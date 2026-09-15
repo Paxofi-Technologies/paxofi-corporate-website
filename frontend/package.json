@@ -1,0 +1,13 @@
+{
+  "name": "@paxofi/corporate-website-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Frontend test suite pending implementation\""
+  }
+}
