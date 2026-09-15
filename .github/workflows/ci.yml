@@ -1,0 +1,38 @@
+name: Corporate Website CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Baseline validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate repository boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f .gitignore
+          test -f .env.example
+          test -f frontend/README.md
+          test -f backend/README.md
+          test -f database/README.md
+          test -f tests/README.md
+          test -f docs/README.md
+          test -f ops/README.md
+          if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md'; then
+            echo 'Potential secret-bearing file detected.'
+            exit 1
+          fi
+
+      - name: Repository structure summary
+        run: find . -maxdepth 3 -type f | sort
