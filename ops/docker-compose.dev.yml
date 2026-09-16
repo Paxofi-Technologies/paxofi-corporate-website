@@ -3,10 +3,10 @@ services:
     image: mariadb:11.8
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: paxofi_corporate_website
-      MARIADB_USER: paxofi
-      MARIADB_PASSWORD: paxofi_local_only
-      MARIADB_ROOT_PASSWORD: root_local_only
+      MARIADB_DATABASE: ${MARIADB_DATABASE:?set MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER:?set MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
