@@ -1,0 +1,25 @@
+services:
+  mysql:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: paxofi_corporate_website
+      MARIADB_USER: paxofi
+      MARIADB_PASSWORD: paxofi_local_only
+      MARIADB_ROOT_PASSWORD: root_local_only
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
