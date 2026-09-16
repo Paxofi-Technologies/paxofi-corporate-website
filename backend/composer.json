@@ -6,6 +6,9 @@
   "require": {
     "php": ">=8.4"
   },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5"
+  },
   "autoload": {
     "psr-4": {
       "Paxofi\\CorporateWebsite\\": "src/"
