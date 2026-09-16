@@ -9,13 +9,14 @@ final class Router
     /** @var array<string, callable(Request): Response> */
     private array $routes = [];
 
-    /**
-     * Register a method/path handler. PCF routing will become the authoritative
-     * runtime integration once the approved PCF bootstrap contract is consumed.
-     */
     public function get(string $path, callable $handler): void
     {
         $this->routes['GET ' . $path] = $handler;
+    }
+
+    public function post(string $path, callable $handler): void
+    {
+        $this->routes['POST ' . $path] = $handler;
     }
 
     public function dispatch(Request $request): Response
