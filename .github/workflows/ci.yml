@@ -9,13 +9,12 @@ permissions:
   contents: read
 
 jobs:
-  baseline:
-    name: Baseline validation
+  repository:
+    name: Repository validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Validate repository boundaries
         shell: bash
         run: |
@@ -23,16 +22,106 @@ jobs:
           test -f README.md
           test -f .gitignore
           test -f .env.example
+          test -f frontend/package.json
           test -f frontend/README.md
+          test -f backend/composer.json
           test -f backend/README.md
           test -f database/README.md
           test -f tests/README.md
           test -f docs/README.md
           test -f ops/README.md
-          if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md'; then
+      - name: Scan for likely secret-bearing files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find . -type f \( -name '.env' -o -name '*.pem' -o -name '*.key' \) -not -path './.git/*' -print -quit | grep -q .; then
             echo 'Potential secret-bearing file detected.'
             exit 1
           fi
 
-      - name: Repository structure summary
-        run: find . -maxdepth 3 -type f | sort
+  frontend:
+    name: Frontend lint, typecheck and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend PHP validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Validate composer manifest
+        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: PHP syntax validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          find src tests -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm install --ignore-scripts && npm audit --audit-level=high
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Validate backend dependencies
+        working-directory: backend
+        run: composer validate --strict
+
+  backend-tests:
+    name: Backend PHPUnit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --configuration phpunit.xml

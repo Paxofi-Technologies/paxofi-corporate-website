@@ -2,8 +2,12 @@
   "name": "paxofi/corporate-website-backend",
   "description": "Paxofi Corporate Website pure PHP backend boundary",
   "type": "project",
+  "license": "proprietary",
   "require": {
     "php": ">=8.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5"
   },
   "autoload": {
     "psr-4": {
