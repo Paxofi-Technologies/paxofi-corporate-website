@@ -15,10 +15,15 @@ $router = new Router();
 $router->get('/api/v1/health', static function (Request $request) use ($app): Response {
     return new Response(
         success: true,
-        data: [
-            'application' => $app->name(),
-            'status' => 'ok',
-        ],
+        data: ['application' => $app->name(), 'status' => 'ok'],
+        requestId: bin2hex(random_bytes(16)),
+    );
+});
+
+$router->get('/api/v1/readiness', static function (Request $request) use ($app): Response {
+    return new Response(
+        success: true,
+        data: ['application' => $app->name(), 'status' => 'ready'],
         requestId: bin2hex(random_bytes(16)),
     );
 });
