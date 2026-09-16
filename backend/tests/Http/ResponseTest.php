@@ -2,18 +2,25 @@
 
 declare(strict_types=1);
 
+namespace Paxofi\CorporateWebsite\Tests\Http;
+
 use Paxofi\CorporateWebsite\Http\Response;
+use PHPUnit\Framework\TestCase;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+final class ResponseTest extends TestCase
+{
+    public function testResponseSerializesCanonicalPayload(): void
+    {
+        $response = new Response(
+            success: true,
+            data: ['ok' => true],
+            requestId: 'test-request',
+        );
 
-$response = new Response(
-    success: true,
-    data: ['ok' => true],
-    requestId: 'test-request',
-);
+        $payload = json_decode($response->toJson(), true, 512, JSON_THROW_ON_ERROR);
 
-$payload = json_decode($response->toJson(), true, 512, JSON_THROW_ON_ERROR);
-
-assert($payload['success'] === true);
-assert($payload['data']['ok'] === true);
-assert($payload['request_id'] === 'test-request');
+        self::assertTrue($payload['success']);
+        self::assertTrue($payload['data']['ok']);
+        self::assertSame('test-request', $payload['request_id']);
+    }
+}
