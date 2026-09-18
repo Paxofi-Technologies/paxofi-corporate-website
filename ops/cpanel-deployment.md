@@ -19,7 +19,7 @@ Backend:
 1. Point the API domain/subdomain document root to backend/public.
 2. Select PHP 8.4.
 3. Set required environment variables.
-4. Apply database/001_initial_schema.sql to the MariaDB database.
+4. Apply database/001_initial_schema.sql, then apply subsequent migrations in filename order (including 002 and 003).
 5. Verify GET /api/v1/health and GET /api/v1/readiness.
 
 Operational controls:
