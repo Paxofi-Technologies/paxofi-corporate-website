@@ -1,0 +1,1 @@
+<?php declare(strict_types=1); use PHPUnit\Framework\TestCase; final class HealthTest extends TestCase { public function testHealthContract():void { $payload=['success'=>true,'data'=>['status'=>'ok'],'request_id'=>'test']; self::assertTrue($payload['success']); self::assertSame('ok',$payload['data']['status']); self::assertNotEmpty($payload['request_id']); } }
