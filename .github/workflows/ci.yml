@@ -1,48 +1,35 @@
 name: Corporate Website CI
-
 on:
   pull_request:
   push:
     branches: [main]
-
 permissions:
   contents: read
-
 jobs:
   frontend:
     name: Frontend validation
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    defaults: {run: {working-directory: frontend}}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package.json
+        with: {node-version: 22}
       - run: npm install
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
-
   backend:
     name: Backend validation
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+        with: {php-version: '8.4'}
       - run: php -l public/index.php
       - run: php -l src/Http/JsonResponse.php
       - run: php -l tests/HealthTest.php
-
   repository:
     name: Repository controls
     runs-on: ubuntu-latest
@@ -58,7 +45,7 @@ jobs:
           test -f frontend/package.json
           test -f backend/composer.json
           test -f database/001_initial_schema.sql
-          if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md'; then
+          if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md' --exclude='.gitignore'; then
             echo 'Potential secret-bearing file detected.'
             exit 1
           fi
