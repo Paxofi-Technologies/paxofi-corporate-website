@@ -26,12 +26,19 @@ Backend:
 1. Point the API domain/subdomain document root to `backend/public`.
 2. Select PHP 8.4.
 3. Ensure Composer 2 is available for the cPanel account.
-4. From the backend directory, run `composer install --no-dev --prefer-dist --optimize-autoloader`.
-5. Confirm PCF v1.1.0 is installed under `backend/vendor/paxofi-technologies/paxofi-core-framework`.
-6. Set required environment variables, including `APP_ENV=production` and the database settings.
-7. Apply `database/001_initial_schema.sql`, then apply subsequent migrations in filename order (including 002 and 003).
-8. Verify GET `/api/v1/health` and GET `/api/v1/readiness`.
-9. Run a public contact-form smoke test and verify a persisted enquiry before production authorization.
+4. Configure Composer authentication for the private PCF repository using a read-only GitHub credential. Keep the credential in Composer's global/project authentication store or an environment variable; never commit `auth.json` or a token.
+5. From the backend directory, run `composer install --no-dev --prefer-dist --optimize-autoloader`.
+6. Confirm PCF v1.1.x is installed under `backend/vendor/paxofi-technologies/paxofi-core-framework`.
+7. Set required environment variables, including `APP_ENV=production` and the database settings.
+8. Apply `database/001_initial_schema.sql`, then apply subsequent migrations in filename order (including 002 and 003).
+9. Verify GET `/api/v1/health` and GET `/api/v1/readiness`.
+10. Run a public contact-form smoke test and verify a persisted enquiry before production authorization.
+
+Composer private-repository requirement:
+- The PCF repository is private, so Composer must have read access when resolving the VCS dependency.
+- A fine-grained GitHub credential scoped to the PCF repository with read-only contents access is sufficient.
+- Do not place credentials in `composer.json`, source files, Git history, or public document roots.
+- If cPanel SSH keys are used instead, the PCF repository may be accessed through a read-only GitHub deploy key.
 
 Operational controls:
 - TLS must be enabled before public traffic.
