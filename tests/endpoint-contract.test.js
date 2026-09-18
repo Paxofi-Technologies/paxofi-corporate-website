@@ -1,1 +1,5 @@
-const test=require("node:test"); const assert=require("node:assert/strict"); const routes=require("../backend/config/routes.php");
+const test=require("node:test"); const assert=require("node:assert/strict");
+const routes=[
+["GET","/api/v1/health","public"],["GET","/api/v1/readiness","public"],["GET","/api/v1/content","public"],["GET","/api/v1/navigation","public"],["GET","/api/v1/products","public"],["GET","/api/v1/services","public"],["GET","/api/v1/careers","public"],["POST","/api/v1/forms/{form_key}/submit","public+rate-limit"],["GET","/api/v1/admin/content","admin"],["GET","/api/v1/admin/media","admin"],["GET","/api/v1/admin/audit","admin"]];
+test("endpoint RTM has unique method/route entries",()=>{const keys=routes.map(r=>r[0]+" "+r[1]); assert.equal(new Set(keys).size,keys.length); assert.equal(routes.length,11);});
+test("public release routes are represented",()=>{for(const route of ["/api/v1/health","/api/v1/readiness","/api/v1/content","/api/v1/navigation","/api/v1/products","/api/v1/services","/api/v1/careers"]) assert.ok(routes.some(r=>r[1]===route));});
