@@ -1,18 +1,9 @@
 {
-  "name": "paxofi/corporate-website-backend",
-  "description": "Paxofi Corporate Website pure PHP backend boundary",
-  "type": "project",
-  "require": {
-    "php": ">=8.4"
-  },
-  "autoload": {
-    "psr-4": {
-      "Paxofi\\CorporateWebsite\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Paxofi\\CorporateWebsite\\Tests\\": "tests/"
-    }
-  }
+  "name":"paxofi/corporate-website-backend",
+  "description":"Paxofi Corporate Website pure PHP backend boundary",
+  "type":"project",
+  "require":{"php":">=8.4"},
+  "autoload":{"psr-4":{"Paxofi\\CorporateWebsite\\":"src/"}},
+  "autoload-dev":{"psr-4":{"Paxofi\\CorporateWebsite\\Tests\\":"tests/"}},
+  "scripts":{"test":"php -l public/index.php && php -l src/Http/JsonResponse.php"}
 }
