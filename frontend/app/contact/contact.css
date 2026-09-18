@@ -1,0 +1,1 @@
+.contact-form{display:grid;gap:18px;max-width:680px;margin-top:45px}.contact-form label{display:grid;gap:7px;font-weight:700;font-size:14px}.contact-form input,.contact-form textarea{font:inherit;border:1px solid #d1d5cc;border-radius:8px;padding:12px;background:#fff}.contact-form textarea{resize:vertical}.contact-form button{border:0;width:max-content}
