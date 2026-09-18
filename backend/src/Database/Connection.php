@@ -1,27 +1,39 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Paxofi\CorporateWebsite\Database;
 
 use PDO;
 use PDOException;
+use Paxofi\Core\Configuration\Environment;
 use RuntimeException;
 
 final class Connection
 {
     public static function make(): PDO
     {
-        $host = getenv('DB_HOST') ?: '127.0.0.1';
-        $port = getenv('DB_PORT') ?: '3306';
-        $database = getenv('DB_DATABASE') ?: '';
-        $username = getenv('DB_USERNAME') ?: '';
-        $password = getenv('DB_PASSWORD') ?: '';
+        $processEnvironment = getenv();
+        $environment = Environment::from(
+            is_array($processEnvironment) ? array_map('strval', $processEnvironment) : [],
+        );
+
+        $host = $environment->get('DB_HOST', '127.0.0.1') ?? '127.0.0.1';
+        $port = $environment->get('DB_PORT', '3306') ?? '3306';
+        $database = $environment->get('DB_DATABASE', '') ?? '';
+        $username = $environment->get('DB_USERNAME', '') ?? '';
+        $password = $environment->get('DB_PASSWORD', '') ?? '';
 
         if ($database === '' || $username === '') {
             throw new RuntimeException('Database configuration is incomplete.');
         }
 
-        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $database);
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            $host,
+            $port,
+            $database,
+        );
 
         try {
             return new PDO($dsn, $username, $password, [
