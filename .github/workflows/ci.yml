@@ -3,7 +3,7 @@ name: Corporate Website CI
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feature/**']
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${COMPOSER_AUTH:-}" ]; then
-            echo "PCF_COMPOSER_AUTH repository secret is required to install the private PCF dependency."
+            echo "PCF_COMPOSER_AUTH is unavailable to this workflow run. Push-triggered runs must have repository-level or permitted environment-level secret access."
             exit 1
           fi
       - run: composer validate --strict
