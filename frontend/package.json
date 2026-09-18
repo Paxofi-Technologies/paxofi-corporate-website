@@ -2,7 +2,7 @@
   "name":"@paxofi/corporate-website-frontend",
   "private":true,
   "version":"1.0.0",
-  "scripts":{"dev":"next dev","build":"next build","start":"next start","lint":"eslint .","typecheck":"tsc --noEmit","test":"node --test"},
+  "scripts":{"dev":"next dev","build":"next build","start":"node app.js","lint":"eslint .","typecheck":"tsc --noEmit","test":"node --test"},
   "dependencies":{"next":"^15.5.0","react":"^19.1.0","react-dom":"^19.1.0"},
   "devDependencies":{"@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","typescript":"^5.8.0","eslint":"^9.0.0","eslint-config-next":"^15.5.0"}
 }
