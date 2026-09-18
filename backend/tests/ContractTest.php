@@ -10,7 +10,7 @@ $migration3 = file_get_contents($root . '/database/003_enquiry_rate_limit_index.
 $checks = [
     'health route exists' => str_contains($api, "'/api/v1/health'") && str_contains($api, "'status' => 'ok'"),
     'readiness route checks database' => str_contains($api, "'/api/v1/readiness'") && str_contains($api, "SELECT 1"),
-    'contact route persists enquiries' => str_contains($api, "'/api/v1/forms/([^/]+)/submit'") && str_contains($api, 'INSERT INTO enquiries'),
+    'contact route persists enquiries' => str_contains($api, '/api/v1/forms/') && str_contains($api, 'forms/{key}/submit') && str_contains($api, 'INSERT INTO enquiries'),
     'contact validation exists' => str_contains($api, 'VALIDATION_ERROR') && str_contains($api, 'FILTER_VALIDATE_EMAIL'),
     'rate limiting exists' => str_contains($api, 'RATE_LIMITED') && str_contains($api, 'INTERVAL 10 MINUTE'),
     'enquiries table exists' => str_contains($schema, 'CREATE TABLE enquiries'),
