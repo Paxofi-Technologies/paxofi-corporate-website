@@ -1,6 +1,8 @@
 <?php
+
 declare(strict_types=1);
 
+require dirname(__DIR__) . '/vendor/autoload.php';
 require dirname(__DIR__) . '/src/Http/JsonResponse.php';
 require dirname(__DIR__) . '/src/Database/Connection.php';
 
@@ -150,9 +152,13 @@ if (preg_match('#^/api/v1/forms/([^/]+)/submit$#', $path, $matches) === 1 && $me
             ], 429);
         }
 
-        $id = sprintf('%s-%s-%s-%s-%s',
-            bin2hex(random_bytes(4)), bin2hex(random_bytes(2)), bin2hex(random_bytes(2)),
-            bin2hex(random_bytes(2)), bin2hex(random_bytes(6))
+        $id = sprintf(
+            '%s-%s-%s-%s-%s',
+            bin2hex(random_bytes(4)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(6))
         );
         $stmt = $db->prepare(
             'INSERT INTO enquiries (id, name, email, company, message, status, source_ip, user_agent, request_id)
