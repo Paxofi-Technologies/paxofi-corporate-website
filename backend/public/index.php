@@ -127,6 +127,29 @@ if (preg_match('#^/api/v1/forms/([^/]+)/submit$#', $path, $matches) === 1 && $me
 
     try {
         $db = Connection::make();
+
+        // Application-level anti-abuse guard. This is intentionally conservative and
+        // complements (rather than replaces) an edge/distributed rate limiter.
+        $sourceIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        $rateStmt = $db->prepare(
+            'SELECT COUNT(*) FROM enquiries
+             WHERE created_at >= (CURRENT_TIMESTAMP - INTERVAL 10 MINUTE)
+               AND ((:source_ip IS NOT NULL AND source_ip = :source_ip_check)
+                    OR email = :email)'
+        );
+        $rateStmt->execute([
+            'source_ip' => $sourceIp,
+            'source_ip_check' => $sourceIp,
+            'email' => $email,
+        ]);
+        if ((int) $rateStmt->fetchColumn() >= 5) {
+            JsonResponse::send([
+                'success' => false,
+                'error' => ['code' => 'RATE_LIMITED', 'message' => 'Too many enquiries. Please try again later.'],
+                'request_id' => $requestId,
+            ], 429);
+        }
+
         $id = sprintf('%s-%s-%s-%s-%s',
             bin2hex(random_bytes(4)), bin2hex(random_bytes(2)), bin2hex(random_bytes(2)),
             bin2hex(random_bytes(2)), bin2hex(random_bytes(6))
