@@ -27,10 +27,20 @@ jobs:
     name: Backend validation
     runs-on: ubuntu-latest
     defaults: {run: {working-directory: backend}}
+    env:
+      COMPOSER_AUTH: ${{ secrets.PCF_COMPOSER_AUTH }}
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with: {php-version: '8.4'}
+      - name: Verify PCF Composer credentials are configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${COMPOSER_AUTH:-}" ]; then
+            echo "PCF_COMPOSER_AUTH repository secret is required to install the private PCF dependency."
+            exit 1
+          fi
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: composer test
