@@ -38,4 +38,4 @@ The structure is intentionally established as the initial implementation boundar
 
 ## Status
 
-Repository bootstrap is in progress under CW-001. Repository existence is not implementation completion and does not authorize production deployment.
+V1 implementation is in active release-readiness execution. CI is green on the current mainline. Production deployment remains environment-dependent: the cPanel runtime, database credentials/migrations, TLS, backups and final smoke tests must be verified before public release.
