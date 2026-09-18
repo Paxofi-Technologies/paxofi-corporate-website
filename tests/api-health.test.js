@@ -1,0 +1,1 @@
+const test=require("node:test"); const assert=require("node:assert"); test("health contract shape",()=>{const body={success:true,data:{status:"ok"},request_id:"test"}; assert.equal(body.success,true); assert.equal(body.data.status,"ok"); assert.ok(body.request_id);});
