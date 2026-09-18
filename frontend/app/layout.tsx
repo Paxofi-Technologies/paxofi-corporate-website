@@ -1,21 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
-
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://paxofi.com"),
-  title: { default: "Paxofi Technologies — Building Digital Infrastructure", template: "%s | Paxofi Technologies" },
-  description: "Paxofi Technologies builds dependable digital products, software platforms and technology infrastructure for businesses and communities.",
-  robots: { index: true, follow: true }
-};
-
-export default function RootLayout({children}:{children:React.ReactNode}) {
- return <html lang="en"><body>
-  <header className="site-header"><div className="container nav">
-   <Link href="/" className="brand"><span className="brand-mark">P</span><span>PAXOFI</span></Link>
-   <nav><Link href="/about">About</Link><Link href="/services">Services</Link><Link href="/products">Products</Link><Link href="/careers">Careers</Link><Link href="/contact" className="nav-cta">Talk to us</Link></nav>
-  </div></header>
-  <main>{children}</main>
-  <footer className="footer"><div className="container footer-grid"><div><div className="brand footer-brand"><span className="brand-mark">P</span><span>PAXOFI</span></div><p>Technology that moves ideas into dependable digital products.</p></div><div><strong>Explore</strong><Link href="/about">About</Link><Link href="/services">Services</Link><Link href="/careers">Careers</Link></div><div><strong>Contact</strong><a href="mailto:hello@paxofi.com">hello@paxofi.com</a><a href="/contact">Start a conversation</a></div></div><div className="container footer-bottom">© {new Date().getFullYear()} Paxofi Technologies LTD. All rights reserved.</div></footer>
- </body></html>
-}
+export const metadata: Metadata = { metadataBase:new URL(process.env.NEXT_PUBLIC_SITE_URL||"https://paxofi.com"), title:{default:"Paxofi Technologies — Building Digital Infrastructure",template:"%s | Paxofi Technologies"}, description:"Paxofi Technologies builds dependable digital products, software platforms and technology infrastructure for businesses and communities.", robots:{index:true,follow:true}};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body><header className="site-header"><div className="container nav"><Link href="/" className="brand"><span className="brand-mark">P</span><span>PAXOFI</span></Link><nav><Link href="/about">About</Link><Link href="/services">Services</Link><Link href="/products">Products</Link><Link href="/careers">Careers</Link><Link href="/contact" className="nav-cta">Talk to us</Link></nav></div></header><main>{children}</main><footer className="footer"><div className="container footer-grid"><div><div className="brand footer-brand"><span className="brand-mark">P</span><span>PAXOFI</span></div><p>Technology that moves ideas into dependable digital products.</p></div><div><strong>Explore</strong><Link href="/about">About</Link><Link href="/services">Services</Link><Link href="/careers">Careers</Link></div><div><strong>Contact</strong><a href="mailto:hello@paxofi.com">hello@paxofi.com</a><Link href="/contact">Start a conversation</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></div><div className="container footer-bottom">© {new Date().getFullYear()} Paxofi Technologies LTD. All rights reserved.</div></footer></body></html>}
