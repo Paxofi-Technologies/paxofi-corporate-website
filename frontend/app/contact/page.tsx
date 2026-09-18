@@ -1,1 +1,37 @@
-import type { Metadata } from "next"; import "./contact.css"; export const metadata:Metadata={title:"Contact"}; export default function Contact(){return <section className="section"><div className="container"><span className="eyebrow">CONTACT</span><h1>Let's talk about what you're building.</h1><p className="hero-copy">Tell us what you are trying to achieve and we'll help map the next practical step.</p><form className="contact-form" action={process.env.NEXT_PUBLIC_API_URL||"/api/v1/forms/contact/submit"} method="post"><label>Name<input name="name" required /></label><label>Email<input name="email" type="email" required /></label><label>Company<input name="company" /></label><label>How can we help?<textarea name="message" rows={6} required /></label><button className="button primary" type="submit">Send enquiry</button></form></div></section>}
+import type { Metadata } from "next";
+import "./contact.css";
+
+export const metadata: Metadata = { title: "Contact" };
+
+export default function Contact() {
+  return (
+    <section className="section">
+      <div className="container">
+        <span className="eyebrow">CONTACT</span>
+        <h1>Let&apos;s talk about what you&apos;re building.</h1>
+        <p className="hero-copy">
+          Tell us what you are trying to achieve and we&apos;ll help map the next practical step.
+        </p>
+        <form
+          className="contact-form"
+          action={process.env.NEXT_PUBLIC_API_URL || "/api/v1/forms/contact/submit"}
+          method="post"
+        >
+          <label>
+            Name<input name="name" required />
+          </label>
+          <label>
+            Email<input name="email" type="email" required />
+          </label>
+          <label>
+            Company<input name="company" />
+          </label>
+          <label>
+            How can we help?<textarea name="message" rows={6} required />
+          </label>
+          <button className="button primary" type="submit">Send enquiry</button>
+        </form>
+      </div>
+    </section>
+  );
+}
