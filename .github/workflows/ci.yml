@@ -29,6 +29,7 @@ jobs:
         with: {php-version: '8.4'}
       - run: php -l public/index.php
       - run: php -l src/Http/JsonResponse.php
+      - run: php -l src/Database/Connection.php
       - run: php -l tests/HealthTest.php
   repository:
     name: Repository controls
@@ -45,6 +46,7 @@ jobs:
           test -f frontend/package.json
           test -f backend/composer.json
           test -f database/001_initial_schema.sql
+          test -f database/002_enquiry_metadata.sql
           if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md' --exclude='.gitignore'; then
             echo 'Potential secret-bearing file detected.'
             exit 1
