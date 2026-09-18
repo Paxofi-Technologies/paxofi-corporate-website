@@ -2,6 +2,7 @@
   "name": "paxofi/corporate-website-backend",
   "description": "Paxofi Corporate Website pure PHP backend boundary",
   "type": "project",
+  "license": "proprietary",
   "repositories": [
     {
       "type": "vcs",
@@ -10,7 +11,7 @@
   ],
   "require": {
     "php": ">=8.4",
-    "paxofi-technologies/paxofi-core-framework": "1.1.0"
+    "paxofi-technologies/paxofi-core-framework": "~1.1.0"
   },
   "autoload": {
     "psr-4": {
