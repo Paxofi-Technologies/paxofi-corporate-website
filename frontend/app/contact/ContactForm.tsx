@@ -23,7 +23,7 @@ export default function ContactForm({ apiUrl }: Props) {
         body: JSON.stringify(payload),
       });
       const body = (await response.json().catch(() => null)) as
-        | { data?: { accepted?: boolean }; error?: { message?: string } }
+        | { error?: { message?: string } }
         | null;
 
       if (!response.ok) {
@@ -32,7 +32,7 @@ export default function ContactForm({ apiUrl }: Props) {
 
       form.reset();
       setStatus("success");
-      setMessage("Thanks — your enquiry has been received. We&apos;ll get back to you.");
+      setMessage("Thanks — your enquiry has been received. We'll get back to you.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "We could not send your enquiry. Please try again.");
@@ -40,7 +40,7 @@ export default function ContactForm({ apiUrl }: Props) {
   }
 
   return (
-    <form className="contact-form" onSubmit={submit} noValidate={false}>
+    <form className="contact-form" onSubmit={submit}>
       <label>
         Name<input name="name" autoComplete="name" required maxLength={160} />
       </label>
