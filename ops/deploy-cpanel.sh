@@ -133,7 +133,7 @@ API_STAGE="$API_RUNTIME_DIR/.staging"
 FRONTEND_STAGE="${FRONTEND_STAGE:-$HOME/.paxofi-frontend-staging}"
 # Never synced over the live runtime: secrets, host-managed PHP/handler config, logs.
 PROTECT=(--exclude .env --exclude '.env.*' --exclude .htaccess --exclude .user.ini --exclude php.ini --exclude error_log --exclude '*.log')
-cleanup() { rm -f "$API_STAGE/backend/.env" "${DEFAULTS_FILE:-}"; }
+cleanup() { rm -f "$API_STAGE/backend/.env" "${DEFAULTS_FILE:-}" "${BACKUP_PARTIAL:-}"; }
 trap cleanup EXIT
 
 # Everything below is prepared in staging directories first. The live API
@@ -179,9 +179,14 @@ if [[ "$SKIP_BACKUP" -eq 0 ]]; then
         echo $v["DB_DATABASE"] ?? "";' "$DEFAULTS_FILE")"
     [[ -n "$DB_NAME" ]] || fail "DB_DATABASE is not set in $API_BACKEND/.env"
     BACKUP_FILE="$BACKUP_DIR/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ)-before-$COMMIT.sql.gz"
-    "$MYSQLDUMP_BIN" --defaults-extra-file="$DEFAULTS_FILE" --single-transaction --routines --triggers "$DB_NAME" | gzip > "$BACKUP_FILE"
-    chmod 600 "$BACKUP_FILE"
-    echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+    # Written under a private umask to a .partial name and only renamed once the
+    # dump is verified complete, so a failed run never leaves an empty or
+    # truncated file that looks like a usable backup.
+    BACKUP_PARTIAL="$BACKUP_FILE.partial"
+    (umask 077 && "$MYSQLDUMP_BIN" --defaults-extra-file="$DEFAULTS_FILE" --single-transaction --routines --triggers "$DB_NAME" | gzip > "$BACKUP_PARTIAL")
+    gunzip -c "$BACKUP_PARTIAL" | tail -n 1 | grep -q '^-- Dump completed' || fail "backup is incomplete ($BACKUP_PARTIAL)"
+    mv "$BACKUP_PARTIAL" "$BACKUP_FILE"
+    echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1), $(gunzip -c "$BACKUP_FILE" | grep -c '^CREATE TABLE') tables)"
 fi
 
 LIVE_STATE="Production code is unchanged, but migrations may have run: check \`php bin/migrate.php --status\` and the backup above."

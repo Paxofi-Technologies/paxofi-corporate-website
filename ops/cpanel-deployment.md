@@ -78,7 +78,13 @@ Submit the live contact form, then in phpMyAdmin confirm one new row in `enquiri
 ## Rollback / forward recovery
 
 - **Code:** revert the bad commit on `main` through a PR, then run the deploy script again. (The script only fast-forwards, so it never deploys anything that is not on `main`.)
-- **Database:** migrations are forward-only. If a migration fails part-way, restore the backup the script just wrote (`gunzip -c <file> | mariadb <db>`) or fix forward with a new migration. Migration 006 is safe to re-run.
+- **Database:** migrations are forward-only. If a migration fails part-way, restore the backup the script wrote just before migrating, or fix forward with a new migration. Migration 006 is safe to re-run. Restore **one** file (the newest `…-before-<commit>.sql.gz` from the failed run; never pass several files at once):
+
+  ```bash
+  gunzip -c ~/backups/corporate-website/<file>.sql.gz | mariadb paxoalhu_corporate
+  ```
+
+  The script only keeps verified, complete dumps (each ends with `-- Dump completed`); a failed backup leaves no file behind.
 
 ## Operational controls
 
