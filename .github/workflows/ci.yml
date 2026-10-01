@@ -75,6 +75,8 @@ jobs:
         with: {node-version: 22}
       - name: Repository contract tests
         run: node --test 'tests/*.test.js'
+      - name: Lint deployment scripts
+        run: shellcheck -S warning ops/*.sh
       - name: Validate boundaries and secrets
         shell: bash
         run: |
