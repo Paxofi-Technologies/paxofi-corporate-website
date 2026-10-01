@@ -17,6 +17,9 @@
 # applied by hand before migrations were tracked):
 #   bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh --baseline 003
 #
+# Check the live site at any time without deploying:
+#   bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh --smoke-only
+#
 # Every path and binary can be overridden with the environment variables
 # below. Live .env files, .htaccess, .user.ini and php.ini are never overwritten.
 set -Eeuo pipefail
@@ -42,7 +45,7 @@ fail() { printf '\nDEPLOY FAILED: %s\n' "$*" >&2; exit 1; }
 # This script lives inside the clone it updates, and bash reads scripts
 # incrementally. Update the clone first, then re-run the fresh copy, so a
 # deployment always executes the deploy script of the commit it deploys.
-if [[ "${PAXOFI_DEPLOY_UPDATED:-0}" != 1 && " $* " != *" -h "* && " $* " != *" --help "* ]]; then
+if [[ "${PAXOFI_DEPLOY_UPDATED:-0}" != 1 && " $* " != *" -h "* && " $* " != *" --help "* && " $* " != *" --smoke-only "* ]]; then
     [[ -d "$REPO_DIR/.git" ]] || fail "Git clone not found at $REPO_DIR"
     step "Update Git clone ($BRANCH, fast-forward only)"
     git -C "$REPO_DIR" fetch --quiet origin "$BRANCH"
@@ -51,17 +54,58 @@ if [[ "${PAXOFI_DEPLOY_UPDATED:-0}" != 1 && " $* " != *" -h "* && " $* " != *" -
     PAXOFI_DEPLOY_UPDATED=1 exec bash "$REPO_DIR/ops/deploy-cpanel.sh" "$@"
 fi
 
+smoke_tests() {
+step "Smoke tests"
+env_value() { sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -1 | tr -d '"'"'"; }
+API_URL="${API_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLIC_API_URL)}"
+SITE_URL="${SITE_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLIC_SITE_URL)}"
+[[ -n "$API_URL" && -n "$SITE_URL" ]] || fail "Set API_URL and SITE_URL (or NEXT_PUBLIC_* in $FRONTEND_APP_DIR/.env.production) for smoke tests"
+API_URL="${API_URL%/}"; SITE_URL="${SITE_URL%/}"
+
+# Retries for up to ~60s: Passenger boots the app lazily after a restart.
+check() {
+    local name="$1" expected="$2"; shift 2
+    local status=""
+    for _ in $(seq 1 "${SMOKE_ATTEMPTS:-12}"); do
+        status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" 2>/dev/null || true)"
+        [[ "$status" == "$expected" ]] && break
+        sleep 5
+    done
+    if [[ "$status" == "$expected" ]]; then echo "PASS $name ($status)"; else echo "FAIL $name (got ${status:-no response}, expected $expected)"; SMOKE_FAILED=1; fi
+}
+SMOKE_FAILED=0
+check "API health" 200 "$API_URL/health"
+check "API readiness (database)" 200 "$API_URL/readiness"
+check "Products from database" 200 "$API_URL/products"
+check "CORS preflight from $SITE_URL" 204 -X OPTIONS "$API_URL/forms/contact/submit" \
+    -H "Origin: $SITE_URL" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type"
+check "Frontend home" 200 "$SITE_URL/"
+check "Frontend contact" 200 "$SITE_URL/contact"
+# A page can return 200 while its JavaScript fails (e.g. a stale process after
+# an upgrade), which silently breaks the contact form. Fetch a script it loads.
+CHUNK="$(curl -sS --max-time 20 "$SITE_URL/contact" 2>/dev/null | grep -o '/_next/static/chunks/[^"]*\.js' | head -1 || true)"
+if [[ -n "$CHUNK" ]]; then
+    check "Frontend JavaScript ($CHUNK)" 200 "$SITE_URL$CHUNK"
+else
+    echo "FAIL Frontend JavaScript (no script found in /contact)"; SMOKE_FAILED=1
+fi
+
+[[ "$SMOKE_FAILED" -eq 0 ]] || fail "smoke tests failed for commit $COMMIT (backup: ${BACKUP_FILE:-none})"
+}
+
 main() {
 LIVE_STATE="Production is unchanged (nothing has been promoted yet)."
 trap '(( BASH_SUBSHELL == 0 )) && printf "\nDEPLOY FAILED at line %s. %s\n" "$LINENO" "$LIVE_STATE" >&2' ERR
 BASELINE=""
 SKIP_FRONTEND=0
 SKIP_BACKUP=0
+SMOKE_ONLY=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --baseline) BASELINE="${2:?--baseline needs a migration number, e.g. 003}"; shift 2 ;;
         --skip-frontend) SKIP_FRONTEND=1; shift ;;
         --skip-backup) SKIP_BACKUP=1; shift ;;
+        --smoke-only) SMOKE_ONLY=1; shift ;;
         -h|--help) sed -n '2,/^set -Eeuo pipefail/{/^set -Eeuo/!p}' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
@@ -78,6 +122,11 @@ step "Preflight"
 echo "PHP: $("$PHP_BIN" -r 'echo PHP_VERSION;')  repo: $REPO_DIR  api: $API_BACKEND  frontend: $FRONTEND_APP_DIR"
 
 COMMIT="$(git -C "$REPO_DIR" rev-parse --short HEAD)"
+if [[ "$SMOKE_ONLY" -eq 1 ]]; then
+    LIVE_STATE="Smoke-only run; nothing was changed."
+    smoke_tests
+    return
+fi
 echo "Deploying commit $COMMIT"
 
 API_STAGE="$API_RUNTIME_DIR/.staging"
@@ -164,42 +213,7 @@ if [[ "$SKIP_FRONTEND" -eq 0 ]]; then
 fi
 
 LIVE_STATE="The new release is live."
-step "Smoke tests"
-env_value() { sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -1 | tr -d '"'"'"; }
-API_URL="${API_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLIC_API_URL)}"
-SITE_URL="${SITE_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLIC_SITE_URL)}"
-[[ -n "$API_URL" && -n "$SITE_URL" ]] || fail "Set API_URL and SITE_URL (or NEXT_PUBLIC_* in $FRONTEND_APP_DIR/.env.production) for smoke tests"
-API_URL="${API_URL%/}"; SITE_URL="${SITE_URL%/}"
-
-# Retries for up to ~60s: Passenger boots the app lazily after a restart.
-check() {
-    local name="$1" expected="$2"; shift 2
-    local status=""
-    for _ in $(seq 1 "${SMOKE_ATTEMPTS:-12}"); do
-        status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" 2>/dev/null || true)"
-        [[ "$status" == "$expected" ]] && break
-        sleep 5
-    done
-    if [[ "$status" == "$expected" ]]; then echo "PASS $name ($status)"; else echo "FAIL $name (got ${status:-no response}, expected $expected)"; SMOKE_FAILED=1; fi
-}
-SMOKE_FAILED=0
-check "API health" 200 "$API_URL/health"
-check "API readiness (database)" 200 "$API_URL/readiness"
-check "Products from database" 200 "$API_URL/products"
-check "CORS preflight from $SITE_URL" 204 -X OPTIONS "$API_URL/forms/contact/submit" \
-    -H "Origin: $SITE_URL" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type"
-check "Frontend home" 200 "$SITE_URL/"
-check "Frontend contact" 200 "$SITE_URL/contact"
-# A page can return 200 while its JavaScript fails (e.g. a stale process after
-# an upgrade), which silently breaks the contact form. Fetch a script it loads.
-CHUNK="$(curl -sS --max-time 20 "$SITE_URL/contact" 2>/dev/null | grep -o '/_next/static/chunks/[^"]*\.js' | head -1 || true)"
-if [[ -n "$CHUNK" ]]; then
-    check "Frontend JavaScript ($CHUNK)" 200 "$SITE_URL$CHUNK"
-else
-    echo "FAIL Frontend JavaScript (no script found in /contact)"; SMOKE_FAILED=1
-fi
-
-[[ "$SMOKE_FAILED" -eq 0 ]] || fail "smoke tests failed for commit $COMMIT (backup: ${BACKUP_FILE:-none})"
+smoke_tests
 
 printf '\nDeployed %s successfully.\nFinal manual check: submit the live contact form and confirm a new row in `enquiries`\nand a matching `enquiry.submitted` row in `audit_events` (same request_id).\n' "$COMMIT"
 }
