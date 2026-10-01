@@ -132,11 +132,16 @@ SITE_URL="${SITE_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLI
 [[ -n "$API_URL" && -n "$SITE_URL" ]] || fail "Set API_URL and SITE_URL (or NEXT_PUBLIC_* in $FRONTEND_APP_DIR/.env.production) for smoke tests"
 API_URL="${API_URL%/}"; SITE_URL="${SITE_URL%/}"
 
+# Retries for up to ~60s: Passenger boots the app lazily after a restart.
 check() {
     local name="$1" expected="$2"; shift 2
-    local status
-    status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" || true)"
-    if [[ "$status" == "$expected" ]]; then echo "PASS $name ($status)"; else echo "FAIL $name (got $status, expected $expected)"; SMOKE_FAILED=1; fi
+    local status=""
+    for _ in $(seq 1 "${SMOKE_ATTEMPTS:-12}"); do
+        status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" 2>/dev/null || true)"
+        [[ "$status" == "$expected" ]] && break
+        sleep 5
+    done
+    if [[ "$status" == "$expected" ]]; then echo "PASS $name ($status)"; else echo "FAIL $name (got ${status:-no response}, expected $expected)"; SMOKE_FAILED=1; fi
 }
 SMOKE_FAILED=0
 check "API health" 200 "$API_URL/health"
