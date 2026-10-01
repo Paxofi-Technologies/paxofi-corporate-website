@@ -34,3 +34,10 @@ test("never shows raw server errors", () => {
   assert.doesNotMatch(failure.message, /SQLSTATE/);
   assert.deepEqual(failure.fields, {});
 });
+
+test("runtime API_BASE_URL wins over the build-time fallback", async () => {
+  const { resolveApiBase } = await import("../lib/contact.ts");
+  assert.equal(resolveApiBase({ API_BASE_URL: " https://api.example.com/api/v1 ", NEXT_PUBLIC_API_URL: "https://old" }), "https://api.example.com/api/v1");
+  assert.equal(resolveApiBase({ NEXT_PUBLIC_API_URL: "https://old" }), "https://old");
+  assert.equal(resolveApiBase({ API_BASE_URL: "  " }), undefined);
+});
