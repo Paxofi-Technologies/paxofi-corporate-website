@@ -19,7 +19,7 @@
 #
 # Every path and binary can be overridden with the environment variables
 # below. Live .env files, .htaccess, .user.ini and php.ini are never overwritten.
-set -euo pipefail
+set -Eeuo pipefail
 
 REPO_DIR="${REPO_DIR:-$HOME/repositories/paxofi-corporate-website}"
 API_RUNTIME_DIR="${API_RUNTIME_DIR:-$HOME/paxofi-api-runtime}"
@@ -52,6 +52,8 @@ if [[ "${PAXOFI_DEPLOY_UPDATED:-0}" != 1 && " $* " != *" -h "* && " $* " != *" -
 fi
 
 main() {
+LIVE_STATE="Production is unchanged (nothing has been promoted yet)."
+trap '(( BASH_SUBSHELL == 0 )) && printf "\nDEPLOY FAILED at line %s. %s\n" "$LINENO" "$LIVE_STATE" >&2' ERR
 BASELINE=""
 SKIP_FRONTEND=0
 SKIP_BACKUP=0
@@ -60,7 +62,7 @@ while [[ $# -gt 0 ]]; do
         --baseline) BASELINE="${2:?--baseline needs a migration number, e.g. 003}"; shift 2 ;;
         --skip-frontend) SKIP_FRONTEND=1; shift ;;
         --skip-backup) SKIP_BACKUP=1; shift ;;
-        -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,/^set -Eeuo pipefail/{/^set -Eeuo/!p}' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -132,6 +134,7 @@ if [[ "$SKIP_BACKUP" -eq 0 ]]; then
     echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 fi
 
+LIVE_STATE="Production code is unchanged, but migrations may have run: check \`php bin/migrate.php --status\` and the backup above."
 step "Apply database migrations"
 if [[ -n "$BASELINE" ]]; then
     (cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php --baseline="$BASELINE")
@@ -139,6 +142,7 @@ fi
 (cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php)
 (cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php --status)
 
+LIVE_STATE="Promotion was in progress: run the script again, or restore from the backup above."
 step "Promote API"
 mkdir -p "$API_BACKEND/public"
 rsync -a --delete "${PROTECT[@]}" "$API_STAGE/backend/" "$API_BACKEND/"
@@ -158,6 +162,7 @@ if [[ "$SKIP_FRONTEND" -eq 0 ]]; then
     echo "Passenger restart requested."
 fi
 
+LIVE_STATE="The new release is live."
 step "Smoke tests"
 env_value() { sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -1 | tr -d '"'"'"; }
 API_URL="${API_URL:-$(env_value "$FRONTEND_APP_DIR/.env.production" NEXT_PUBLIC_API_URL)}"
