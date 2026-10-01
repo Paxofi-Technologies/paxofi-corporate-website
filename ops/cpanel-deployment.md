@@ -36,13 +36,28 @@ Release source:
 
 ## Deploying
 
-From cPanel Terminal (or SSH):
+The very first time, the clone does not yet contain the deploy script, so update it once by hand (cPanel → Git Version Control → *Manage* → *Pull or Deploy* → *Update from Remote*, or):
+
+```bash
+git -C ~/repositories/paxofi-corporate-website pull --ff-only
+```
+
+From then on, from cPanel Terminal (or SSH):
 
 ```bash
 bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh
 ```
 
-The script, in order: fast-forwards the clone to `origin/main`; backs up the database to `~/backups/corporate-website`; syncs `backend/` and `database/` into `paxofi-api-runtime` (never touching `.env`); runs `composer install --no-dev` from the committed `composer.lock`; applies pending migrations with `bin/migrate.php`; syncs and builds the frontend with `npm ci && npm run build`; restarts Passenger; and smoke-tests health, readiness, the database-backed catalogue, the CORS preflight from the site origin, and the home and contact pages. It stops at the first failure.
+The script, in order:
+
+1. fast-forwards the clone to `origin/main` and re-runs itself from the updated copy;
+2. **stages** the API (`composer install --no-dev` from the committed `composer.lock`) in `paxofi-api-runtime/.staging` and the frontend (`npm ci && npm run build`) in `~/.paxofi-frontend-staging` — nothing live changes yet;
+3. backs up the database to `~/backups/corporate-website`;
+4. applies pending migrations with `bin/migrate.php`;
+5. **promotes** the staged API and frontend into the live directories (never overwriting `.env`, `.env.production`, `.htaccess`, `.user.ini`, `php.ini` or logs) and restarts Passenger;
+6. smoke-tests health, readiness, the database-backed catalogue, the CORS preflight from the site origin, and the home and contact pages.
+
+It stops at the first failure. A failure in steps 1–3 leaves production exactly as it was.
 
 ### First deployment onto the existing production database (once)
 

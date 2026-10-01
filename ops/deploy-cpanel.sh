@@ -36,6 +36,22 @@ if [[ -z "${COMPOSER_BIN:-}" ]]; then
 fi
 MYSQLDUMP_BIN="${MYSQLDUMP_BIN:-$(command -v mariadb-dump || command -v mysqldump || true)}"
 
+step() { printf '\n==> %s\n' "$*"; }
+fail() { printf '\nDEPLOY FAILED: %s\n' "$*" >&2; exit 1; }
+
+# This script lives inside the clone it updates, and bash reads scripts
+# incrementally. Update the clone first, then re-run the fresh copy, so a
+# deployment always executes the deploy script of the commit it deploys.
+if [[ "${PAXOFI_DEPLOY_UPDATED:-0}" != 1 && " $* " != *" -h "* && " $* " != *" --help "* ]]; then
+    [[ -d "$REPO_DIR/.git" ]] || fail "Git clone not found at $REPO_DIR"
+    step "Update Git clone ($BRANCH, fast-forward only)"
+    git -C "$REPO_DIR" fetch --quiet origin "$BRANCH"
+    git -C "$REPO_DIR" checkout --quiet "$BRANCH"
+    git -C "$REPO_DIR" merge --ff-only --quiet "origin/$BRANCH"
+    PAXOFI_DEPLOY_UPDATED=1 exec bash "$REPO_DIR/ops/deploy-cpanel.sh" "$@"
+fi
+
+main() {
 BASELINE=""
 SKIP_FRONTEND=0
 SKIP_BACKUP=0
@@ -49,8 +65,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-step() { printf '\n==> %s\n' "$*"; }
-fail() { printf '\nDEPLOY FAILED: %s\n' "$*" >&2; exit 1; }
 
 API_BACKEND="$API_RUNTIME_DIR/backend"
 
@@ -61,10 +75,6 @@ step "Preflight"
 "$PHP_BIN" -m | grep -qi '^pdo_mysql$' || fail "pdo_mysql extension missing for $PHP_BIN"
 echo "PHP: $("$PHP_BIN" -r 'echo PHP_VERSION;')  repo: $REPO_DIR  api: $API_BACKEND  frontend: $FRONTEND_APP_DIR"
 
-step "Update Git clone ($BRANCH, fast-forward only)"
-git -C "$REPO_DIR" fetch --quiet origin "$BRANCH"
-git -C "$REPO_DIR" checkout --quiet "$BRANCH"
-git -C "$REPO_DIR" merge --ff-only --quiet "origin/$BRANCH"
 COMMIT="$(git -C "$REPO_DIR" rev-parse --short HEAD)"
 echo "Deploying commit $COMMIT"
 
@@ -178,3 +188,6 @@ check "Frontend contact" 200 "$SITE_URL/contact"
 [[ "$SMOKE_FAILED" -eq 0 ]] || fail "smoke tests failed for commit $COMMIT (backup: ${BACKUP_FILE:-none})"
 
 printf '\nDeployed %s successfully.\nFinal manual check: submit the live contact form and confirm a new row in `enquiries`\nand a matching `enquiry.submitted` row in `audit_events` (same request_id).\n' "$COMMIT"
+}
+
+main "$@"
