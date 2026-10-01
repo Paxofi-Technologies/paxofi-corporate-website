@@ -117,7 +117,8 @@ if [[ "$SKIP_BACKUP" -eq 0 ]]; then
     step "Back up database"
     [[ -n "$MYSQLDUMP_BIN" ]] || fail "mariadb-dump/mysqldump not found (set MYSQLDUMP_BIN, or --skip-backup after taking a backup in phpMyAdmin)"
     mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
-    DEFAULTS_FILE="$(mktemp)"; chmod 600 "$DEFAULTS_FILE"
+    # Credentials file lives in the private (700) backup directory, not a shared /tmp.
+    DEFAULTS_FILE="$(mktemp "$BACKUP_DIR/.client-XXXXXX.cnf")"; chmod 600 "$DEFAULTS_FILE"
     # Option-file values are written quoted and escaped by PHP, so passwords
     # containing #, ;, quotes or backslashes are passed through intact.
     DB_NAME="$(cd "$API_STAGE/backend" && "$PHP_BIN" -r '
