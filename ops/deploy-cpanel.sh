@@ -190,6 +190,14 @@ check "CORS preflight from $SITE_URL" 204 -X OPTIONS "$API_URL/forms/contact/sub
     -H "Origin: $SITE_URL" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type"
 check "Frontend home" 200 "$SITE_URL/"
 check "Frontend contact" 200 "$SITE_URL/contact"
+# A page can return 200 while its JavaScript fails (e.g. a stale process after
+# an upgrade), which silently breaks the contact form. Fetch a script it loads.
+CHUNK="$(curl -sS --max-time 20 "$SITE_URL/contact" 2>/dev/null | grep -o '/_next/static/chunks/[^"]*\.js' | head -1 || true)"
+if [[ -n "$CHUNK" ]]; then
+    check "Frontend JavaScript ($CHUNK)" 200 "$SITE_URL$CHUNK"
+else
+    echo "FAIL Frontend JavaScript (no script found in /contact)"; SMOKE_FAILED=1
+fi
 
 [[ "$SMOKE_FAILED" -eq 0 ]] || fail "smoke tests failed for commit $COMMIT (backup: ${BACKUP_FILE:-none})"
 
