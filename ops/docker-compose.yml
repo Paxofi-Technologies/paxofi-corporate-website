@@ -11,6 +11,25 @@ services:
   backend:
     image: php:8.4-cli
     working_dir: /app
-    command: php -S 0.0.0.0:8080 -t public public/index.php
+    # The stock image lacks pdo_mysql; install it, then serve the API.
+    command: sh -c "docker-php-ext-install pdo_mysql >/dev/null && php -S 0.0.0.0:8080 -t public public/index.php"
     volumes: ["../backend:/app"]
     ports: ["8080:8080"]
+    environment:
+      APP_ENV: development
+      DB_HOST: database
+      DB_DATABASE: paxofi_corporate_website
+      DB_USERNAME: paxofi
+      DB_PASSWORD: local-dev-only
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+    depends_on: [database]
+  database:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: paxofi_corporate_website
+      MARIADB_USER: paxofi
+      MARIADB_PASSWORD: local-dev-only
+      MARIADB_ROOT_PASSWORD: local-dev-only-root
+    # Migrations in ../database are applied in filename order on first start.
+    volumes: ["../database:/docker-entrypoint-initdb.d:ro"]
+    ports: ["3306:3306"]
