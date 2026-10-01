@@ -1,29 +1,43 @@
 {
-  "name": "paxofi/corporate-website-backend",
-  "description": "Paxofi Corporate Website pure PHP backend boundary",
-  "type": "project",
-  "license": "proprietary",
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "https://github.com/Paxofi-Technologies/paxofi-core-framework.git"
+    "name": "paxofi/corporate-website-backend",
+    "description": "Paxofi Corporate Website pure PHP backend boundary",
+    "type": "project",
+    "license": "proprietary",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Paxofi-Technologies/paxofi-core-framework.git"
+        }
+    ],
+    "require": {
+        "php": ">=8.4",
+        "paxofi-technologies/paxofi-core-framework": "~1.1.0",
+        "ext-pdo": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Paxofi\\CorporateWebsite\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Paxofi\\CorporateWebsite\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "@lint",
+            "phpunit --colors=never"
+        ],
+        "lint": "find public src tests config -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null",
+        "test:unit": "phpunit --colors=never --testsuite unit",
+        "test:integration": "phpunit --colors=never --testsuite integration"
+    },
+    "config": {
+        "sort-packages": true
     }
-  ],
-  "require": {
-    "php": ">=8.4",
-    "paxofi-technologies/paxofi-core-framework": "~1.1.0"
-  },
-  "autoload": {
-    "psr-4": {
-      "Paxofi\\CorporateWebsite\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Paxofi\\CorporateWebsite\\Tests\\": "tests/"
-    }
-  },
-  "scripts": {
-    "test": "php -l public/index.php && php -l src/Http/JsonResponse.php && php -l src/Database/Connection.php && php tests/ContractTest.php"
-  }
 }
