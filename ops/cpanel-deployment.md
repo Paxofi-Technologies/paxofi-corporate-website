@@ -1,5 +1,9 @@
 # cPanel Deployment — Version 1
 
+> **Primary method: upload packages.** Releases are deployed by uploading prebuilt ZIP files through cPanel File Manager and importing one SQL file in phpMyAdmin — no Git, Composer, npm or terminal on the server. Build them with `ops/package-release.sh`; the step-by-step guide shipped with each release is generated from `ops/DEPLOYMENT-GUIDE.template.md`.
+>
+> The Git-clone method below (`ops/deploy-cpanel.sh`) remains available for servers with terminal access.
+
 Target:
 - Next.js frontend via cPanel Application Manager / Passenger, Node.js 22.
 - PHP 8.4 API (PCF v1.1.0 consumed by Composer under `vendor/`).
