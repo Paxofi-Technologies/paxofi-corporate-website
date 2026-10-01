@@ -18,7 +18,7 @@ Frontend:
 3. Register the `frontend` directory as a Node.js application.
 4. Select Node.js 22.
 5. Set startup file to `app.js`.
-6. Run `npm install` and `npm run build` from `frontend`.
+6. Run `npm ci` and `npm run build` from `frontend` (installs the exact versions pinned in `package-lock.json`).
 7. Set `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_API_URL`.
 8. Enable the application.
 
