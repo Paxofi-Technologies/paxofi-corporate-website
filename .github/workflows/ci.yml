@@ -40,7 +40,7 @@ jobs:
       INTEGRATION_REQUIRED: '1'
     services:
       mariadb:
-        image: mariadb:11
+        image: mariadb:11.4  # matches production (paxoalhu_corporate dump: 11.4.13-MariaDB)
         env:
           MARIADB_ROOT_PASSWORD: ci-only-root-password
         ports: ['3306:3306']
@@ -90,6 +90,8 @@ jobs:
           test -f database/003_enquiry_rate_limit_index.sql
           test -f database/004_seed_published_catalog.sql
           test -f database/005_audit_event_action_index.sql
+          test -f database/006_innodb_utf8mb4_and_foreign_keys.sql
+          test -f backend/composer.lock
           if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md' --exclude='.gitignore'; then
             echo 'Potential secret-bearing file detected.'
             exit 1
