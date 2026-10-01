@@ -98,7 +98,8 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
    - Node.js version: **22**
    - Application root: `paxofi-corporate-website`
    - Application startup file: `app.js`
-   - **Environment variables** → Add Variable: `API_BASE_URL` = `{{API_URL}}`
+   - **Environment variables** → Add Variable: Name `API_BASE_URL`, Value `{{API_URL}}` (type the name without `=`).
+   - Variables left over from the old site (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NODE_ENV`) are not used by this package and can be deleted; *Application mode: Production* already sets `NODE_ENV`.
    - **Do not** click *Run NPM Install*: the package already contains everything.
    - **Save** (this writes cPanel's Node.js routing into the domain's document root from Step 0), then **Start App** (or **Restart**).
 5. **Test the website:** open {{SITE_URL}} and {{SITE_URL}}/contact. Pages load with styling and no error.
