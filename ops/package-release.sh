@@ -50,6 +50,9 @@ printf '%s\n' "$VERSION ($COMMIT)" > "$API/RELEASE.txt"
 # shellcheck disable=SC2086
 (cd "$API/backend" && "$COMPOSER_BIN" install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader $COMPOSER_FLAGS)
 [[ -d "$API/backend/vendor/paxofi-technologies/paxofi-core-framework" ]] || fail "PCF missing from vendor/"
+# Composer falls back to git checkouts when it cannot download archives; never
+# ship repository metadata to the server.
+find "$API/backend/vendor" -name .git -prune -exec rm -rf {} +
 [[ ! -e "$API/backend/.env" ]] || fail "refusing to package a .env file"
 (cd "$WORK/pkg-api" && zip -qr -X "$OUT_DIR/paxofi-api-runtime-$VERSION.zip" paxofi-api-runtime)
 
