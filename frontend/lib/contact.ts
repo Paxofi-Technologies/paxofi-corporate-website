@@ -12,6 +12,15 @@ export type SubmissionFailure = { message: string; fields: ContactFieldErrors };
 const GENERIC_FAILURE = "We could not send your enquiry. Please try again, or email hello@paxofi.com.";
 
 /**
+ * API base used by the server when rendering the contact page. API_BASE_URL is
+ * read at request time (set it on the server); NEXT_PUBLIC_API_URL is the
+ * build-time fallback.
+ */
+export function resolveApiBase(env: Record<string, string | undefined>): string | undefined {
+  return env.API_BASE_URL?.trim() || env.NEXT_PUBLIC_API_URL?.trim() || undefined;
+}
+
+/**
  * Builds the contact submission URL from the configured API base
  * (NEXT_PUBLIC_API_URL, e.g. "https://api.paxofi.com/api/v1").
  * Defaults to the same-origin API path when no base is configured.

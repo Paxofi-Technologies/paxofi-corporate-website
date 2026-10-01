@@ -7,12 +7,18 @@ namespace Paxofi\CorporateWebsite\Tests\Integration;
 use PDO;
 use Paxofi\Core\Configuration\Environment;
 use Paxofi\CorporateWebsite\Database\Connection;
+use Paxofi\CorporateWebsite\Database\Migrator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Runs against a real MySQL/MariaDB server. Each test class gets a freshly
- * created database with every migration in database/ applied in filename
- * order, which doubles as fresh-install migration evidence.
+ * Runs against a real MySQL/MariaDB server, rebuilding the database the way
+ * production was actually built, then upgrading it the supported way:
+ *
+ *   1. CREATE DATABASE with a latin1 default and apply 001–003 with MyISAM as
+ *      the session default engine (matches the cPanel host: see the
+ *      paxoalhu_corporate dump of 30 Sep 2026);
+ *   2. `Migrator::baseline('003')` to adopt that database;
+ *   3. `Migrator::migrate()` to apply everything newer (004+).
  *
  * Configure with DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD (a user allowed to
  * create databases) and optionally DB_TEST_DATABASE. Without DB_HOST the
@@ -20,10 +26,37 @@ use PHPUnit\Framework\TestCase;
  */
 abstract class DatabaseTestCase extends TestCase
 {
+    protected const PRODUCTION_BASELINE = '003';
+
     protected static PDO $pdo;
     protected static Environment $environment;
 
     public static function setUpBeforeClass(): void
+    {
+        $database = getenv('DB_TEST_DATABASE') ?: 'cw_integration_test';
+        self::$environment = self::environmentFor($database);
+
+        $server = self::server();
+        self::recreate($server, $database, 'CHARACTER SET latin1 COLLATE latin1_swedish_ci');
+
+        $server->exec("USE `{$database}`");
+        $server->exec('SET SESSION default_storage_engine = MyISAM');
+        foreach (self::migrationFiles() as $version => $file) {
+            if (strcmp(substr($version, 0, 3), self::PRODUCTION_BASELINE) > 0) {
+                break;
+            }
+            foreach (Migrator::statements((string) file_get_contents($file)) as $statement) {
+                $server->exec($statement);
+            }
+        }
+
+        self::$pdo = Connection::make(self::$environment);
+        $migrator = new Migrator(self::$pdo, self::migrationsDirectory());
+        $migrator->baseline(self::PRODUCTION_BASELINE);
+        $migrator->migrate();
+    }
+
+    protected static function environmentFor(string $database): Environment
     {
         if ((getenv('DB_HOST') ?: '') === '') {
             if (getenv('INTEGRATION_REQUIRED') === '1') {
@@ -31,22 +64,11 @@ abstract class DatabaseTestCase extends TestCase
             }
             self::markTestSkipped('Integration database not configured (set DB_HOST).');
         }
-
-        $database = getenv('DB_TEST_DATABASE') ?: 'cw_integration_test';
         if (preg_match('/^[A-Za-z0-9_]+$/', $database) !== 1) {
             self::fail('DB_TEST_DATABASE must be a plain identifier.');
         }
 
-        $server = new PDO(
-            sprintf('mysql:host=%s;port=%s;charset=utf8mb4', getenv('DB_HOST'), getenv('DB_PORT') ?: '3306'),
-            (string) getenv('DB_USERNAME'),
-            (string) getenv('DB_PASSWORD'),
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
-        );
-        $server->exec("DROP DATABASE IF EXISTS `{$database}`");
-        $server->exec("CREATE DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-
-        self::$environment = Environment::from([
+        return Environment::from([
             'APP_ENV' => 'testing',
             'DB_HOST' => (string) getenv('DB_HOST'),
             'DB_PORT' => getenv('DB_PORT') ?: '3306',
@@ -56,26 +78,38 @@ abstract class DatabaseTestCase extends TestCase
             'CORS_ALLOWED_ORIGINS' => 'https://paxofi.com',
             'CONTACT_RATE_LIMIT_MAX' => '3',
         ]);
-        self::$pdo = Connection::make(self::$environment);
-
-        foreach (self::migrationFiles() as $file) {
-            self::applySqlFile($file);
-        }
     }
 
-    /** @return list<string> */
+    protected static function server(): PDO
+    {
+        return new PDO(
+            sprintf('mysql:host=%s;port=%s;charset=utf8mb4', getenv('DB_HOST'), getenv('DB_PORT') ?: '3306'),
+            (string) getenv('DB_USERNAME'),
+            (string) getenv('DB_PASSWORD'),
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+        );
+    }
+
+    protected static function recreate(PDO $server, string $database, string $options = ''): void
+    {
+        $server->exec("DROP DATABASE IF EXISTS `{$database}`");
+        $server->exec("CREATE DATABASE `{$database}` {$options}");
+    }
+
+    protected static function migrationsDirectory(): string
+    {
+        return dirname(__DIR__, 3) . '/database';
+    }
+
+    /** @return array<string, string> */
     protected static function migrationFiles(): array
     {
-        $files = glob(dirname(__DIR__, 3) . '/database/[0-9][0-9][0-9]_*.sql') ?: [];
-        sort($files, SORT_STRING);
-
-        return $files;
+        return (new Migrator(new PDO('sqlite::memory:'), self::migrationsDirectory()))->available();
     }
 
     protected static function applySqlFile(string $file): void
     {
-        $sql = (string) preg_replace('/^\s*--.*$/m', '', (string) file_get_contents($file));
-        foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
+        foreach (Migrator::statements((string) file_get_contents($file)) as $statement) {
             self::$pdo->exec($statement);
         }
     }

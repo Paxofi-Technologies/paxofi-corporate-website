@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Paxofi\CorporateWebsite\Tests\Unit\Application;
 
 use Paxofi\Core\Logging\NullLogger;
-use Paxofi\CorporateWebsite\Application\Audit\AuditEvent;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
 use Paxofi\CorporateWebsite\Application\Contact\EnquiryValidator;
 use Paxofi\CorporateWebsite\Application\Exception\RateLimited;
@@ -65,7 +64,7 @@ final class ContactServiceTest extends TestCase
         }
     }
 
-    public function testRateLimitIsEnforcedAndAudited(): void
+    public function testRateLimitIsEnforcedWithoutDatabaseWrites(): void
     {
         $this->enquiries->recentCount = 2;
 
@@ -77,8 +76,8 @@ final class ContactServiceTest extends TestCase
         }
 
         self::assertSame([], $this->enquiries->stored);
-        self::assertSame('enquiry.rate_limited', $this->audit->events[0]->action);
-        self::assertSame(AuditEvent::OUTCOME_DENIED, $this->audit->events[0]->outcome);
+        self::assertSame([], $this->audit->events, 'blocked requests must not write audit rows');
+        self::assertSame(0, $this->transactions->transactions);
     }
 
     public function testHoneypotSubmissionIsAcknowledgedButDiscarded(): void

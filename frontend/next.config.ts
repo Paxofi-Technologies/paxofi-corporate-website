@@ -8,6 +8,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Self-contained server bundle (server.js + traced node_modules) for the
+  // cPanel upload package; see ops/package-release.sh.
+  output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {

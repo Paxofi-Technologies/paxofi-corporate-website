@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
-import { contactEndpoint } from "@/lib/contact";
+import { contactEndpoint, resolveApiBase } from "@/lib/contact";
 import "./contact.css";
+
+// Rendered per request so API_BASE_URL can be changed on the server
+// (cPanel → Application Manager → Environment variables) without a rebuild.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -18,7 +22,7 @@ export default function Contact() {
         <p className="hero-copy">
           Tell us what you are trying to achieve and we&apos;ll help map the next practical step.
         </p>
-        <ContactForm endpoint={contactEndpoint(process.env.NEXT_PUBLIC_API_URL)} />
+        <ContactForm endpoint={contactEndpoint(resolveApiBase(process.env))} />
       </div>
     </section>
   );

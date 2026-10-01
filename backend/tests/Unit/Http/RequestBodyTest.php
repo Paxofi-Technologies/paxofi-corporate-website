@@ -42,6 +42,11 @@ final class RequestBodyTest extends TestCase
         RequestBody::parse(self::request('POST', '/', ['content-type' => 'application/json'], str_repeat(' ', RequestFactory::MAX_BODY_BYTES + 1)));
     }
 
+    public function testHeadIsServedAsGet(): void
+    {
+        self::assertSame('GET', RequestFactory::fromGlobals(['REQUEST_METHOD' => 'HEAD', 'REQUEST_URI' => '/api/v1/health'], [], '')->method());
+    }
+
     public function testRequestFactoryMapsServerVariables(): void
     {
         $request = RequestFactory::fromGlobals(
