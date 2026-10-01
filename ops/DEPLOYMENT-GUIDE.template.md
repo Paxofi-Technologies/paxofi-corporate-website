@@ -106,6 +106,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 | Symptom | Fix |
 |---|---|
 | API shows *500* or *"The service is misconfigured"* | `.env` missing or wrong in `paxofi-api-runtime/backend/` (Step 3.4); `APP_ENV` must be `production`. Check `paxofi-api-runtime/backend/public/error_log`. |
+| `error_log` says *backend/.env exists but is not readable by PHP* | Right-click `.env` → **Change Permissions** → `600` (owner read/write). It must belong to your cPanel account, which it does when created or copied in File Manager. |
 | API `/health` gives *404 Not Found* (HTML page) | API domain document root is not `paxofi-api-runtime/backend/public` (Step 0), or `public/.htaccess` is missing (enable *Show Hidden Files*; re-extract if needed) — then redo Step 3.6. |
 | `/readiness` shows `"database":false` | `DB_*` values in `.env` are wrong, or the database user lacks privileges on `paxoalhu_corporate` (cPanel → MySQL Databases). |
 | Contact form says *"We could not send your enquiry"*; the browser console (F12) mentions **CORS** | `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `{{SITE_URL}}` (no trailing slash). |

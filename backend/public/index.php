@@ -17,6 +17,12 @@ use Paxofi\CorporateWebsite\Bootstrap\Settings;
 use Paxofi\CorporateWebsite\Http\RequestFactory;
 use Paxofi\CorporateWebsite\Http\ResponseEmitter;
 
+// Never print PHP warnings into API responses, whatever the host's php.ini
+// says: they leak server paths and break status codes. Errors still reach
+// the server error log.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $method = is_string($_SERVER['REQUEST_METHOD'] ?? null) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
@@ -24,7 +30,12 @@ $method = is_string($_SERVER['REQUEST_METHOD'] ?? null) ? strtoupper($_SERVER['R
 try {
     // backend/.env (outside the public document root) is optional; real
     // process environment variables always take precedence.
-    $environment = Environment::from((new EnvLoader())->load(dirname(__DIR__) . '/.env'));
+    $envFile = dirname(__DIR__) . '/.env';
+    if (is_file($envFile) && !is_readable($envFile)) {
+        // Fail closed rather than silently running with empty configuration.
+        throw new RuntimeException('backend/.env exists but is not readable by PHP.');
+    }
+    $environment = Environment::from((new EnvLoader())->load($envFile));
     $logger = new StreamLogger(fopen('php://stderr', 'wb'));
     $application = new ApiApplication(Settings::fromEnvironment($environment), $logger);
 
