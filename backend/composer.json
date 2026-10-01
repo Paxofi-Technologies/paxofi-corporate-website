@@ -6,7 +6,8 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/Paxofi-Technologies/paxofi-core-framework.git"
+            "url": "https://github.com/Paxofi-Technologies/paxofi-core-framework.git",
+            "no-api": true
         }
     ],
     "require": {
@@ -38,6 +39,9 @@
         "test:integration": "phpunit --colors=never --testsuite integration"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4.0"
+        }
     }
 }

@@ -1,55 +1,89 @@
 # cPanel Deployment — Version 1
 
 Target:
-- Next.js frontend via cPanel Application Manager / Passenger.
-- Node.js 22.
-- PHP 8.4 backend.
-- MariaDB 10.11+ where available.
-- PCF v1.1.0 consumed by Composer under backend/vendor/.
+- Next.js frontend via cPanel Application Manager / Passenger, Node.js 22.
+- PHP 8.4 API (PCF v1.1.0 consumed by Composer under `vendor/`).
+- MariaDB 10.11+ (production: 11.4).
+
+Layout on the cPanel account (`/home/paxoalhu`):
+
+| Path | Role |
+|---|---|
+| `repositories/paxofi-corporate-website` | cPanel Git clone. **The only source of deployed code.** Tracks `main`. |
+| `paxofi-api-runtime/backend` | Runtime copy of `backend/`. The API domain's document root is `paxofi-api-runtime/backend/public`. Holds `.env` and `vendor/`. |
+| `paxofi-api-runtime/database` | Runtime copy of `database/` (used by the migration runner). |
+| `paxofi-corporate-website` | Next.js application root registered in Application Manager. Holds `.env.production`, `node_modules/`, `.next/`. |
+| `backups/corporate-website` | Database backups written by the deploy script (`chmod 700`). |
 
 Release source:
-- cPanel Git repository tracks `main` only for production deployment.
-- Engineering changes flow through feature branch → `develop` → `main`.
-- Do not deploy an unmerged feature branch to production.
+- Engineering changes flow feature branch → `develop` → `main`. Only `main` is deployed.
+- Never upload code by hand into the runtime directories; deploy from the Git clone with `ops/deploy-cpanel.sh`. Hand uploads drift from Git and cannot be traced or rolled back.
 
-Frontend:
-1. Clone the repository with cPanel Git Version Control.
-2. Keep the production checkout on the `main` branch.
-3. Register the `frontend` directory as a Node.js application.
-4. Select Node.js 22.
-5. Set startup file to `app.js`.
-6. Run `npm ci` and `npm run build` from `frontend` (installs the exact versions pinned in `package-lock.json`).
-7. Set `NEXT_PUBLIC_SITE_URL` (e.g. `https://paxofi.com`) and `NEXT_PUBLIC_API_URL` to the API **base** (e.g. `https://api.paxofi.com/api/v1`) **before** `npm run build` — Next.js inlines `NEXT_PUBLIC_*` values at build time. The contact form posts to `{NEXT_PUBLIC_API_URL}/forms/contact/submit`.
-8. Enable the application.
+## One-time setup
 
-Backend:
-1. Point the API domain/subdomain document root to `backend/public`.
-2. Select PHP 8.4.
-3. Ensure Composer 2 is available for the cPanel account.
-4. Configure Composer authentication for the private PCF repository using a read-only GitHub credential. Keep the credential in Composer's global/project authentication store or an environment variable; never commit `auth.json` or a token.
-5. From the backend directory, run `composer install --no-dev --prefer-dist --optimize-autoloader`.
-6. Confirm PCF v1.1.x is installed under `backend/vendor/paxofi-technologies/paxofi-core-framework`.
-7. Configure the backend environment. Either set real environment variables, or create `backend/.env` from `.env.example` (it sits outside the `backend/public` document root; permissions `600`). Required in production:
+1. **Private PCF access for Composer.** PCF is a private GitHub repository. Give Composer a read-only credential (fine-grained token with *Contents: read* on `paxofi-core-framework`), stored only in Composer's auth store:
+   `composer config --global github-oauth.github.com <token>`
+   Never put it in `composer.json`, Git, or a public directory.
+2. **API environment.** Create `paxofi-api-runtime/backend/.env` from the repo's `.env.example`, `chmod 600`:
    - `APP_ENV=production`
-   - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
-   - `CORS_ALLOWED_ORIGINS=https://paxofi.com,https://www.paxofi.com` (exact frontend origins; without this, browsers block the contact form)
-8. Apply `database/001_initial_schema.sql`, then every subsequent migration in filename order (002 → 005). `004_seed_published_catalog.sql` loads the V1 products and services; it is safe to re-run.
-9. Verify GET `/api/v1/health` returns 200 and GET `/api/v1/readiness` returns 200 with `"database": true`.
-10. Verify GET `/api/v1/products` returns the two seeded products.
-11. Verify the CORS preflight from the live frontend origin:
-    `curl -i -X OPTIONS https://api.paxofi.com/api/v1/forms/contact/submit -H "Origin: https://paxofi.com" -H "Access-Control-Request-Method: POST"` → `204` with `Access-Control-Allow-Origin: https://paxofi.com`.
-12. Submit the public contact form from the live site and confirm one new row in `enquiries` and a matching `enquiry.submitted` row in `audit_events` (same `request_id`) before production authorization.
+   - `DB_HOST`, `DB_PORT`, `DB_DATABASE=paxoalhu_corporate`, `DB_USERNAME`, `DB_PASSWORD`
+   - `CORS_ALLOWED_ORIGINS=https://corporate.paxofi.com` (every live frontend origin, comma-separated; without it browsers block the contact form)
+3. **Frontend environment.** Create `paxofi-corporate-website/.env.production`, `chmod 600`:
+   - `NEXT_PUBLIC_SITE_URL=https://corporate.paxofi.com`
+   - `NEXT_PUBLIC_API_URL=https://<api-domain>/api/v1` (the API **base**; the form posts to `{base}/forms/contact/submit`). Next.js inlines these at **build** time, so the deploy script rebuilds after any change.
+4. **Application Manager.** Application root `paxofi-corporate-website`, Node.js 22, startup file `app.js`, domain `corporate.paxofi.com`.
+5. **API domain.** Document root `paxofi-api-runtime/backend/public`, PHP 8.4 (MultiPHP Manager), TLS enabled.
 
-Composer private-repository requirement:
-- The PCF repository is private, so Composer must have read access when resolving the VCS dependency.
-- A fine-grained GitHub credential scoped to the PCF repository with read-only contents access is sufficient.
-- Do not place credentials in `composer.json`, source files, Git history, or public document roots.
-- If cPanel SSH keys are used instead, the PCF repository may be accessed through a read-only GitHub deploy key.
+## Deploying
 
-Operational controls:
+The very first time, the clone does not yet contain the deploy script, so update it once by hand (cPanel → Git Version Control → *Manage* → *Pull or Deploy* → *Update from Remote*, or):
+
+```bash
+git -C ~/repositories/paxofi-corporate-website pull --ff-only
+```
+
+From then on, from cPanel Terminal (or SSH):
+
+```bash
+bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh
+```
+
+The script, in order:
+
+1. fast-forwards the clone to `origin/main` and re-runs itself from the updated copy;
+2. **stages** the API (`composer install --no-dev` from the committed `composer.lock`) in `paxofi-api-runtime/.staging` and the frontend (`npm ci && npm run build`) in `~/.paxofi-frontend-staging` — nothing live changes yet;
+3. backs up the database to `~/backups/corporate-website`;
+4. applies pending migrations with `bin/migrate.php`;
+5. **promotes** the staged API and frontend into the live directories (never overwriting `.env`, `.env.production`, `.htaccess`, `.user.ini`, `php.ini` or logs) and restarts Passenger;
+6. smoke-tests health, readiness, the database-backed catalogue, the CORS preflight from the site origin, and the home and contact pages.
+
+It stops at the first failure. A failure in steps 1–3 leaves production exactly as it was.
+
+### First deployment onto the existing production database (once)
+
+The production database was built by hand with migrations 001–003 before they were tracked, and every table is MyISAM + latin1 (30 Sep 2026 dump). Adopt it and apply 004–006 (006 converts it to InnoDB + utf8mb4 with foreign keys):
+
+```bash
+bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh --baseline 003
+```
+
+Use `--baseline` exactly once. Later deployments run without it; the runner refuses a second baseline.
+
+Useful options: `--skip-frontend` (API/database only), `--skip-backup` (only after a manual phpMyAdmin export). Paths and binaries can be overridden with `REPO_DIR`, `API_RUNTIME_DIR`, `FRONTEND_APP_DIR`, `NODE_VENV`, `PHP_BIN`, `COMPOSER_BIN`.
+
+### Final manual check
+
+Submit the live contact form, then in phpMyAdmin confirm one new row in `enquiries` and a matching `enquiry.submitted` row in `audit_events` with the same `request_id`.
+
+## Rollback / forward recovery
+
+- **Code:** revert the bad commit on `main` through a PR, then run the deploy script again. (The script only fast-forwards, so it never deploys anything that is not on `main`.)
+- **Database:** migrations are forward-only. If a migration fails part-way, restore the backup the script just wrote (`gunzip -c <file> | mariadb <db>`) or fix forward with a new migration. Migration 006 is safe to re-run.
+
+## Operational controls
+
 - TLS must be enabled before public traffic.
-- Database credentials are environment/provider secrets.
-- Backups must be enabled before production data collection.
-- Do not expose backend source directories, `vendor/`, or repository metadata as public document roots.
-- Do not commit `vendor/`, `backend/.env` or environment secrets.
-- API errors are logged as JSON lines to PHP's stderr/error log with the request id; give support the `X-Request-Id` response header value when reporting a problem.
+- Backups must exist before production data collection; the deploy script writes one per deployment, and cPanel's scheduled backups should also include the database.
+- Do not expose `backend/` (other than `public/`), `vendor/`, `database/` or repository metadata through a document root.
+- Do not commit `vendor/`, `backend/.env`, `.env.production` or any credential.
+- API errors are logged as JSON lines to PHP's error log with the request id; ask for the `X-Request-Id` response header value when someone reports a problem.

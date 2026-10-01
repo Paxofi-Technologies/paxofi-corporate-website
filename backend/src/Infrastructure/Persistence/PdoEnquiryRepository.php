@@ -19,22 +19,24 @@ final class PdoEnquiryRepository implements EnquiryRepository
 
     public function countRecent(?string $clientIp, string $email, int $windowMinutes): int
     {
-        // Two indexed lookups (idx_enquiries_source_ip_created, idx_enquiries_email_created)
-        // instead of an OR that would defeat both indexes.
-        $sql = 'SELECT COUNT(*) AS total FROM enquiries
-                WHERE created_at >= (CURRENT_TIMESTAMP - INTERVAL %d MINUTE) AND %s = :value';
+        // Enquiries matching the email OR the IP, counted once each. A UNION of
+        // two indexed lookups (idx_enquiries_email_created,
+        // idx_enquiries_source_ip_created) keeps both indexes usable.
+        $since = sprintf('created_at >= (CURRENT_TIMESTAMP - INTERVAL %d MINUTE)', $windowMinutes);
+        $sql = "SELECT id FROM enquiries WHERE {$since} AND email = :email";
+        $parameters = ['email' => $email];
+        if ($clientIp !== null && $clientIp !== '') {
+            $sql .= " UNION SELECT id FROM enquiries WHERE {$since} AND source_ip = :client_ip";
+            $parameters['client_ip'] = $clientIp;
+        }
 
         try {
-            $total = (int) ($this->database->reader()->fetchAll(sprintf($sql, $windowMinutes, 'email'), ['value' => $email])[0]['total'] ?? 0);
-            if ($clientIp !== null && $clientIp !== '') {
-                $byIp = (int) ($this->database->reader()->fetchAll(sprintf($sql, $windowMinutes, 'source_ip'), ['value' => $clientIp])[0]['total'] ?? 0);
-                $total = max($total, $byIp);
-            }
+            $rows = $this->database->reader()->fetchAll("SELECT COUNT(*) AS total FROM ({$sql}) recent", $parameters);
         } catch (PersistenceException $exception) {
             throw new DependencyUnavailable(previous: $exception);
         }
 
-        return $total;
+        return (int) ($rows[0]['total'] ?? 0);
     }
 
     public function add(EnquirySubmission $submission, RequestContext $context): string
@@ -53,7 +55,7 @@ final class PdoEnquiryRepository implements EnquiryRepository
                     'message' => $submission->message,
                     'status' => 'new',
                     'source_ip' => $context->clientIp,
-                    'user_agent' => $context->userAgent === null ? null : mb_substr($context->userAgent, 0, 500),
+                    'user_agent' => $context->userAgent === null ? null : mb_substr(mb_scrub($context->userAgent, 'UTF-8'), 0, 500),
                     'request_id' => $context->requestId,
                 ],
             );

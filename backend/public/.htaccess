@@ -1,0 +1,10 @@
+# API front controller routing for Apache / LiteSpeed (cPanel).
+# The deploy script installs this file only when the live document root has
+# none, and never overwrites an existing one: cPanel's MultiPHP Manager keeps
+# its PHP 8.4 handler lines in the live copy.
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
