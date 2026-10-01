@@ -1,3 +1,6 @@
+# Local development stack. Before the first `docker compose up`, install the
+# backend dependencies once (PCF is private; needs Composer GitHub auth):
+#   (cd backend && composer install)
 services:
   frontend:
     image: node:22-alpine
@@ -11,9 +14,10 @@ services:
   backend:
     image: php:8.4-cli
     working_dir: /app
-    # The stock image lacks pdo_mysql; install it, then serve the API.
-    command: sh -c "docker-php-ext-install pdo_mysql >/dev/null && php -S 0.0.0.0:8080 -t public public/index.php"
-    volumes: ["../backend:/app"]
+    # The stock image lacks pdo_mysql. Migrations run through the same runner
+    # as production (bin/migrate.php), then the API is served.
+    command: sh -c "docker-php-ext-install pdo_mysql >/dev/null && php bin/migrate.php && php -S 0.0.0.0:8080 -t public public/index.php"
+    volumes: ["../backend:/app", "../database:/database:ro"]
     ports: ["8080:8080"]
     environment:
       APP_ENV: development
@@ -22,14 +26,18 @@ services:
       DB_USERNAME: paxofi
       DB_PASSWORD: local-dev-only
       CORS_ALLOWED_ORIGINS: http://localhost:3000
-    depends_on: [database]
+    depends_on:
+      database:
+        condition: service_healthy
   database:
-    image: mariadb:11
+    image: mariadb:11.4
     environment:
       MARIADB_DATABASE: paxofi_corporate_website
       MARIADB_USER: paxofi
       MARIADB_PASSWORD: local-dev-only
       MARIADB_ROOT_PASSWORD: local-dev-only-root
-    # Migrations in ../database are applied in filename order on first start.
-    volumes: ["../database:/docker-entrypoint-initdb.d:ro"]
     ports: ["3306:3306"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20

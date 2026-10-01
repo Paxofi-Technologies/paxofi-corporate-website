@@ -33,6 +33,17 @@ final class PaginationTest extends TestCase
         Pagination::fromQuery(['page' => '0', 'per_page' => '500']);
     }
 
+    public function testRejectsPagesThatWouldOverflowTheOffset(): void
+    {
+        $this->expectException(ValidationFailed::class);
+        Pagination::fromQuery(['page' => (string) PHP_INT_MAX]);
+    }
+
+    public function testAcceptsTheLastAllowedPage(): void
+    {
+        self::assertSame((Pagination::MAX_PAGE - 1) * 50, Pagination::fromQuery(['page' => (string) Pagination::MAX_PAGE, 'per_page' => '50'])->offset());
+    }
+
     public function testRejectsNonNumericValues(): void
     {
         $this->expectException(ValidationFailed::class);

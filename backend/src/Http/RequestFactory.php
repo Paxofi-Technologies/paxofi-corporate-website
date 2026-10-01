@@ -38,9 +38,11 @@ final class RequestFactory
         }
 
         $clientIp = $server['REMOTE_ADDR'] ?? null;
+        $method = is_string($server['REQUEST_METHOD'] ?? null) ? strtoupper($server['REQUEST_METHOD']) : 'GET';
 
         return new Request(
-            is_string($server['REQUEST_METHOD'] ?? null) ? $server['REQUEST_METHOD'] : 'GET',
+            // HEAD is answered as GET; the SAPI emitter drops the body (RFC 9110 §9.3.2).
+            $method === 'HEAD' ? 'GET' : $method,
             is_string($server['REQUEST_URI'] ?? null) ? $server['REQUEST_URI'] : '/',
             $headers,
             $body,

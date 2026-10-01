@@ -4,10 +4,11 @@
 # Deploys the `main` branch from the cPanel Git clone into the two runtime
 # directories, in a fixed order:
 #   1. update the Git clone (fast-forward only)
-#   2. back up the database
-#   3. sync + composer install the API, then apply database migrations
-#   4. sync + npm ci + build the Next.js frontend, then restart Passenger
-#   5. smoke-test the live API (health, readiness, catalogue, CORS)
+#   2. stage the API (composer install) and frontend (npm ci + build)
+#      in separate directories; nothing live changes yet
+#   3. back up the database, then apply database migrations
+#   4. promote the staged API and frontend, restart Passenger
+#   5. smoke-test (health, readiness, catalogue, CORS, pages)
 #
 # Run from cPanel Terminal:
 #   bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh
@@ -17,7 +18,7 @@
 #   bash ~/repositories/paxofi-corporate-website/ops/deploy-cpanel.sh --baseline 003
 #
 # Every path and binary can be overridden with the environment variables
-# below. Nothing here deletes backend/.env, frontend .env* files or vendor/.
+# below. Live .env files, .htaccess, .user.ini and php.ini are never overwritten.
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-$HOME/repositories/paxofi-corporate-website}"
@@ -43,7 +44,7 @@ while [[ $# -gt 0 ]]; do
         --baseline) BASELINE="${2:?--baseline needs a migration number, e.g. 003}"; shift 2 ;;
         --skip-frontend) SKIP_FRONTEND=1; shift ;;
         --skip-backup) SKIP_BACKUP=1; shift ;;
-        -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -67,61 +68,83 @@ git -C "$REPO_DIR" merge --ff-only --quiet "origin/$BRANCH"
 COMMIT="$(git -C "$REPO_DIR" rev-parse --short HEAD)"
 echo "Deploying commit $COMMIT"
 
-# Reads DB_* from backend/.env (process environment wins), via the PCF loader.
-db_setting() {
-    (cd "$API_BACKEND" && "$PHP_BIN" -r '
-        require "vendor/autoload.php";
-        $v = (new Paxofi\Core\Configuration\EnvLoader())->load(".env");
-        echo $v[$argv[1]] ?? ($argv[2] ?? "");' "$1" "${2:-}")
-}
+API_STAGE="$API_RUNTIME_DIR/.staging"
+FRONTEND_STAGE="${FRONTEND_STAGE:-$HOME/.paxofi-frontend-staging}"
+# Never synced over the live runtime: secrets, host-managed PHP/handler config, logs.
+PROTECT=(--exclude .env --exclude '.env.*' --exclude .htaccess --exclude .user.ini --exclude php.ini --exclude error_log --exclude '*.log')
+cleanup() { rm -f "$API_STAGE/backend/.env" "${DEFAULTS_FILE:-}"; }
+trap cleanup EXIT
 
-if [[ "$SKIP_BACKUP" -eq 0 ]]; then
-    step "Back up database"
-    [[ -n "$MYSQLDUMP_BIN" ]] || fail "mariadb-dump/mysqldump not found (set MYSQLDUMP_BIN, or --skip-backup after taking a backup in phpMyAdmin)"
-    [[ -f "$API_BACKEND/vendor/autoload.php" ]] || fail "No vendor/ in $API_BACKEND yet; run composer install there once, or use --skip-backup after a manual backup"
-    mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
-    DEFAULTS_FILE="$(mktemp)"; chmod 600 "$DEFAULTS_FILE"
-    trap 'rm -f "$DEFAULTS_FILE"' EXIT
-    printf '[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n' \
-        "$(db_setting DB_HOST 127.0.0.1)" "$(db_setting DB_PORT 3306)" "$(db_setting DB_USERNAME)" "$(db_setting DB_PASSWORD)" > "$DEFAULTS_FILE"
-    BACKUP_FILE="$BACKUP_DIR/$(db_setting DB_DATABASE)-$(date -u +%Y%m%dT%H%M%SZ)-before-$COMMIT.sql.gz"
-    "$MYSQLDUMP_BIN" --defaults-extra-file="$DEFAULTS_FILE" --single-transaction --routines --triggers "$(db_setting DB_DATABASE)" | gzip > "$BACKUP_FILE"
-    chmod 600 "$BACKUP_FILE"
-    echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
-fi
+# Everything below is prepared in staging directories first. The live API
+# and frontend only change in the "Promote" steps, after dependencies,
+# backup and migrations have all succeeded.
 
-step "Sync API code and migrations"
-mkdir -p "$API_BACKEND"
-for dir in bin config public src; do
-    rsync -a --delete "$REPO_DIR/backend/$dir/" "$API_BACKEND/$dir/"
-done
-rsync -a "$REPO_DIR/backend/composer.json" "$REPO_DIR/backend/composer.lock" "$REPO_DIR/backend/README.md" "$API_BACKEND/"
-rsync -a --delete "$REPO_DIR/database/" "$API_RUNTIME_DIR/database/"
-
-step "Install API dependencies (composer.lock, no dev)"
-(cd "$API_BACKEND" && "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader)
-[[ -d "$API_BACKEND/vendor/paxofi-technologies/paxofi-core-framework" ]] || fail "PCF not installed under vendor/"
-
-step "Apply database migrations"
-if [[ -n "$BASELINE" ]]; then
-    (cd "$API_BACKEND" && "$PHP_BIN" bin/migrate.php --baseline="$BASELINE")
-fi
-(cd "$API_BACKEND" && "$PHP_BIN" bin/migrate.php)
-(cd "$API_BACKEND" && "$PHP_BIN" bin/migrate.php --status)
+step "Stage API (code + composer install from composer.lock, no dev)"
+mkdir -p "$API_STAGE"
+rsync -a --delete --exclude vendor/ --exclude tests/ --exclude phpunit.xml --exclude .phpunit.cache/ "${PROTECT[@]}" \
+    "$REPO_DIR/backend/" "$API_STAGE/backend/"
+rsync -a --delete "$REPO_DIR/database/" "$API_STAGE/database/"
+install -m 600 "$API_BACKEND/.env" "$API_STAGE/backend/.env"
+(cd "$API_STAGE/backend" && "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader)
+[[ -d "$API_STAGE/backend/vendor/paxofi-technologies/paxofi-core-framework" ]] || fail "PCF not installed under vendor/"
 
 if [[ "$SKIP_FRONTEND" -eq 0 ]]; then
-    step "Sync and build frontend"
+    step "Stage frontend (npm ci + next build)"
     [[ -f "$FRONTEND_APP_DIR/.env.production" ]] || fail "Missing $FRONTEND_APP_DIR/.env.production with NEXT_PUBLIC_SITE_URL and NEXT_PUBLIC_API_URL (read at build time)"
-    mkdir -p "$FRONTEND_APP_DIR"
-    rsync -a --delete \
-        --exclude node_modules/ --exclude .next/ --exclude tmp/ --exclude '.env*' --exclude '*.log' --exclude .htaccess \
-        "$REPO_DIR/frontend/" "$FRONTEND_APP_DIR/"
+    mkdir -p "$FRONTEND_STAGE"
+    rsync -a --delete --exclude node_modules/ --exclude .next/ "${PROTECT[@]}" "$REPO_DIR/frontend/" "$FRONTEND_STAGE/"
+    install -m 600 "$FRONTEND_APP_DIR/.env.production" "$FRONTEND_STAGE/.env.production"
     if [[ -f "$NODE_VENV" ]]; then
         # shellcheck disable=SC1090
         source "$NODE_VENV"
     fi
-    (cd "$FRONTEND_APP_DIR" && npm ci --no-audit --no-fund && npm run build)
-    mkdir -p "$FRONTEND_APP_DIR/tmp" && touch "$FRONTEND_APP_DIR/tmp/restart.txt"
+    (cd "$FRONTEND_STAGE" && npm ci --no-audit --no-fund && npm run build)
+fi
+
+if [[ "$SKIP_BACKUP" -eq 0 ]]; then
+    step "Back up database"
+    [[ -n "$MYSQLDUMP_BIN" ]] || fail "mariadb-dump/mysqldump not found (set MYSQLDUMP_BIN, or --skip-backup after taking a backup in phpMyAdmin)"
+    mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
+    DEFAULTS_FILE="$(mktemp)"; chmod 600 "$DEFAULTS_FILE"
+    # Option-file values are written quoted and escaped by PHP, so passwords
+    # containing #, ;, quotes or backslashes are passed through intact.
+    DB_NAME="$(cd "$API_STAGE/backend" && "$PHP_BIN" -r '
+        require "vendor/autoload.php";
+        $v = (new Paxofi\Core\Configuration\EnvLoader())->load(".env");
+        $q = static fn (string $s): string => "\"" . addcslashes($s, "\\\"") . "\"";
+        file_put_contents($argv[1], sprintf("[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n",
+            $q($v["DB_HOST"] ?? "127.0.0.1"), $q($v["DB_PORT"] ?? "3306"), $q($v["DB_USERNAME"] ?? ""), $q($v["DB_PASSWORD"] ?? "")));
+        echo $v["DB_DATABASE"] ?? "";' "$DEFAULTS_FILE")"
+    [[ -n "$DB_NAME" ]] || fail "DB_DATABASE is not set in $API_BACKEND/.env"
+    BACKUP_FILE="$BACKUP_DIR/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ)-before-$COMMIT.sql.gz"
+    "$MYSQLDUMP_BIN" --defaults-extra-file="$DEFAULTS_FILE" --single-transaction --routines --triggers "$DB_NAME" | gzip > "$BACKUP_FILE"
+    chmod 600 "$BACKUP_FILE"
+    echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+fi
+
+step "Apply database migrations"
+if [[ -n "$BASELINE" ]]; then
+    (cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php --baseline="$BASELINE")
+fi
+(cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php)
+(cd "$API_STAGE/backend" && "$PHP_BIN" bin/migrate.php --status)
+
+step "Promote API"
+mkdir -p "$API_BACKEND/public"
+rsync -a --delete "${PROTECT[@]}" "$API_STAGE/backend/" "$API_BACKEND/"
+rsync -a --delete "$API_STAGE/database/" "$API_RUNTIME_DIR/database/"
+if [[ ! -f "$API_BACKEND/public/.htaccess" ]]; then
+    install -m 644 "$REPO_DIR/backend/public/.htaccess" "$API_BACKEND/public/.htaccess"
+    echo "Installed API routing .htaccess."
+elif ! grep -q 'index.php' "$API_BACKEND/public/.htaccess"; then
+    echo "WARNING: $API_BACKEND/public/.htaccess has no rewrite to index.php; compare with backend/public/.htaccess in the repo."
+fi
+
+if [[ "$SKIP_FRONTEND" -eq 0 ]]; then
+    step "Promote frontend and restart Passenger"
+    mkdir -p "$FRONTEND_APP_DIR/tmp"
+    rsync -a --delete --exclude tmp/ "${PROTECT[@]}" "$FRONTEND_STAGE/" "$FRONTEND_APP_DIR/"
+    touch "$FRONTEND_APP_DIR/tmp/restart.txt"
     echo "Passenger restart requested."
 fi
 

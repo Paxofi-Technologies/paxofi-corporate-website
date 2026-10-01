@@ -114,8 +114,34 @@ final class PublicApiTest extends DatabaseTestCase
         }
 
         self::assertSame([202, 202, 202, 429], $statuses);
-        self::assertSame(1, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'enquiry.rate_limited'"));
+        self::assertSame(0, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'enquiry.rate_limited'"), 'blocked requests are logged, not stored');
         self::assertSame(3, (int) self::scalar("SELECT COUNT(*) FROM enquiries WHERE source_ip = '198.51.100.7'"));
+    }
+
+    public function testRateLimitCountsEmailAndAddressTogether(): void
+    {
+        // Two enquiries from 192.0.2.1 and one with the same email from elsewhere:
+        // three distinct recent enquiries match (address OR email), so the limit of 3 applies.
+        foreach ([['192.0.2.1', 'a1@example.com'], ['192.0.2.1', 'a2@example.com'], ['192.0.2.99', 'shared@example.com']] as [$ip, $email]) {
+            self::assertSame(202, $this->submitFrom($ip, $email)->status());
+        }
+
+        self::assertSame(429, $this->submitFrom('192.0.2.1', 'shared@example.com')->status());
+    }
+
+    public function testInvalidUtf8UserAgentIsStoredScrubbed(): void
+    {
+        $response = $this->app()->handle(self::jsonPost('/api/v1/forms/contact/submit', [
+            'name' => 'Agent', 'email' => 'agent@example.com', 'message' => 'Hello',
+        ], ['user-agent' => "Legacy\xE9Browser/1.0"]));
+
+        self::assertSame(202, $response->status());
+        self::assertSame('Legacy?Browser/1.0', self::scalar("SELECT user_agent FROM enquiries WHERE email = 'agent@example.com'"));
+    }
+
+    public function testHugePageNumberIsAValidationError(): void
+    {
+        self::assertSame(422, $this->app()->handle(self::request('GET', '/api/v1/products?page=9223372036854775807'))->status());
     }
 
     public function testHoneypotSubmissionIsNotStored(): void
@@ -141,6 +167,12 @@ final class PublicApiTest extends DatabaseTestCase
 
         self::assertSame(503, $response->status());
         self::assertSame(0, (int) self::scalar("SELECT COUNT(*) FROM enquiries WHERE email = 'rollback@example.com'"));
+    }
+
+    private function submitFrom(string $ip, string $email): \Paxofi\Core\Contracts\HttpResponse
+    {
+        return $this->app()->handle(self::request('POST', '/api/v1/forms/contact/submit', ['content-type' => 'application/json'],
+            json_encode(['name' => 'Combo', 'email' => $email, 'message' => 'hi'], JSON_THROW_ON_ERROR), [], $ip));
     }
 
     private function app(): ApiApplication

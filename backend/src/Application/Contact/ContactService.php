@@ -51,12 +51,12 @@ final class ContactService
         }
 
         if ($this->enquiries->countRecent($context->clientIp, $submission->email, $this->rateLimitWindowMinutes) >= $this->rateLimitMax) {
-            $this->audit->record(new AuditEvent(
-                action: 'enquiry.rate_limited',
-                outcome: AuditEvent::OUTCOME_DENIED,
-                targetType: 'enquiry',
-                requestId: $context->requestId,
-            ));
+            // Logged, not written to audit_events: a flood of blocked requests
+            // must not turn into a flood of database writes.
+            $this->logger->warning('enquiry.rate_limited', [
+                'request_id' => $context->requestId,
+                'client_ip' => $context->clientIp,
+            ]);
 
             throw new RateLimited($this->rateLimitWindowMinutes * 60);
         }
