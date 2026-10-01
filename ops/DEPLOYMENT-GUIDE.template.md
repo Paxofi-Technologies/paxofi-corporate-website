@@ -41,10 +41,18 @@ Order matters: **back up → database → API → website → test.** Allow abou
 
 cPanel → **Domains**:
 
-- The **API domain** (e.g. `api.paxofi.com`) document root must be `paxofi-api-runtime/backend/public`.
-- The **website domain** `corporate.paxofi.com` is served by the Node.js app (Application Manager, application root `paxofi-corporate-website`).
+| Domain | Document root must be | Why |
+|---|---|---|
+| API domain (e.g. `api.paxofi.com`) | `/paxofi-api-runtime/backend/public` | Only `public/` (index.php, .htaccess) is reachable from the web; `.env`, `src/`, `vendor/` are not. |
+| `corporate.paxofi.com` | `/corporate.paxofi.com` (its own folder, normally containing only `cgi-bin`) | It must **not** be the Node.js app folder `paxofi-corporate-website`. If it is, the web server can hand out files from the app folder directly (for example `.env` or `package.json`), and cPanel stores the Node.js routing file (`.htaccess`) inside the app folder, which breaks when the folder is replaced. |
 
-If the API domain points anywhere else, click **Manage** next to it and change the document root to `paxofi-api-runtime/backend/public`.
+To change a document root: **Domains** → **Manage** next to the domain → **New Document Root** → enter the path above → **Update**.
+
+If you change the document root of `corporate.paxofi.com`, cPanel must re-write its Node.js routing into the new location: do Step 4.4 (**Setup Node.js App → Edit → Save**) as written, and the site will route through Passenger again.
+
+Quick exposure check (before and after): open `https://corporate.paxofi.com/.env` and `https://corporate.paxofi.com/package.json` in a private browser window. Both must show **Not Found** (or the site's 404 page), never the file contents. If `.env` was ever downloadable, treat any secret in it as exposed and change it.
+
+**What the new website package looks like compared to the old folder.** The old `paxofi-corporate-website` folder contained source code (`app/`, `*.ts`, `tsconfig.json`, `package-lock.json`, `node_modules/`, `.next/`, `.env`) because the site was built on the server. This release is built and tested in advance, so the new folder contains only `app.js`, `package.json`, `RELEASE.txt` and `standalone/`. Nothing from the old folder needs to be copied over: the old `.env` is replaced by the `API_BASE_URL` setting in Step 4.4, and `tmp/` and `stderr.log` are recreated by cPanel.
 
 ## Step 1 — Back up the database (3 minutes)
 
@@ -92,7 +100,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
    - Application startup file: `app.js`
    - **Environment variables** → Add Variable: `API_BASE_URL` = `{{API_URL}}`
    - **Do not** click *Run NPM Install*: the package already contains everything.
-   - **Save**, then **Start App** (or **Restart**).
+   - **Save** (this writes cPanel's Node.js routing into the domain's document root from Step 0), then **Start App** (or **Restart**).
 5. **Test the website:** open {{SITE_URL}} and {{SITE_URL}}/contact. Pages load with styling and no error.
 
 ## Step 5 — Final check (5 minutes)
@@ -111,6 +119,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 | `/readiness` shows `"database":false` | `DB_*` values in `.env` are wrong, or the database user lacks privileges on `paxoalhu_corporate` (cPanel → MySQL Databases). |
 | Contact form says *"We could not send your enquiry"*; the browser console (F12) mentions **CORS** | `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `{{SITE_URL}}` (no trailing slash). |
 | Contact form error without CORS message | `API_BASE_URL` in the Node app's environment variables must be the API base ending in `/api/v1`; restart the app after changing it. |
+| Website shows a file list, *403 Forbidden*, downloads a file, or the default cPanel page | The `corporate.paxofi.com` document root is wrong or its Node.js routing was not written: redo Step 0, then Setup Node.js App → **Edit** → **Save** → **Restart**. |
 | Website shows *503* / *Incomplete response* | The Node app is stopped or failed: Setup Node.js App → **Start**/**Restart**; check `stderr.log` in `paxofi-corporate-website/`. Make sure the startup file is `app.js`. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 
