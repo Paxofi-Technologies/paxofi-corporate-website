@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
+import { contactEndpoint } from "@/lib/contact";
 import "./contact.css";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Talk to Paxofi Technologies about software engineering, digital products, infrastructure or partnerships.",
+  alternates: { canonical: "/contact" },
+};
 
 export default function Contact() {
   return (
@@ -13,7 +18,7 @@ export default function Contact() {
         <p className="hero-copy">
           Tell us what you are trying to achieve and we&apos;ll help map the next practical step.
         </p>
-        <ContactForm apiUrl={process.env.NEXT_PUBLIC_API_URL || "/api/v1/forms/contact/submit"} />
+        <ContactForm endpoint={contactEndpoint(process.env.NEXT_PUBLIC_API_URL)} />
       </div>
     </section>
   );
