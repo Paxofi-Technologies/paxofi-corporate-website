@@ -149,11 +149,13 @@ describe("navigation", () => {
     await nav.getByRole("link", { name: "About" }).click();
     await page.waitForURL(`${BASE}/about`);
 
-    assert.equal(await nav.getByRole("link", { name: "About" }).isVisible(), false, "menu closes after navigating");
+    // Menu state updates after React re-renders, so wait rather than read once.
+    await nav.getByRole("link", { name: "About" }).waitFor({ state: "hidden", timeout: 5000 });
     await page.getByRole("button", { name: "Open menu" }).click();
+    await nav.getByRole("link", { name: "About" }).waitFor({ state: "visible", timeout: 5000 });
     assert.equal(await nav.getByRole("link", { name: "About" }).getAttribute("aria-current"), "page");
     await page.keyboard.press("Escape");
-    assert.equal(await nav.getByRole("link", { name: "About" }).isVisible(), false, "Escape closes the menu");
+    await nav.getByRole("link", { name: "About" }).waitFor({ state: "hidden", timeout: 5000 });
     await page.context().close();
   });
 
