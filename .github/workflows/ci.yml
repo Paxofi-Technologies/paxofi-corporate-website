@@ -21,6 +21,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Dependency audit (fails on known vulnerabilities)
+        run: npm audit --audit-level=moderate
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
@@ -68,6 +70,8 @@ jobs:
           fi
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Dependency audit (fails on known vulnerabilities)
+        run: composer audit --no-interaction
       - run: composer test
 
   repository:
