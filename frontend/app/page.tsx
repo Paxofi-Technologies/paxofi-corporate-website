@@ -140,8 +140,8 @@ export default function Home() {
                 <span className="product-label">{label}</span>
                 <h3>{name}</h3>
                 <p>{text}</p>
-                <Link href="/products" aria-label={`Learn more about ${name}`}>
-                  Learn more <ArrowRight size={16} aria-hidden="true" />
+                <Link href="/products">
+                  More about {name} <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </article>
             ))}
