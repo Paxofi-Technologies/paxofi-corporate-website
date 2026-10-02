@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: {run: {working-directory: frontend}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -54,7 +54,7 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -78,7 +78,7 @@ jobs:
     name: Repository controls
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with: {node-version: 22}
       - name: Repository contract tests
@@ -116,7 +116,7 @@ jobs:
     env:
       COMPOSER_AUTH: ${{ secrets.PCF_COMPOSER_AUTH }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
