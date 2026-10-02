@@ -76,6 +76,16 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 
 Dependabot opens weekly update PRs against `develop`. CI fails on any known vulnerability (`npm audit`, `composer audit`). Merge only green PRs, promote `develop` → `main`, then deploy the new packages (RB-1).
 
+## Escalation
+
+| Severity | Examples | Who acts | Target response |
+|---|---|---|---|
+| **P1 — outage or security** | Website or API down, data exposure, defacement, contact form failing for everyone | Operator on duty → Engineering lead immediately; CEO informed for security incidents | Start within 1 hour; restore service (RB-2 rollback first, investigate after) |
+| **P2 — degraded** | Certificate warning, slow pages, intermittent errors, stale content | Operator → Engineering lead same day | Within 1 business day |
+| **P3 — minor** | Copy or design fixes, dependency update PRs | Engineering backlog (Asana) | Next planned release |
+
+Hosting-level problems (server down, MariaDB unavailable, LiteSpeed cache purge, DNS) go to the hosting provider (Namecheap support) with the time, the URL and the `request_id` if there is one. Record every P1/P2 in PKDMS with cause, fix and follow-up actions. Final SLA targets are pending SRS Appendix K (SRS-PL-02).
+
 ## Monitoring
 
 Not yet automated. Recommended: a free external uptime monitor (for example UptimeRobot or Better Stack) on `https://corporate.paxofi.com/release.txt` and `https://api.paxofi.com/api/v1/readiness` every 5 minutes, alerting the operations email. Owner decision needed (CW-OPS2-002).
