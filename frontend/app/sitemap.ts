@@ -1,1 +1,7 @@
-import type { MetadataRoute } from "next"; export default function sitemap():MetadataRoute.Sitemap{const base=process.env.NEXT_PUBLIC_SITE_URL||"https://paxofi.com"; return ["/","/about","/services","/products","/careers","/contact"].map(path=>({url:base+path,lastModified:new Date()}));}
+import type { MetadataRoute } from "next";
+import { PUBLIC_ROUTES, siteUrl } from "@/lib/site";
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = siteUrl();
+  return PUBLIC_ROUTES.map((path) => ({ url: path === "/" ? base : base + path }));
+}
