@@ -127,18 +127,17 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 
 ### One-time: stop the server cache from serving old pages
 
-Releases before `20261002-4aa5aa7` told the server cache (LiteSpeed) it could keep pages for up to a year; later releases forbid caching, but copies already stored can stay until they expire. Without access to LiteSpeed Web Cache Manager, switch the cache off for this site:
+Website releases up to and including `20261002-4aa5aa7` told the server cache (LiteSpeed) it could keep pages for up to a year. Later releases forbid caching, but copies already stored can stay until they expire. Without access to LiteSpeed Web Cache Manager, switch the cache off for this site:
 
 1. File Manager (with *Show Hidden Files* on) → `/home/paxoalhu/corporate.paxofi.com/` → right-click `.htaccess` → **Edit**.
-2. Add these lines at the **very top**, above everything cPanel wrote there (do not change the `CLOUDLINUX PASSENGER CONFIGURATION` lines):
-
-   ```apache
-   # Paxofi: never serve cached copies of the Node.js website
-   <IfModule LiteSpeed>
-   CacheLookup off
-   </IfModule>
-   ```
+2. Add the three lines below at the **very top**, above everything cPanel wrote there. Do not change the `CLOUDLINUX PASSENGER CONFIGURATION` lines.
 3. **Save Changes**, then reload the site in a private window.
+
+```apache
+<IfModule LiteSpeed>
+CacheLookup off
+</IfModule>
+```
 
 If the site shows an error after saving, remove the three added lines again and contact the hosting provider (Namecheap) to purge the LiteSpeed cache for `corporate.paxofi.com`.
 
