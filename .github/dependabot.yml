@@ -1,5 +1,13 @@
 # Weekly dependency update PRs (they target develop and must pass CI like any change).
 version: 2
+# The Paxofi Core Framework is a private GitHub repository. Dependabot reads it
+# with a read-only token stored as the Dependabot secret PCF_GITHUB_TOKEN.
+registries:
+  paxofi-github:
+    type: git
+    url: https://github.com
+    username: x-access-token
+    password: ${{secrets.PCF_GITHUB_TOKEN}}
 updates:
   - package-ecosystem: npm
     directory: /frontend
@@ -21,6 +29,7 @@ updates:
   - package-ecosystem: composer
     directory: /backend
     target-branch: develop
+    registries: [paxofi-github]
     schedule: {interval: weekly}
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
