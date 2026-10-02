@@ -1,3 +1,5 @@
+import { Cog, ShieldCheck } from "lucide-react";
+import { CtaBand, PageHero } from "@/components/Sections";
 import { pageMetadata } from "@/lib/site";
 
 export const metadata = pageMetadata(
@@ -8,33 +10,54 @@ export const metadata = pageMetadata(
 
 const products = [
   {
-    label: "PAXOFI PRODUCT",
+    icon: ShieldCheck,
+    label: "Paxofi Product",
     name: "Paxofi Pay",
     summary: "Digital payments infrastructure designed around reliability, transaction certainty, transparency, recovery and trust.",
+    points: ["Transaction certainty", "Transparency and traceability", "Recovery built in"],
   },
   {
-    label: "PAXOFI TECHNOLOGY",
+    icon: Cog,
+    label: "Paxofi Technology",
     name: "Paxofi Core Framework",
     summary: "An independent PHP application framework for maintainable internal, client, SaaS and API systems.",
+    points: ["Layered, testable architecture", "Secure HTTP and data foundations", "Built for long-lived systems"],
   },
 ];
 
 export default function Products() {
   return (
-    <section className="section">
-      <div className="container">
-        <span className="eyebrow">PRODUCTS</span>
-        <h1>Building our own technology, too.</h1>
-        <div className="grid-2 section-body">
-          {products.map(({ label, name, summary }) => (
-            <article className="product-card solid" key={name}>
-              <span>{label}</span>
-              <h2 className="card-title">{name}</h2>
+    <>
+      <PageHero
+        eyebrow="Products"
+        title="Building our own technology, too."
+        intro="Alongside client work, we build and operate products that put our principles into practice."
+      />
+
+      <section className="section">
+        <div className="container grid grid-2">
+          {products.map(({ icon: Icon, label, name, summary, points }) => (
+            <article className="product-card product-card--large" key={name}>
+              <span className="product-icon" aria-hidden="true">
+                <Icon size={28} strokeWidth={1.75} />
+              </span>
+              <span className="product-label">{label}</span>
+              <h2>{name}</h2>
               <p>{summary}</p>
+              <ul className="check-list">
+                {points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
             </article>
           ))}
         </div>
-      </div>
-    </section>
+      </section>
+
+      <CtaBand
+        title="Interested in our products?"
+        text="Talk to us about partnerships, early access or building on Paxofi technology."
+      />
+    </>
   );
 }
