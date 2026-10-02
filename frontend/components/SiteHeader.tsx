@@ -12,16 +12,17 @@ function isCurrent(pathname: string, href: string): boolean {
 
 export default function SiteHeader() {
   const pathname = usePathname() ?? "/";
-  const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
+  // The menu remembers the page it was opened on, so it is closed on any other
+  // page: navigating (by link or browser back/forward) closes it without an effect.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const close = () => setOpenOn(null);
 
-  // Close the mobile menu after navigating (links also close it on click, and
-  // browser back/forward changes the path) and when Escape is pressed.
-  useEffect(() => setOpen(false), [pathname]);
+  // Escape closes the menu.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setOpenOn(null);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -38,7 +39,7 @@ export default function SiteHeader() {
           className="menu-toggle"
           aria-expanded={open}
           aria-controls="primary-nav"
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setOpenOn(open ? null : pathname)}
         >
           <span className="menu-icon" aria-hidden="true" />
           <span className="visually-hidden">{open ? "Close menu" : "Open menu"}</span>
