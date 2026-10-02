@@ -93,7 +93,7 @@ Owner decision 2 Oct 2026: UptimeRobot (free plan, 5-minute checks, email alerts
 | # | Monitor type | Friendly name | URL | Setting |
 |---|---|---|---|---|
 | 1 | HTTP(s) | Paxofi website | `https://corporate.paxofi.com/` | Interval 5 min |
-| 2 | Keyword | Paxofi website release | `https://corporate.paxofi.com/release.txt` | Keyword `2026` → alert when **not exists** |
+| 2 | HTTP(s) | Paxofi website release | `https://corporate.paxofi.com/release.txt` | Interval 5 min (a 404 here means the Node.js app is not serving) |
 | 3 | Keyword | Paxofi API readiness | `https://api.paxofi.com/api/v1/readiness` | Keyword `"database":true` → alert when **not exists** |
 | 4 | HTTP(s) | Paxofi API health | `https://api.paxofi.com/api/v1/health` | Interval 5 min |
 
