@@ -194,6 +194,23 @@ describe("public pages", () => {
     for (const path of ROUTES.filter((p) => p !== "/")) assert.ok(sitemap.includes(`${path}</loc>`), path);
   });
 
+  test("every page has a large social share image (LinkedIn, WhatsApp, X)", async () => {
+    const page = await newPage();
+    for (const path of ROUTES) {
+      await page.goto(BASE + path);
+      const image = await page.locator('meta[property="og:image"]').getAttribute("content");
+      assert.match(image ?? "", /^https:\/\/\S+\/og-image\.png$/, `${path}: absolute og:image`);
+      assert.equal(await page.locator('meta[property="og:image:width"]').getAttribute("content"), "1200");
+      assert.equal(await page.locator('meta[property="og:image:height"]').getAttribute("content"), "630");
+      assert.ok(await page.locator('meta[property="og:description"]').getAttribute("content"), `${path}: og:description`);
+      assert.equal(await page.locator('meta[name="twitter:card"]').getAttribute("content"), "summary_large_image");
+    }
+    await page.context().close();
+    const response = await fetch(`${BASE}/og-image.png`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/png");
+  });
+
   test("the home page publishes Organization structured data", async () => {
     const page = await newPage();
     await page.goto(BASE);
