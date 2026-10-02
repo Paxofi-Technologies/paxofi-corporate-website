@@ -41,10 +41,11 @@ Website or API code: rename the new folder to `…-failed`, rename `…-old-<ver
 ## RB-4 Contact form not working
 
 1. Try the form in a private window and press F12 → Console.
-2. **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `https://corporate.paxofi.com`.
-3. Other network error → open `/api/v1/health` and `/readiness`. If the API is down, RB-5.
-4. *"You've sent several enquiries…"* → the rate limit (`CONTACT_RATE_LIMIT_MAX` per `CONTACT_RATE_LIMIT_WINDOW_MINUTES`, per email or IP) is working as designed; wait or raise the limit in `.env`.
-5. The form posts to `API_BASE_URL` (Setup Node.js App → environment variables); after changing it, **Restart**.
+2. Address bar shows **Not secure** / the console's CORS message names origin `http://corporate.paxofi.com` → the site is served without HTTPS: RB-6 (certificate) and cPanel → Domains → **Force HTTPS Redirect** on. Never add the `http://` origin to CORS (enquiries would travel unencrypted). (UAT defect DEF-001, 2 Oct 2026.)
+3. Other **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `https://corporate.paxofi.com`.
+4. Other network error → open `/api/v1/health` and `/readiness`. If the API is down, RB-5.
+5. *"You've sent several enquiries…"* → the rate limit (`CONTACT_RATE_LIMIT_MAX` per `CONTACT_RATE_LIMIT_WINDOW_MINUTES`, per email or IP) is working as designed; wait or raise the limit in `.env`.
+6. The form posts to `API_BASE_URL` (Setup Node.js App → environment variables); after changing it, **Restart**.
 
 ## RB-5 API down or `"database":false`
 
