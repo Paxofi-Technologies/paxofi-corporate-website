@@ -45,6 +45,8 @@ CW-UAT-008 (production smoke test: guide Step 5), CW-UAT-009 (release closure), 
 
 ## Results — release 20261002-7a821c7 (2 Oct 2026)
 
-Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Android. U1–U4, U7 and U9–U12 passed on all devices; content and privacy/terms wording approved. **U5 failed (DEF-001)**, and U6 and U8 were blocked by it.
+Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Android. U1–U4, U7, U9, U10 and U12 passed on all devices; content and privacy/terms wording approved. **U5 failed (DEF-001)**, and U6 and U8 were blocked by it. **U11 failed (DEF-002)**: a link shared on LinkedIn showed only the title and domain, with no image.
 
 **DEF-001 (blocker):** the site was opened over `http://` ("Not secure"). The API accepts enquiries only from `https://corporate.paxofi.com` (CORS), so the browser blocked the request. This is hosting configuration: a valid AutoSSL certificate plus **Force HTTPS Redirect** (guide Step 0, RB-4/RB-6). Retest U5, U6 and U8 over HTTPS to complete sign-off.
+
+**DEF-002 (major):** the site had no `og:image`. Fixed with a 1200×630 branded share image on every page and the large Twitter/X card. After deploying, refresh LinkedIn's cache at https://www.linkedin.com/post-inspector/ and retest U11.
