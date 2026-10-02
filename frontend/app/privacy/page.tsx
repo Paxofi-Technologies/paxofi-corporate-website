@@ -14,7 +14,7 @@ export default function Privacy() {
       <PageHero
         eyebrow="Privacy"
         title="Privacy at Paxofi."
-        intro="We collect only the information needed to operate our services, respond to enquiries and improve our products. Version 1 uses privacy-minimal first-party analytics and avoids third-party tracking as an architectural dependency."
+        intro="We collect only the information needed to answer your enquiries and keep this website secure. This website does not use analytics, advertising or tracking cookies."
       />
       <section className="section">
         <div className="container prose">
@@ -28,6 +28,20 @@ export default function Privacy() {
           <p>
             We use this information only to respond to your enquiry and to keep the service secure. We do not sell it
             or use it for advertising.
+          </p>
+
+          <h2>How long we keep it</h2>
+          <ul>
+            <li>Enquiries are deleted 24 months after we receive them.</li>
+            <li>The IP address and browser user-agent recorded with an enquiry are removed after 90 days.</li>
+            <li>Security and audit records are deleted after 24 months.</li>
+          </ul>
+          <p>You can ask us to delete an enquiry sooner at any time.</p>
+
+          <h2>Cookies and tracking</h2>
+          <p>
+            This website sets no cookies and uses no analytics, advertising or third-party tracking. Fonts and images are
+            served from our own servers.
           </p>
 
           <h2>Job applications</h2>

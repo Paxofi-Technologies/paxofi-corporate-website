@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Paxofi\CorporateWebsite\Application\Retention;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use PDO;
+use Paxofi\CorporateWebsite\Infrastructure\Support\Uuid;
+
+/**
+ * Applies the retention policy. Idempotent: running it twice removes nothing
+ * more. Each run that changes data writes one `data_retention.purged` audit
+ * event, so the purge itself is traceable.
+ */
+final class RetentionPurge
+{
+    public function __construct(private readonly PDO $pdo, private readonly RetentionPolicy $policy)
+    {
+    }
+
+    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int} */
+    public function run(?DateTimeImmutable $now = null): array
+    {
+        $now = ($now ?? new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'));
+
+        $this->pdo->beginTransaction();
+        try {
+            $result = [
+                'enquiry_metadata_cleared' => $this->execute(
+                    'UPDATE enquiries SET source_ip = NULL, user_agent = NULL
+                     WHERE created_at < :cutoff AND (source_ip IS NOT NULL OR user_agent IS NOT NULL)',
+                    $this->policy->networkMetadataCutoff($now),
+                ),
+                'enquiries_deleted' => $this->execute(
+                    'DELETE FROM enquiries WHERE created_at < :cutoff',
+                    $this->policy->enquiryCutoff($now),
+                ),
+                'audit_events_deleted' => $this->execute(
+                    'DELETE FROM audit_events WHERE created_at < :cutoff',
+                    $this->policy->auditEventCutoff($now),
+                ),
+            ];
+
+            if (array_sum($result) > 0) {
+                $this->pdo->prepare(
+                    "INSERT INTO audit_events (id, actor_id, action, target_type, target_id, outcome, request_id)
+                     VALUES (:id, NULL, 'data_retention.purged', NULL, NULL, 'success', NULL)",
+                )->execute(['id' => Uuid::v4()]);
+            }
+
+            $this->pdo->commit();
+
+            return $result;
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
+    }
+
+    private function execute(string $sql, DateTimeImmutable $cutoff): int
+    {
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute(['cutoff' => $cutoff->format('Y-m-d H:i:s')]);
+
+        return $statement->rowCount();
+    }
+}

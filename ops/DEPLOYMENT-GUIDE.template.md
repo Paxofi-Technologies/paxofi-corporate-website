@@ -110,6 +110,21 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 2. phpMyAdmin → `paxoalhu_corporate` → table `enquiries` → **Browse**: your enquiry is there. Table `audit_events`: a row with action `enquiry.submitted` whose `request_id` matches the enquiry's `request_id`.
 3. When everything works, delete the now-empty `release-{{VERSION}}` folder. Keep the `…-old-{{VERSION}}` folders and the Step 1 database export for a week, then delete them.
 
+## Step 6 — One time: schedule the data retention clean-up (5 minutes)
+
+From this release the API includes `backend/bin/purge-retention.php`, which deletes enquiries older than 24 months, removes the IP address and browser details from enquiries older than 90 days, and deletes audit records older than 24 months (as the privacy page states). Schedule it once; it then runs every night.
+
+1. cPanel → **Cron Jobs**. Under *Cron Email*, enter the operations email and click **Update Email**.
+2. Under *Add New Cron Job*: Common Settings → **Once Per Day**. Change *Minute* to `17` and *Hour* to `3`.
+3. Command (one line):
+
+```text
+/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/purge-retention.php >> /home/paxoalhu/logs/purge-retention.log 2>&1
+```
+
+4. **Add New Cron Job**. If a scheduled job already exists from an earlier release, skip this step.
+5. The next day, open `/home/paxoalhu/logs/purge-retention.log` in File Manager. It shows a line like `… retention purge: 0 enquiries deleted, …`. If it says `Could not open input file` or a PHP version error, edit the cron job and replace `/usr/local/bin/php` with `/opt/cpanel/ea-php84/root/usr/bin/php`.
+
 ## If something goes wrong
 
 | Symptom | Fix |
