@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE } from "@/lib/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  description: SITE.description,
+};
 
 const services = [
   ["Software Engineering", "Web platforms, APIs and business applications built for reliability."],
@@ -28,7 +35,7 @@ export default function Home() {
           <div className="hero-card">
             <div className="orb"></div>
             <div className="card-label">OUR APPROACH</div>
-            <h3>Clarity → Engineering → Delivery → Growth</h3>
+            <h2 className="hero-card-title">Clarity → Engineering → Delivery → Growth</h2>
             <p>We connect strategy and implementation so every product has a clear path from idea to operation.</p>
           </div>
         </div>
@@ -39,7 +46,7 @@ export default function Home() {
           <div className="grid-4">
             {services.map(([title, description], index) => (
               <article className="feature" key={title}>
-                <div className="number">0{index + 1}</div><h3>{title}</h3><p>{description}</p>
+                <div className="number" aria-hidden="true">0{index + 1}</div><h3>{title}</h3><p>{description}</p>
               </article>
             ))}
           </div>
@@ -51,7 +58,7 @@ export default function Home() {
           <div className="grid-2">
             {products.map(([title, description]) => (
               <article className="product-card" key={title}>
-                <span>PRODUCT</span><h3>{title}</h3><p>{description}</p><Link href="/products">Learn more →</Link>
+                <span>PRODUCT</span><h3>{title}</h3><p>{description}</p><Link href="/products" aria-label={`Learn more about ${title}`}>Learn more →</Link>
               </article>
             ))}
           </div>

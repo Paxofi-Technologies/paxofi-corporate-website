@@ -25,6 +25,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Install Chromium for end-to-end tests
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end, accessibility (WCAG 2.1 AA) and security-header tests
+        run: npm run test:e2e
 
   backend:
     name: Backend validation

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Privacy",
-  description: "How Paxofi Technologies collects and uses information on this website, including contact enquiries.",
-  alternates: { canonical: "/privacy" },
-};
+export const metadata = pageMetadata(
+  "Privacy",
+  "How Paxofi Technologies collects and uses information on this website, including contact enquiries.",
+  "/privacy",
+);
 
 export default function Privacy() {
   return (
