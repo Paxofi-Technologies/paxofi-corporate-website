@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
 import { contactEndpoint, resolveApiBase } from "@/lib/contact";
+import { pageMetadata } from "@/lib/site";
 import "./contact.css";
 
 // Rendered per request so API_BASE_URL can be changed on the server
 // (cPanel → Application Manager → Environment variables) without a rebuild.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Contact",
-  description: "Talk to Paxofi Technologies about software engineering, digital products, infrastructure or partnerships.",
-  alternates: { canonical: "/contact" },
-};
+export const metadata = pageMetadata(
+  "Contact",
+  "Talk to Paxofi Technologies about software engineering, digital products, infrastructure or partnerships.",
+  "/contact",
+);
 
 export default function Contact() {
   return (
