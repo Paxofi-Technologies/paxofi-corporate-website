@@ -108,6 +108,20 @@ describe("public pages", () => {
     assert.equal(response.headers.get("x-powered-by"), null);
   });
 
+  test("pages cannot be kept by a shared cache after a deployment", async () => {
+    for (const path of ROUTES) {
+      const cacheControl = (await fetch(BASE + path)).headers.get("cache-control") ?? "";
+      assert.doesNotMatch(cacheControl, /s-maxage|public/, `${path}: ${cacheControl}`);
+      assert.match(cacheControl, /no-store|no-cache|max-age=0/, `${path}: ${cacheControl}`);
+    }
+  });
+
+  test("release.txt identifies the deployed release", async () => {
+    const response = await fetch(`${BASE}/release.txt`);
+    assert.equal(response.status, 200);
+    assert.ok((await response.text()).trim().length > 0);
+  });
+
   test("robots.txt and sitemap.xml list the public site", async () => {
     const robots = await (await fetch(`${BASE}/robots.txt`)).text();
     assert.match(robots, /Sitemap: https?:\/\/\S+\/sitemap\.xml/);
