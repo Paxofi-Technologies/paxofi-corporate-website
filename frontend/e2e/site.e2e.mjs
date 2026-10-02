@@ -4,12 +4,13 @@
 //
 //   npm run test:e2e
 //
+// E2E_BROWSER selects the engine: chromium (default), firefox or webkit.
 // Set PLAYWRIGHT_CHROMIUM_PATH to use a preinstalled Chromium.
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { chromium } from "playwright";
+import { chromium, firefox, webkit } from "playwright";
 import AxeBuilder from "@axe-core/playwright";
 
 const PORT = Number(process.env.E2E_PORT || 3123);
@@ -17,6 +18,18 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const API_BASE = "https://api.e2e.test/api/v1";
 const CONTACT_URL = `${API_BASE}/forms/contact/submit`;
 const ROUTES = ["/", "/about", "/services", "/products", "/careers", "/contact", "/privacy", "/terms"];
+
+const ENGINES = { chromium, firefox, webkit };
+const BROWSER = process.env.E2E_BROWSER || "chromium";
+assert.ok(ENGINES[BROWSER], `unknown E2E_BROWSER ${BROWSER}`);
+
+// Phone, tablet, laptop and wide desktop. The menu collapses at 860px and below.
+const VIEWPORTS = [
+  { name: "phone", width: 360, height: 740, collapsedMenu: true },
+  { name: "tablet", width: 768, height: 1024, collapsedMenu: true },
+  { name: "laptop", width: 1280, height: 800, collapsedMenu: false },
+  { name: "desktop", width: 1920, height: 1080, collapsedMenu: false },
+];
 
 let server;
 let browser;
@@ -38,7 +51,8 @@ before(async () => {
     }
     await sleep(500);
   }
-  browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined });
+  const executablePath = BROWSER === "chromium" ? process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined : undefined;
+  browser = await ENGINES[BROWSER].launch({ executablePath });
 });
 
 after(async () => {
@@ -191,6 +205,37 @@ describe("navigation", () => {
       await nav.getByRole("link", { name }).click();
       await page.waitForURL(BASE + path);
     }
+    await page.context().close();
+  });
+});
+
+describe("responsive layout", () => {
+  for (const viewport of VIEWPORTS) {
+    test(`${viewport.name} (${viewport.width}px): every page fits the screen and the menu is usable`, async () => {
+      const page = await newPage({ viewport: { width: viewport.width, height: viewport.height } });
+      for (const path of ROUTES) {
+        await page.goto(BASE + path);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 0, `${path}: page is ${overflow}px wider than the screen`);
+        assert.ok(await page.locator("h1").isVisible(), `${path}: heading visible`);
+
+        const toggle = page.locator(".menu-toggle");
+        const about = page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "About" });
+        assert.equal(await toggle.isVisible(), viewport.collapsedMenu, `${path}: menu button`);
+        assert.equal(await about.isVisible(), !viewport.collapsedMenu, `${path}: inline navigation`);
+      }
+      await page.context().close();
+    });
+  }
+
+  test("form fields are large enough not to trigger zoom on phones", async () => {
+    const page = await newPage({ viewport: { width: 360, height: 740 } });
+    await page.goto(`${BASE}/contact`);
+    const sizes = await page.locator("main input:not([type=hidden]):not([tabindex='-1']), main textarea").evaluateAll((fields) =>
+      fields.filter((f) => f.offsetParent !== null).map((f) => parseFloat(getComputedStyle(f).fontSize)),
+    );
+    assert.ok(sizes.length >= 4);
+    for (const size of sizes) assert.ok(size >= 16, `field font-size ${size}px`);
     await page.context().close();
   });
 });

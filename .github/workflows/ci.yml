@@ -32,6 +32,30 @@ jobs:
       - name: End-to-end, accessibility (WCAG 2.1 AA) and security-header tests
         run: npm run test:e2e
 
+  cross-browser:
+    name: Cross-browser end-to-end (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Install ${{ matrix.browser }}
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: End-to-end, responsive and accessibility tests in ${{ matrix.browser }}
+        run: npm run test:e2e
+        env:
+          E2E_BROWSER: ${{ matrix.browser }}
+
   backend:
     name: Backend validation
     runs-on: ubuntu-latest
@@ -111,7 +135,7 @@ jobs:
     name: cPanel upload packages
     # Every validated commit on main gets ready-to-upload ZIPs (Actions → run → Artifacts).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [frontend, backend, repository]
+    needs: [frontend, cross-browser, backend, repository]
     runs-on: ubuntu-latest
     env:
       COMPOSER_AUTH: ${{ secrets.PCF_COMPOSER_AUTH }}
