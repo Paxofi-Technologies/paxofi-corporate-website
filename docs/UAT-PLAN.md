@@ -42,3 +42,9 @@ After U5–U8: delete the "UAT test" enquiries in phpMyAdmin (tick → Delete), 
 ## After sign-off
 
 CW-UAT-008 (production smoke test: guide Step 5), CW-UAT-009 (release closure), CW-OPS2-003 (stabilisation review after 1–2 weeks), CW-OPS2-004 (30-day review around 1 November 2026: uptime against D-007, enquiries received, incidents, dependency updates).
+
+## Results — release 20261002-7a821c7 (2 Oct 2026)
+
+Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Android. U1–U4, U7 and U9–U12 passed on all devices; content and privacy/terms wording approved. **U5 failed (DEF-001)**, and U6 and U8 were blocked by it.
+
+**DEF-001 (blocker):** the site was opened over `http://` ("Not secure"). The API accepts enquiries only from `https://corporate.paxofi.com` (CORS), so the browser blocked the request. This is hosting configuration: a valid AutoSSL certificate plus **Force HTTPS Redirect** (guide Step 0, RB-4/RB-6). Retest U5, U6 and U8 over HTTPS to complete sign-off.

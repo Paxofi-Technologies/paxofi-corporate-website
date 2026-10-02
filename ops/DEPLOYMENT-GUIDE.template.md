@@ -48,6 +48,8 @@ cPanel → **Domains**:
 
 To change a document root: **Domains** → **Manage** next to the domain → **New Document Root** → enter the path above → **Update**.
 
+**HTTPS (required for the contact form).** cPanel → **SSL/TLS Status**: `corporate.paxofi.com`, `www.corporate.paxofi.com` and `api.paxofi.com` must show a valid certificate (if not, select them → **Run AutoSSL**). Then **Domains** → turn on **Force HTTPS Redirect** for `corporate.paxofi.com` and `api.paxofi.com`. The API accepts enquiries only from `https://corporate.paxofi.com`; a page opened over `http://` ("Not secure") cannot send the form.
+
 If you change the document root of `corporate.paxofi.com`, cPanel must re-write its Node.js routing into the new location: do Step 4.4 (**Setup Node.js App → Edit → Save**) as written, and the site will route through Passenger again.
 
 Quick exposure check (before and after): open `https://corporate.paxofi.com/.env` and `https://corporate.paxofi.com/package.json` in a private browser window. Both must show **Not Found** (or the site's 404 page), never the file contents. If `.env` was ever downloadable, treat any secret in it as exposed and change it.
@@ -133,6 +135,7 @@ From this release the API includes `backend/bin/purge-retention.php`, which dele
 | `error_log` says *backend/.env exists but is not readable by PHP* | Right-click `.env` → **Change Permissions** → `600` (owner read/write). It must belong to your cPanel account, which it does when created or copied in File Manager. |
 | API `/health` gives *404 Not Found* (HTML page) | API domain document root is not `paxofi-api-runtime/backend/public` (Step 0), or `public/.htaccess` is missing (enable *Show Hidden Files*; re-extract if needed) — then redo Step 3.6. |
 | `/readiness` shows `"database":false` | `DB_*` values in `.env` are wrong, or the database user lacks privileges on `paxoalhu_corporate` (cPanel → MySQL Databases). |
+| Contact form fails and the address bar shows **Not secure** / `http://` (console: *blocked by CORS policy* from origin `http://…`) | The site is being served without HTTPS. Step 0 *HTTPS*: valid certificate (Run AutoSSL) and **Force HTTPS Redirect** on. Do not add `http://` to `CORS_ALLOWED_ORIGINS`. |
 | Contact form says *"We could not send your enquiry"*; the browser console (F12) mentions **CORS** | `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `{{SITE_URL}}` (no trailing slash). |
 | Contact form error without CORS message | `API_BASE_URL` in the Node app's environment variables must be the API base ending in `/api/v1`; restart the app after changing it. |
 | Website shows a file list, *403 Forbidden*, downloads a file, or the default cPanel page | The `corporate.paxofi.com` document root is wrong or its Node.js routing was not written: redo Step 0, then Setup Node.js App → **Edit** → **Save** → **Restart**. |
