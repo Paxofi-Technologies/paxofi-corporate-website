@@ -1,7 +1,8 @@
+import { Clock, Mail, MapPin } from "lucide-react";
 import ContactForm from "./ContactForm";
+import { PageHero } from "@/components/Sections";
 import { contactEndpoint, resolveApiBase } from "@/lib/contact";
-import { pageMetadata } from "@/lib/site";
-import "./contact.css";
+import { SITE, pageMetadata } from "@/lib/site";
 
 // Rendered per request so API_BASE_URL can be changed on the server
 // (cPanel → Application Manager → Environment variables) without a rebuild.
@@ -15,15 +16,47 @@ export const metadata = pageMetadata(
 
 export default function Contact() {
   return (
-    <section className="section">
-      <div className="container">
-        <span className="eyebrow">CONTACT</span>
-        <h1>Let&apos;s talk about what you&apos;re building.</h1>
-        <p className="hero-copy">
-          Tell us what you are trying to achieve and we&apos;ll help map the next practical step.
-        </p>
-        <ContactForm endpoint={contactEndpoint(resolveApiBase(process.env))} />
-      </div>
-    </section>
+    <>
+      <PageHero
+        eyebrow="Contact"
+        title="Let's talk about what you're building."
+        intro="Tell us what you are trying to achieve and we'll help map the next practical step."
+      />
+      <section className="section">
+        <div className="container contact-layout">
+          <div className="form-card">
+            <h2>Send us a message</h2>
+            <ContactForm endpoint={contactEndpoint(resolveApiBase(process.env))} />
+          </div>
+          <aside className="contact-aside" aria-label="Other ways to reach us">
+            <h2>Other ways to reach us</h2>
+            <ul>
+              <li>
+                <Mail size={20} aria-hidden="true" />
+                <span>
+                  <strong>Email</strong>
+                  <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+                </span>
+              </li>
+              <li>
+                <Clock size={20} aria-hidden="true" />
+                <span>
+                  <strong>Response</strong>
+                  We reply to enquiries by email.
+                </span>
+              </li>
+              <li>
+                <MapPin size={20} aria-hidden="true" />
+                <span>
+                  <strong>Where we work</strong>
+                  Across Africa and beyond.
+                </span>
+              </li>
+            </ul>
+            <p className="aside-signoff">A brighter tomorrow, together.</p>
+          </aside>
+        </div>
+      </section>
+    </>
   );
 }

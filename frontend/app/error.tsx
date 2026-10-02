@@ -10,14 +10,14 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <section className="section">
-      <div className="container">
-        <span className="eyebrow">SOMETHING WENT WRONG</span>
+    <section className="page-hero">
+      <div className="container page-hero-inner">
+        <span className="eyebrow">Something went wrong</span>
         <h1>We couldn&apos;t load this page.</h1>
-        <p className="hero-copy">Please try again. If it keeps happening, email hello@paxofi.com.</p>
+        <p className="lead">Please try again. If it keeps happening, email hello@paxofi.com.</p>
         <div className="actions">
-          <button type="button" className="button primary" onClick={reset}>Try again</button>
-          <Link className="button secondary" href="/">Return home</Link>
+          <button type="button" className="button button--primary" onClick={reset}>Try again</button>
+          <Link className="button button--outline" href="/">Return home</Link>
         </div>
       </div>
     </section>
