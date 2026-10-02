@@ -68,6 +68,9 @@ mkdir -p "$FE"
 cp -a "$FE_SRC/.next/standalone" "$FE/standalone"
 cp -a "$FE_SRC/.next/static" "$FE/standalone/.next/static"
 if [[ -d "$FE_SRC/public" ]]; then cp -a "$FE_SRC/public" "$FE/standalone/public"; fi
+# Served at /release.txt so anyone can confirm which release is live.
+mkdir -p "$FE/standalone/public"
+printf '%s\n' "$VERSION ($COMMIT)" > "$FE/standalone/public/release.txt"
 cat > "$FE/app.js" <<'EOF'
 // Paxofi Corporate Website — cPanel Application Manager startup file.
 // Starts the prebuilt Next.js standalone server. Runtime settings:
