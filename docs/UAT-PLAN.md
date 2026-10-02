@@ -50,3 +50,17 @@ Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Andro
 **DEF-001 (blocker):** the site was opened over `http://` ("Not secure"). The API accepts enquiries only from `https://corporate.paxofi.com` (CORS), so the browser blocked the request. This is hosting configuration: a valid AutoSSL certificate plus **Force HTTPS Redirect** (guide Step 0, RB-4/RB-6). Retest U5, U6 and U8 over HTTPS to complete sign-off.
 
 **DEF-002 (major):** the site had no `og:image`. Fixed with a 1200×630 branded share image on every page and the large Twitter/X card. After deploying, refresh LinkedIn's cache at https://www.linkedin.com/post-inspector/ and retest U11.
+
+## Retest and sign-off — release 20261002-747d5a8 (2 Oct 2026)
+
+| Item | Result |
+|---|---|
+| DEF-001 HTTPS | Resolved: AutoSSL certificate issued; padlock on `https://corporate.paxofi.com` |
+| U5 Send an enquiry | Pass (over HTTPS) |
+| U6 Enquiry arrives | Pass: the test enquiries were in `enquiries` with name, email, company, IP, user-agent and request reference; the owner deleted them afterwards |
+| U8 Rate limit | Pass: "You've sent several enquiries in a short time…" |
+| U11 Share preview | LinkedIn: pass (branded image). Facebook: **known issue KI-001**, accepted by the owner |
+
+**KI-001 (accepted known issue):** Facebook's crawler gets HTTP 403 from the shared host's bot protection (Imunify360/WebShield) before the request reaches the website. ModSecurity was ruled out and the error log is empty. The website itself is correct: LinkedIn previews work. The owner deferred this to the planned move to a VPS, where the firewall is under Paxofi's control; retest with the Facebook Sharing Debugger after the move.
+
+**Sign-off:** UAT passed for release `20261002-747d5a8`, signed off by Samuel Kehinde Adeniji (owner and founder), 2 Oct 2026. All 12 scenarios pass on desktop, iPhone and Android, with KI-001 accepted.
