@@ -86,6 +86,25 @@ Dependabot opens weekly update PRs against `develop`. CI fails on any known vuln
 
 Hosting-level problems (server down, MariaDB unavailable, LiteSpeed cache purge, DNS) go to the hosting provider (Namecheap support) with the time, the URL and the `request_id` if there is one. Record every P1/P2 in PKDMS with cause, fix and follow-up actions. Final SLA targets are pending SRS Appendix K (SRS-PL-02).
 
-## Monitoring
+## Monitoring (UptimeRobot)
 
-Not yet automated. Recommended: a free external uptime monitor (for example UptimeRobot or Better Stack) on `https://corporate.paxofi.com/release.txt` and `https://api.paxofi.com/api/v1/readiness` every 5 minutes, alerting the operations email. Owner decision needed (CW-OPS2-002).
+Owner decision 2 Oct 2026: UptimeRobot (free plan, 5-minute checks, email alerts). Set up once at uptimerobot.com → **Add New Monitor**:
+
+| # | Monitor type | Friendly name | URL | Setting |
+|---|---|---|---|---|
+| 1 | HTTP(s) | Paxofi website | `https://corporate.paxofi.com/` | Interval 5 min |
+| 2 | Keyword | Paxofi website release | `https://corporate.paxofi.com/release.txt` | Keyword `2026` → alert when **not exists** |
+| 3 | Keyword | Paxofi API readiness | `https://api.paxofi.com/api/v1/readiness` | Keyword `"database":true` → alert when **not exists** |
+| 4 | HTTP(s) | Paxofi API health | `https://api.paxofi.com/api/v1/health` | Interval 5 min |
+
+Alert contact: the operations email (verify it in **My Settings → Alert Contacts**) on all four monitors. An alert starts the matching runbook: website monitors → RB-3, API monitors → RB-5, any certificate error → RB-6. Review the 30-day uptime report monthly (CW-OPS2-002/004). The readiness check touches the database once per 5 minutes, which is negligible.
+
+## GitHub repository secrets
+
+| Where (GitHub → Settings → Secrets and variables) | Name | Value | Used by |
+|---|---|---|---|
+| **Actions** | `PCF_COMPOSER_AUTH` | `{"github-oauth":{"github.com":"<token>"}}` | CI on normal pushes and PRs (installs PCF) |
+| **Dependabot** | `PCF_COMPOSER_AUTH` | same JSON as above | CI on Dependabot's update PRs |
+| **Dependabot** | `PCF_GITHUB_TOKEN` | `<token>` on its own (no JSON) | Dependabot reading PCF to propose Composer updates |
+
+`<token>` is a GitHub fine-grained personal access token with **read-only Contents** access to `Paxofi-Technologies/paxofi-core-framework` only. Rotate it before it expires and update all three secrets.
