@@ -115,6 +115,21 @@ describe("public pages", () => {
     await page.context().close();
   });
 
+  test("no page triggers a Content-Security-Policy violation and every page hydrates", async () => {
+    const page = await newPage();
+    await page.addInitScript(() => {
+      window.__cspViolations = [];
+      document.addEventListener("securitypolicyviolation", (e) => window.__cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`));
+    });
+    for (const path of ROUTES) {
+      await page.goto(BASE + path, { waitUntil: "networkidle" });
+      // The header's menu button only works once React has hydrated the page.
+      await page.waitForFunction(() => Object.keys(document.querySelector(".menu-toggle") ?? {}).some((k) => k.startsWith("__react")));
+      assert.deepEqual(await page.evaluate(() => window.__cspViolations), [], path);
+    }
+    await page.context().close();
+  });
+
   test("unknown paths return 404 with the site's not-found page", async () => {
     const page = await newPage();
     const response = await page.goto(`${BASE}/does-not-exist`);
@@ -129,6 +144,10 @@ describe("public pages", () => {
     assert.match(csp, /frame-ancestors 'none'/);
     assert.match(csp, /object-src 'none'/);
     assert.match(csp, /connect-src 'self' https:\/\/api\.e2e\.test;/, "connect-src names only the configured API origin");
+    assert.match(csp, /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+    assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/);
+    const second = (await fetch(`${BASE}/`)).headers.get("content-security-policy");
+    assert.notEqual(second, csp, "a new nonce for every response");
     assert.equal(response.headers.get("cross-origin-embedder-policy"), "require-corp");
     assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=\d+/);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");

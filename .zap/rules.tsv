@@ -2,3 +2,5 @@
 # Every passive-scan warning fails CI unless it is listed here with a reason.
 # Format: rule-id<TAB>IGNORE|WARN|FAIL<TAB>reason
 10049	IGNORE	Non-Storable Content: pages are deliberately "private, no-store" so the host's LiteSpeed cache cannot serve an old release (frontend/app/layout.tsx, RUNBOOKS RB-3).
+10109	IGNORE	Modern Web Application: informational; the site is a Next.js app (the spider still covers every page; E2E covers client behaviour).
+10202	IGNORE	Absence of Anti-CSRF Tokens: the contact form sends JSON with fetch to the API, which uses no cookies or sessions and accepts only the website origin (CORS); there is no authenticated state to forge. Without JavaScript the form posts to the page itself, which ignores it.
