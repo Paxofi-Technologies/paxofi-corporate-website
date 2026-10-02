@@ -23,6 +23,10 @@ export default function Careers() {
             View opportunities
           </a>
         </div>
+        <p className="page-note section-body">
+          All open roles, applications and recruitment updates are handled on our careers site,{" "}
+          <a href={SITE.careersUrl} rel="noopener">career.paxofi.com</a>.
+        </p>
       </div>
     </section>
   );

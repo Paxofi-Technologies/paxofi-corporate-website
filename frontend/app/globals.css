@@ -42,3 +42,7 @@ button.button{border:0;cursor:pointer;font-family:inherit}
 /* Visual fixes */
 .footer .brand-mark{background:#fff;color:#111}
 .hero-card>:not(.orb){position:relative;z-index:1}
+
+/* Notes below page content */
+.page-note{color:#5c625b;max-width:680px}
+.page-note a{color:#111}
