@@ -20,6 +20,14 @@ export const NAV_LINKS = [
 /** Every public, indexable route (used by the sitemap and the E2E tests). */
 export const PUBLIC_ROUTES = ["/", "/about", "/services", "/products", "/careers", "/contact", "/privacy", "/terms"] as const;
 
+/** Social share image (1200×630, Open Graph and Twitter/X large card). */
+export const SHARE_IMAGE = {
+  url: "/og-image.png",
+  width: 1200,
+  height: 630,
+  alt: "Paxofi Technologies — Technology for a Brighter Tomorrow.",
+};
+
 /** Canonical site origin without a trailing slash. Inlined at build time. */
 export function siteUrl(env: Record<string, string | undefined> = process.env): string {
   return (env.NEXT_PUBLIC_SITE_URL?.trim() || "https://corporate.paxofi.com").replace(/\/+$/, "");
@@ -31,8 +39,8 @@ export function pageMetadata(title: string, description: string, path: string): 
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title: `${title} | ${SITE.name}`, description, url: path, siteName: SITE.name, type: "website" },
-    twitter: { card: "summary", title: `${title} | ${SITE.name}`, description },
+    openGraph: { title: `${title} | ${SITE.name}`, description, url: path, siteName: SITE.name, type: "website", images: [SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title: `${title} | ${SITE.name}`, description, images: [SHARE_IMAGE.url] },
   };
 }
 

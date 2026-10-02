@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
-import { SITE, organizationJsonLd, siteUrl } from "@/lib/site";
+import { SHARE_IMAGE, SITE, organizationJsonLd, siteUrl } from "@/lib/site";
 
 // Render every page per request. Prerendered pages are sent with
 // "Cache-Control: s-maxage=31536000", which lets the host's shared cache
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: { default: `${SITE.name} — Technology for a Brighter Tomorrow`, template: `%s | ${SITE.name}` },
   description: SITE.description,
-  openGraph: { siteName: SITE.name, type: "website", url: "/", title: SITE.name, description: SITE.description },
-  twitter: { card: "summary", title: SITE.name, description: SITE.description },
+  openGraph: { siteName: SITE.name, type: "website", url: "/", title: SITE.name, description: SITE.description, images: [SHARE_IMAGE] },
+  twitter: { card: "summary_large_image", title: SITE.name, description: SITE.description, images: [SHARE_IMAGE.url] },
   robots: { index: true, follow: true },
 };
 
