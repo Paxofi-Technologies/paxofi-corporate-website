@@ -103,6 +103,33 @@ describe("public pages", () => {
     });
   }
 
+  test("every page's content is in the server HTML and readable without JavaScript", async () => {
+    // Guards against a route-level Suspense/loading fallback, which would ship
+    // the content hidden until a script reveals it.
+    const page = await newPage({ javaScriptEnabled: false });
+    for (const path of ROUTES) {
+      await page.goto(BASE + path);
+      assert.ok(await page.locator("main h1").isVisible(), `${path}: h1 visible without JavaScript`);
+      assert.equal(await page.locator("main [hidden] h1, template").count(), 0, `${path}: no deferred content`);
+    }
+    await page.context().close();
+  });
+
+  test("no page triggers a Content-Security-Policy violation and every page hydrates", async () => {
+    const page = await newPage();
+    await page.addInitScript(() => {
+      window.__cspViolations = [];
+      document.addEventListener("securitypolicyviolation", (e) => window.__cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`));
+    });
+    for (const path of ROUTES) {
+      await page.goto(BASE + path, { waitUntil: "networkidle" });
+      // The header's menu button only works once React has hydrated the page.
+      await page.waitForFunction(() => Object.keys(document.querySelector(".menu-toggle") ?? {}).some((k) => k.startsWith("__react")));
+      assert.deepEqual(await page.evaluate(() => window.__cspViolations), [], path);
+    }
+    await page.context().close();
+  });
+
   test("unknown paths return 404 with the site's not-found page", async () => {
     const page = await newPage();
     const response = await page.goto(`${BASE}/does-not-exist`);
@@ -116,9 +143,17 @@ describe("public pages", () => {
     const csp = response.headers.get("content-security-policy") ?? "";
     assert.match(csp, /frame-ancestors 'none'/);
     assert.match(csp, /object-src 'none'/);
+    assert.match(csp, /connect-src 'self' https:\/\/api\.e2e\.test;/, "connect-src names only the configured API origin");
+    assert.match(csp, /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+    assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/);
+    const second = (await fetch(`${BASE}/`)).headers.get("content-security-policy");
+    assert.notEqual(second, csp, "a new nonce for every response");
+    assert.equal(response.headers.get("cross-origin-embedder-policy"), "require-corp");
     assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=\d+/);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.equal(response.headers.get("cross-origin-opener-policy"), "same-origin");
+    assert.equal(response.headers.get("cross-origin-resource-policy"), "same-origin");
     assert.equal(response.headers.get("x-powered-by"), null);
   });
 
@@ -128,6 +163,22 @@ describe("public pages", () => {
       assert.doesNotMatch(cacheControl, /s-maxage|public/, `${path}: ${cacheControl}`);
       assert.match(cacheControl, /no-store|no-cache|max-age=0/, `${path}: ${cacheControl}`);
     }
+  });
+
+  test("security.txt publishes a security contact (RFC 9116)", async () => {
+    const response = await fetch(`${BASE}/.well-known/security.txt`);
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.match(body, /^Contact: mailto:\S+@paxofi\.com$/m);
+    const expires = new Date(body.match(/^Expires: (.+)$/m)?.[1] ?? "");
+    assert.ok(expires > new Date(), "security.txt has expired; set a new Expires date (at most a year ahead)");
+  });
+
+  test("no cookies are set on any page", async () => {
+    const page = await newPage();
+    for (const path of ROUTES) await page.goto(BASE + path);
+    assert.deepEqual(await page.context().cookies(), []);
+    await page.context().close();
   });
 
   test("release.txt identifies the deployed release", async () => {
@@ -280,6 +331,16 @@ describe("contact journey", () => {
     const email = page.getByLabel("Email");
     assert.equal(await email.getAttribute("aria-invalid"), "true");
     assert.ok(await email.evaluate((el) => el === document.activeElement));
+    await page.context().close();
+  });
+
+  test("a submission before the script loads never puts details in the URL", async () => {
+    const page = await newPage({ javaScriptEnabled: false });
+    await page.goto(`${BASE}/contact`);
+    assert.equal(await page.locator("form.contact-form").getAttribute("method"), "post");
+    // Browsers render <noscript> only when scripting is off in the parser, which
+    // Playwright's javaScriptEnabled does not emulate, so check the markup.
+    assert.match(await page.locator("form.contact-form noscript").textContent(), /Sending this form needs JavaScript\./);
     await page.context().close();
   });
 

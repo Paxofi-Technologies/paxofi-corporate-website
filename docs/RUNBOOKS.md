@@ -76,6 +76,19 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 
 Dependabot opens weekly update PRs against `develop`. CI fails on any known vulnerability (`npm audit`, `composer audit`). Merge only green PRs, promote `develop` → `main`, then deploy the new packages (RB-1).
 
+## RB-10 Data retention clean-up (daily cron job)
+
+Set up once, after the release that ships `backend/bin/purge-retention.php`:
+
+1. cPanel → **Cron Jobs** → *Cron Email*: the operations email (it receives output only when the job prints something).
+2. **Add New Cron Job** → Common Settings **Once Per Day** (adjust the minute, e.g. `17 3 * * *`).
+3. Command (one line):
+   `/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/purge-retention.php >> /home/paxoalhu/logs/purge-retention.log 2>&1`
+   If cPanel shows a different PHP 8.4 path (MultiPHP → *ea-php84*), use `/opt/cpanel/ea-php84/root/usr/bin/php`.
+4. Next day: open `logs/purge-retention.log`; each line reads `… retention purge: N enquiries deleted, …`. A line starting `Retention purge failed` → RB-5 (database).
+
+Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit events 24 months). To delete one person's enquiry on request: phpMyAdmin → `enquiries` → search by email → Delete.
+
 ## Escalation
 
 | Severity | Examples | Who acts | Target response |
@@ -84,7 +97,7 @@ Dependabot opens weekly update PRs against `develop`. CI fails on any known vuln
 | **P2 — degraded** | Certificate warning, slow pages, intermittent errors, stale content | Operator → Engineering lead same day | Within 1 business day |
 | **P3 — minor** | Copy or design fixes, dependency update PRs | Engineering backlog (Asana) | Next planned release |
 
-Hosting-level problems (server down, MariaDB unavailable, LiteSpeed cache purge, DNS) go to the hosting provider (Namecheap support) with the time, the URL and the `request_id` if there is one. Record every P1/P2 in PKDMS with cause, fix and follow-up actions. Final SLA targets are pending SRS Appendix K (SRS-PL-02).
+Hosting-level problems (server down, MariaDB unavailable, LiteSpeed cache purge, DNS) go to the hosting provider (Namecheap support) with the time, the URL and the `request_id` if there is one. Record every P1/P2 in PKDMS with cause, fix and follow-up actions. Service-level targets are decision D-007 (docs/DECISIONS.md).
 
 ## Monitoring (UptimeRobot)
 

@@ -1,6 +1,6 @@
 # Quality report — security, performance, accessibility
 
-Latest run: 2 Oct 2026, release candidate after the Next.js 16 upgrade (branch `develop`).
+Latest run: 2 Oct 2026 (security section updated with the ZAP baseline and nonce CSP).
 
 ## Security
 
@@ -9,12 +9,15 @@ Latest run: 2 Oct 2026, release candidate after the Next.js 16 upgrade (branch `
 | npm dependencies (`npm audit`) | **0 vulnerabilities** (after Next.js 15.5 → 16.3.8, which removed the PostCSS advisories) | CI step *Dependency audit* fails on any moderate or higher advisory |
 | Composer dependencies (`composer audit`) | **No advisories** | CI step *Dependency audit* in Backend validation |
 | Dependency updates | Weekly npm/Composer and monthly GitHub Actions PRs to `develop` | `.github/dependabot.yml` |
-| HTTP security headers (website) | CSP (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`), HSTS, nosniff, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy, no `X-Powered-By` | E2E test *security headers are sent* |
+| HTTP security headers (website) | Per-request nonce CSP (`script-src 'self' 'nonce-…' 'strict-dynamic'`, `style-src 'self'`, no `unsafe-inline`; `connect-src` only this site and the API origin; `frame-ancestors 'none'`, `object-src 'none'`), HSTS, nosniff, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy, COOP/CORP/COEP, no `X-Powered-By` | E2E: *security headers are sent*; *no page triggers a CSP violation and every page hydrates* (3 browsers) |
+| OWASP ZAP baseline (passive scan of the production build) | **0 failures, 0 unaccepted warnings** after fixes: contact form posts (no personal data in URLs), CSP wildcard and `unsafe-inline` removed, COEP added. Accepted with reasons in `.zap/rules.tsv`: 10049 (no-store is intentional), 10109 (informational), 10202 (no session/cookies to forge) | CI job *Security scan (OWASP ZAP baseline)*; any new warning fails the build |
+| Privacy | No cookies, analytics or third-party requests; retention automated (D-008) | E2E *no cookies are set*; `RetentionPurgeTest` |
+| Disclosure contact | `/.well-known/security.txt` (RFC 9116) | E2E fails before its `Expires` date |
 | Caching of HTML | Every page `private, no-store` — the host cache cannot serve stale releases | E2E test *pages cannot be kept by a shared cache* |
 | API | CORS allowlist, honeypot, rate limit (email or IP), safe JSON errors, request IDs, security headers, fail-closed configuration | PHPUnit unit + MariaDB integration suite in CI |
 | Live exposure checks (2 Oct) | `/.env` → 403, `/package.json` → 404 | Deployment guide Step 0 |
 
-Not yet done: authenticated/dynamic scan (e.g. OWASP ZAP baseline against the live site) and TLS confirmation on `corporate.paxofi.com`.
+Remaining: TLS confirmation on `corporate.paxofi.com` (AutoSSL; UAT entry criterion). There is no authenticated surface to scan in v1 (D-005).
 
 ## Performance and quality (Lighthouse 12, mobile emulation, production build)
 
