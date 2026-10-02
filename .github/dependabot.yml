@@ -9,6 +9,15 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Runtime is Node 22 on cPanel: keep the type definitions on the same major.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # Majors that eslint-config-next / Next.js do not support yet; revisit when they do.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
   - package-ecosystem: composer
     directory: /backend
     target-branch: develop
