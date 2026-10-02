@@ -102,7 +102,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
    - Variables left over from the old site (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NODE_ENV`) are not used by this package and can be deleted; *Application mode: Production* already sets `NODE_ENV`.
    - **Do not** click *Run NPM Install*: the package already contains everything.
    - **Save** (this writes cPanel's Node.js routing into the domain's document root from Step 0), then **Start App** (or **Restart**).
-5. **Test the website:** open {{SITE_URL}} and {{SITE_URL}}/contact. Pages load with styling and no error.
+5. **Test the website:** open {{SITE_URL}}/release.txt: it must show `{{VERSION}}`. Then open {{SITE_URL}} and {{SITE_URL}}/contact. Pages load with styling and no error.
 
 ## Step 5 — Final check (5 minutes)
 
@@ -121,8 +121,26 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 | Contact form says *"We could not send your enquiry"*; the browser console (F12) mentions **CORS** | `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `{{SITE_URL}}` (no trailing slash). |
 | Contact form error without CORS message | `API_BASE_URL` in the Node app's environment variables must be the API base ending in `/api/v1`; restart the app after changing it. |
 | Website shows a file list, *403 Forbidden*, downloads a file, or the default cPanel page | The `corporate.paxofi.com` document root is wrong or its Node.js routing was not written: redo Step 0, then Setup Node.js App → **Edit** → **Save** → **Restart**. |
+| Website still shows the previous release (`/release.txt` shows the old version, or old pages appear after a restart) | Check `paxofi-corporate-website/RELEASE.txt` in File Manager. If it is old, the new folder was moved *inside* the old one: rename the outer folder to `…-old-{{VERSION}}`, move the inner `paxofi-corporate-website` to `/`, then **Restart**. If `RELEASE.txt` is new but pages are old, the server cache is serving copies of an earlier release: do the one-time cache step below. |
 | Website shows *503* / *Incomplete response* | The Node app is stopped or failed: Setup Node.js App → **Start**/**Restart**; check `stderr.log` in `paxofi-corporate-website/`. Make sure the startup file is `app.js`. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
+
+### One-time: stop the server cache from serving old pages
+
+Releases before `20261002-4aa5aa7` told the server cache (LiteSpeed) it could keep pages for up to a year; later releases forbid caching, but copies already stored can stay until they expire. Without access to LiteSpeed Web Cache Manager, switch the cache off for this site:
+
+1. File Manager (with *Show Hidden Files* on) → `/home/paxoalhu/corporate.paxofi.com/` → right-click `.htaccess` → **Edit**.
+2. Add these lines at the **very top**, above everything cPanel wrote there (do not change the `CLOUDLINUX PASSENGER CONFIGURATION` lines):
+
+   ```apache
+   # Paxofi: never serve cached copies of the Node.js website
+   <IfModule LiteSpeed>
+   CacheLookup off
+   </IfModule>
+   ```
+3. **Save Changes**, then reload the site in a private window.
+
+If the site shows an error after saving, remove the three added lines again and contact the hosting provider (Namecheap) to purge the LiteSpeed cache for `corporate.paxofi.com`.
 
 ### Roll back to the previous release
 

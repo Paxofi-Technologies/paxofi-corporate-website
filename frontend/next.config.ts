@@ -39,7 +39,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     const headers = process.env.NODE_ENV === "production" ? [...securityHeaders, ...productionHeaders] : securityHeaders;
-    return [{ source: "/(.*)", headers }];
+    return [
+      { source: "/(.*)", headers },
+      // Always fresh, so it reliably shows which release is live.
+      { source: "/release.txt", headers: [{ key: "Cache-Control", value: "no-store" }] },
+    ];
   },
 };
 
