@@ -24,8 +24,8 @@ Automated tests already cover these flows in Chromium, Firefox and WebKit on eve
 | U4 | Careers hand-off | Careers → **View opportunities** | career.paxofi.com opens. No application form on the corporate site | | | |
 | U5 | Send an enquiry | Contact → fill in name, email, company, a message starting "UAT test" → **Send enquiry** | "Thanks — your enquiry has been received."; the form clears | | | |
 | U6 | Enquiry arrives | phpMyAdmin → `paxoalhu_corporate` → `enquiries` → Browse (newest first) | The U5 enquiries are there with the right details | | – | – |
-| U7 | Form mistakes | Contact → enter an email without "@" → Send | A message next to the email field asks for a valid address; nothing is sent | | | |
-| U8 | Too many enquiries | Send 6 enquiries in a row from one device within 10 minutes | The 6th shows a message asking you to wait a few minutes | | – | – |
+| U7 | Form mistakes | Contact → enter an email without "@" → Send | The browser or the form points to the email field and asks for a valid address; nothing is sent | | | |
+| U8 | Too many enquiries | On the desktop, keep sending enquiries (at most 6) | Within 6 sends, a message asks you to wait a few minutes (the limit is 5 per 10 minutes per email or network, so the U5 enquiries count) | | – | – |
 | U9 | Missing page | Open https://corporate.paxofi.com/xyz | A branded "Page not found." page with a way back home | | | |
 | U10 | Privacy and terms | Footer → Privacy, Terms | The pages state the retention periods and that no cookies or tracking are used; you accept the wording | | – | – |
 | U11 | Search/share preview | Paste https://corporate.paxofi.com into WhatsApp or LinkedIn (do not send) | A preview shows the Paxofi title and description | | | |

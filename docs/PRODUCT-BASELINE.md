@@ -67,7 +67,7 @@ Version 1 page copy lives in the frontend code (`frontend/app/**/page.tsx`), rev
 | Accessibility | WCAG 2.1 AA, one h1 per page, skip link, keyboard menu, visible focus, form errors linked to fields | axe scan on every page in 3 browsers; keyboard E2E |
 | Performance | Lighthouse ≥ 90 mobile, LCP ≤ 2.5 s, no layout shift from fonts (self-hosted Inter) | QUALITY-REPORT.md |
 | Responsive | 360 px to 1920 px with no horizontal scroll | E2E viewport tests |
-| Security | CSP, HSTS, nosniff, frame-ancestors none, COOP/CORP, no cookies, dependency audit, ZAP baseline | E2E + CI |
+| Security | CSP, HSTS, nosniff, frame-ancestors none, COOP/CORP/COEP, no cookies, dependency audit, ZAP baseline | E2E + CI |
 
 ## 8. Requirements baseline and hand-off (CW-PD-008)
 

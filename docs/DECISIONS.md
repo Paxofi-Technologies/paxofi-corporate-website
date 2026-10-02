@@ -52,7 +52,7 @@ Short record of decisions that shape the Corporate Website implementation. The c
 
 **Decision (CTO, approved by owner):** the website sets no cookies and loads no analytics, advertising or third-party scripts. Uptime and availability come from UptimeRobot; enquiry volume from the `enquiries` table.
 
-**Why:** no consent banner is needed under the Nigeria Data Protection Act 2023 / GDPR, the CSP stays `'self'`-only, and pages stay fast. CW-OPS-007 and CW-ARCH-010 analytics parts are closed by this decision; revisit in Phase 2 with a cookieless, self-hosted option if traffic insight is needed. An E2E test asserts that no page sets a cookie.
+**Why:** no consent banner is needed under the Nigeria Data Protection Act 2023 / GDPR, the Content-Security-Policy allows only this site and the API, and pages stay fast. CW-OPS-007 and CW-ARCH-010 analytics parts are closed by this decision; revisit in Phase 2 with a cookieless, self-hosted option if traffic insight is needed. An E2E test asserts that no page sets a cookie.
 
 ## D-007 — Service levels (SRS Appendix K) (2 Oct 2026)
 
