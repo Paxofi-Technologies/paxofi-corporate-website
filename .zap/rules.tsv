@@ -1,0 +1,3 @@
+# OWASP ZAP baseline rules for the corporate website (CW-QA-009).
+# Every passive-scan warning fails CI unless it is listed here with a reason.
+# Format: rule-id<TAB>IGNORE|WARN|FAIL<TAB>reason

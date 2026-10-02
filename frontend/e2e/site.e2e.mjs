@@ -103,6 +103,18 @@ describe("public pages", () => {
     });
   }
 
+  test("every page's content is in the server HTML and readable without JavaScript", async () => {
+    // Guards against a route-level Suspense/loading fallback, which would ship
+    // the content hidden until a script reveals it.
+    const page = await newPage({ javaScriptEnabled: false });
+    for (const path of ROUTES) {
+      await page.goto(BASE + path);
+      assert.ok(await page.locator("main h1").isVisible(), `${path}: h1 visible without JavaScript`);
+      assert.equal(await page.locator("main [hidden] h1, template").count(), 0, `${path}: no deferred content`);
+    }
+    await page.context().close();
+  });
+
   test("unknown paths return 404 with the site's not-found page", async () => {
     const page = await newPage();
     const response = await page.goto(`${BASE}/does-not-exist`);
@@ -119,6 +131,8 @@ describe("public pages", () => {
     assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=\d+/);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.equal(response.headers.get("cross-origin-opener-policy"), "same-origin");
+    assert.equal(response.headers.get("cross-origin-resource-policy"), "same-origin");
     assert.equal(response.headers.get("x-powered-by"), null);
   });
 
@@ -128,6 +142,22 @@ describe("public pages", () => {
       assert.doesNotMatch(cacheControl, /s-maxage|public/, `${path}: ${cacheControl}`);
       assert.match(cacheControl, /no-store|no-cache|max-age=0/, `${path}: ${cacheControl}`);
     }
+  });
+
+  test("security.txt publishes a security contact (RFC 9116)", async () => {
+    const response = await fetch(`${BASE}/.well-known/security.txt`);
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.match(body, /^Contact: mailto:\S+@paxofi\.com$/m);
+    const expires = new Date(body.match(/^Expires: (.+)$/m)?.[1] ?? "");
+    assert.ok(expires > new Date(), "security.txt has expired; set a new Expires date (at most a year ahead)");
+  });
+
+  test("no cookies are set on any page", async () => {
+    const page = await newPage();
+    for (const path of ROUTES) await page.goto(BASE + path);
+    assert.deepEqual(await page.context().cookies(), []);
+    await page.context().close();
   });
 
   test("release.txt identifies the deployed release", async () => {

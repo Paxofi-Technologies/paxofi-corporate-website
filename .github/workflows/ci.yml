@@ -56,6 +56,38 @@ jobs:
         env:
           E2E_BROWSER: ${{ matrix.browser }}
 
+  security-scan:
+    name: Security scan (OWASP ZAP baseline)
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Start the production build
+        run: |
+          API_BASE_URL=https://api.paxofi.com/api/v1 nohup npx next start -p 3000 -H 127.0.0.1 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ > /dev/null && exit 0; sleep 1; done
+          cat next.log; exit 1
+      - name: ZAP baseline (passive) scan; any unlisted warning fails
+        working-directory: .
+        run: |
+          mkdir -p zap && cp .zap/rules.tsv zap/ && chmod -R 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:3000 -c rules.tsv -r zap-report.html -J zap-report.json
+      - name: Keep the ZAP report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: zap-report
+          path: zap/zap-report.*
+          if-no-files-found: ignore
+
   backend:
     name: Backend validation
     runs-on: ubuntu-latest
@@ -135,7 +167,7 @@ jobs:
     name: cPanel upload packages
     # Every validated commit on main gets ready-to-upload ZIPs (Actions → run → Artifacts).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [frontend, cross-browser, backend, repository]
+    needs: [frontend, cross-browser, security-scan, backend, repository]
     runs-on: ubuntu-latest
     env:
       COMPOSER_AUTH: ${{ secrets.PCF_COMPOSER_AUTH }}
