@@ -79,7 +79,7 @@ export default function ContactForm({ endpoint }: Props) {
         </label>
       </div>
 
-      <button className="button primary" type="submit" disabled={status === "sending"}>
+      <button className="button button--primary" type="submit" disabled={status === "sending"}>
         {status === "sending" ? "Sending…" : "Send enquiry"}
       </button>
       <p ref={statusRef} tabIndex={-1} className="form-status" role="status" aria-live="polite" data-state={status}>

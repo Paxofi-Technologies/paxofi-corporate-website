@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import Logo from "@/components/Logo";
 import { NAV_LINKS } from "@/lib/site";
 
 function isCurrent(pathname: string, href: string): boolean {
@@ -30,8 +31,7 @@ export default function SiteHeader() {
     <header className="site-header">
       <div className="container nav">
         <Link href="/" className="brand" aria-label="Paxofi Technologies — home">
-          <span className="brand-mark" aria-hidden="true">P</span>
-          <span>PAXOFI</span>
+          <Logo />
         </Link>
         <button
           type="button"

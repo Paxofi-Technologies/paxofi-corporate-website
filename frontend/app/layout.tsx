@@ -1,3 +1,4 @@
+import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import SiteFooter from "@/components/SiteFooter";
@@ -14,14 +15,14 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: `${SITE.name} — Building Digital Infrastructure`, template: `%s | ${SITE.name}` },
+  title: { default: `${SITE.name} — Technology for a Brighter Tomorrow`, template: `%s | ${SITE.name}` },
   description: SITE.description,
   openGraph: { siteName: SITE.name, type: "website", url: "/", title: SITE.name, description: SITE.description },
   twitter: { card: "summary", title: SITE.name, description: SITE.description },
   robots: { index: true, follow: true },
 };
 
-export const viewport: Viewport = { themeColor: "#111111", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#0A1F44", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
