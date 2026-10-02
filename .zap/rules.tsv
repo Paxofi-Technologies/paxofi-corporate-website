@@ -1,3 +1,4 @@
 # OWASP ZAP baseline rules for the corporate website (CW-QA-009).
 # Every passive-scan warning fails CI unless it is listed here with a reason.
 # Format: rule-id<TAB>IGNORE|WARN|FAIL<TAB>reason
+10049	IGNORE	Non-Storable Content: pages are deliberately "private, no-store" so the host's LiteSpeed cache cannot serve an old release (frontend/app/layout.tsx, RUNBOOKS RB-3).

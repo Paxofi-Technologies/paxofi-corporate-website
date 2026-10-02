@@ -55,7 +55,14 @@ export default function ContactForm({ endpoint }: Props) {
   }
 
   return (
-    <form className="contact-form" onSubmit={submit}>
+    // method="post": if the form is submitted before the script loads, the
+    // details go in the request body, never in the URL or server logs.
+    <form className="contact-form" method="post" onSubmit={submit}>
+      <noscript>
+        <p className="form-status" data-state="error">
+          Sending this form needs JavaScript. You can also email us at hello@paxofi.com.
+        </p>
+      </noscript>
       {FIELDS.map((field) => (
         <Field key={field.name} {...field} error={fieldErrors[field.name]} />
       ))}

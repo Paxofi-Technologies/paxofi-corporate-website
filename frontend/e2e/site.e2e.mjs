@@ -128,6 +128,8 @@ describe("public pages", () => {
     const csp = response.headers.get("content-security-policy") ?? "";
     assert.match(csp, /frame-ancestors 'none'/);
     assert.match(csp, /object-src 'none'/);
+    assert.match(csp, /connect-src 'self' https:\/\/api\.e2e\.test;/, "connect-src names only the configured API origin");
+    assert.equal(response.headers.get("cross-origin-embedder-policy"), "require-corp");
     assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=\d+/);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("x-frame-options"), "DENY");
@@ -310,6 +312,16 @@ describe("contact journey", () => {
     const email = page.getByLabel("Email");
     assert.equal(await email.getAttribute("aria-invalid"), "true");
     assert.ok(await email.evaluate((el) => el === document.activeElement));
+    await page.context().close();
+  });
+
+  test("a submission before the script loads never puts details in the URL", async () => {
+    const page = await newPage({ javaScriptEnabled: false });
+    await page.goto(`${BASE}/contact`);
+    assert.equal(await page.locator("form.contact-form").getAttribute("method"), "post");
+    // Browsers render <noscript> only when scripting is off in the parser, which
+    // Playwright's javaScriptEnabled does not emulate, so check the markup.
+    assert.match(await page.locator("form.contact-form noscript").textContent(), /Sending this form needs JavaScript\./);
     await page.context().close();
   });
 
