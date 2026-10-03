@@ -139,11 +139,13 @@ describe("staff area", () => {
     await page.context().close();
   });
 
-  test("/admin redirects to the inbox without a page body (ZAP 10044)", async () => {
+  test("/admin redirects to the inbox with a tiny, typed body", async () => {
     const response = await fetch(`${BASE}/admin`, { redirect: "manual" });
     assert.equal(response.status, 307);
     assert.match(response.headers.get("location"), /\/admin\/enquiries$/);
     assert.equal(response.headers.get("x-frame-options"), "DENY");
+    // A tiny, typed body: no "Big Redirect" (ZAP 10044), no untyped content (ZAP 10019).
+    assert.match(response.headers.get("content-type") ?? "", /^text\/plain/);
     assert.ok((await response.text()).length < 100, "redirect body stays tiny");
   });
 
