@@ -1,6 +1,6 @@
 # Field-level schema review — Version 1 and Phase 2.1 (CW-072.01)
 
-Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–007 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
+Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–008 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
 
 **Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on career.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
 
@@ -43,7 +43,11 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions | id | CHAR(64) PK = SHA-256 of the cookie token | – | OK; the token itself is never stored |
 | | user_id FK, expires_at (8 h absolute), revoked_at, last_seen_at (30 min idle), created_at | see 001/007 | – | OK; `expires_at` has no ON UPDATE (MigrationTest) |
 | | source_ip, user_agent | VARCHAR(45) / VARCHAR(500) NULL | yes | Deleted with the session 30 days after it ends (D-008 extension) |
-| login_attempts | id, email, source_ip, succeeded, created_at; indexes (email, created_at), (source_ip, created_at) | 007 | yes | Throttle window 15 min; rows deleted after 90 days |
+| login_attempts | id, email, source_ip, succeeded, created_at; indexes (email, created_at), (source_ip, created_at) | 007 | yes | Throttle window 15 min (password and second-factor failures together); rows deleted after 90 days |
+| users (008) | totp_secret, totp_pending_secret | VARCHAR(255) NULL, AES-256-GCM ("v1." + base64), key from `MFA_ENCRYPTION_KEY` | – (secret) | OK; never returned by the API |
+| | totp_enabled_at, totp_last_step | TIMESTAMP NULL / BIGINT NULL | – | OK; last_step makes each code single-use |
+| sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
+| recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
 ## Reserved tables (empty in v1)
 
@@ -57,4 +61,4 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 1. Personal data is stored in `enquiries` and, from Phase 2.1, in the staff tables (`users`, `sessions`, `login_attempts`); retention is automated for all of them (D-008, `bin/purge-retention.php`).
 2. All text columns are utf8mb4; integration tests round-trip non-Latin text and emoji (`MigrationTest`).
 3. Every query path used by v1 is indexed (published listings, rate limit by email and by IP, audit by action).
-4. Phase 2.1 delivered `users.password_hash`, hashed session tokens and sign-in throttling (007). Still to design: TOTP second factor (P2.2) and the `content_items` editorial workflow (P2.3).
+4. Phase 2.1 delivered `users.password_hash`, hashed session tokens and sign-in throttling (007); Phase 2.2 the TOTP second factor with encrypted secrets and hashed recovery codes (008). Still to design: the `content_items` editorial workflow (P2.3).

@@ -69,7 +69,7 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 ## RB-8 Suspected security incident
 
 1. Preserve evidence: download `backend/public/error_log`, `stderr.log` and a phpMyAdmin export of `audit_events` before changing anything.
-2. Rotate secrets: change the database user's password (cPanel → MySQL Databases) and update `DB_PASSWORD` in `.env`; change the cPanel password; make sure `ADMIN_SETUP_TOKEN` is not in `.env`. To sign every staff member out at once: phpMyAdmin → SQL → `UPDATE sessions SET revoked_at = UTC_TIMESTAMP() WHERE revoked_at IS NULL;`, then have staff change passwords.
+2. Rotate secrets: change the database user's password (cPanel → MySQL Databases) and update `DB_PASSWORD` in `.env`; change the cPanel password; make sure `ADMIN_SETUP_TOKEN` is not in `.env`. A leaked `MFA_ENCRYPTION_KEY` matters only together with a copy of the database; if both may be exposed, every staff member resets their two-factor after a new key is set (RB-11). To sign every staff member out at once: phpMyAdmin → SQL → `UPDATE sessions SET revoked_at = UTC_TIMESTAMP() WHERE revoked_at IS NULL;`, then have staff change passwords.
 3. Check for unexpected files in the document roots and in `paxofi-api-runtime` (compare with the release ZIP).
 4. Redeploy the last known-good release (RB-1) and record the incident in PKDMS.
 
@@ -90,7 +90,7 @@ Set up once, after the release that ships `backend/bin/purge-retention.php`:
    If cPanel shows a different PHP 8.4 path (MultiPHP → *ea-php84*), use `/opt/cpanel/ea-php84/root/usr/bin/php`.
 4. Next day: open `logs/purge-retention.log`; each line reads `… retention purge: N enquiries deleted, …`. A line starting `Retention purge failed` → RB-5 (database).
 
-Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit events 24 months), plus staff sign-in records 90 days and ended staff sessions 30 days (D-009). To delete one person's enquiry on request: phpMyAdmin → `enquiries` → search by email → Delete (the staff area marks enquiries but does not delete them).
+Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit events 24 months), plus staff sign-in records 90 days and ended staff sessions 30 days (D-009). Recovery codes are deleted when replaced, reset or when two-factor is turned off. To delete one person's enquiry on request: phpMyAdmin → `enquiries` → search by email → Delete (the staff area marks enquiries but does not delete them).
 
 ## RB-11 Staff area access (/admin)
 
@@ -103,6 +103,11 @@ Staff sign in at `https://corporate.paxofi.com/admin` (D-009). Roles: **Administ
 - **"Too many attempts":** automatic 15-minute block (5 failures per email, 20 per network). Repeated blocks you cannot explain → RB-8.
 - **Sent back to sign in straight away:** cookie not kept: both sites must be on HTTPS and the API `.env` must have `APP_ENV=production` (guide, *If something goes wrong*).
 - **Suspected compromised account:** disable it, check **Audit log** for its actions, then RB-8. Disabling, a role change or a password reset revokes all its sessions.
+- **Two-factor (D-010):** required for administrators, optional for Business Development.
+    - *Lost phone:* sign in with a recovery code; another administrator → *Users* → **Edit** → **Reset two-factor**; set it up again.
+    - *Recovery codes running low:* *My account* → *Two-factor sign-in* → **Get new recovery codes** (needs the app).
+    - *Only administrator, no phone and no recovery codes:* engineering sends one SQL statement for phpMyAdmin (`UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = NULL WHERE email = '…';`); the administrator then sets two-factor up again at the next sign-in. Record it as an incident.
+    - *`MFA_ENCRYPTION_KEY`:* set once, keep a copy, never rotate casually: changing it breaks every authenticator (recovery codes still work). Never remove it to "skip" two-factor: accounts that have two-factor on still need their code.
 
 ## Escalation
 
