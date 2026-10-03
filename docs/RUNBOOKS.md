@@ -23,7 +23,7 @@ Every request to the API returns an `X-Request-Id` header and a `request_id` in 
 
 ## RB-1 Deploy a release
 
-Follow `DEPLOYMENT-GUIDE.md` shipped with the release (generated from `ops/DEPLOYMENT-GUIDE.template.md`). Website-only releases need Step 4 only. Always finish by checking `/release.txt` in a private window.
+Follow `DEPLOYMENT-GUIDE.md` shipped with the release (generated from `ops/DEPLOYMENT-GUIDE.template.md`). Website-only releases need Step 4 only. Always finish by checking `/release.txt` in a private window. Once the staging copy exists (guide Step 11, D-013), every release goes to staging first and to live only after it has been checked there (RB-14).
 
 ## RB-2 Roll back
 
@@ -128,6 +128,16 @@ Staff upload files at `/admin` → **Media** (D-012). Files are in `/home/paxoal
 - **Backups:** include `paxofi-media` with every database backup (compress and download in File Manager). The database alone is not enough.
 - **Moving server (VPS):** copy `paxofi-media` as it is and set `MEDIA_STORAGE_PATH` to its new path.
 - **Who uploaded or deleted what:** **Audit log**, actions `media.*`.
+
+## RB-14 Staging copy
+
+`staging.corporate.paxofi.com` + `api-staging.paxofi.com`, folders in `/home/paxoalhu/staging/`, database `paxoalhu_corporate_staging` (D-013). Same release files as live; the Node app's `SITE_ENVIRONMENT=staging` and `STAGING_PASSWORD` make it private and unindexed.
+
+- **Use:** install each release there first (guide *Release routine*), run the release's UAT scenarios, then deploy the same files to live.
+- **Password:** kept in the owner's password manager; change it in the staging Node app's environment variables → **Save** → **Restart**. Share it only with staff who test.
+- **Data:** test data only. Never import the live database into staging (personal data, D-008). To start over: drop all tables in the staging database and import that release's `database-install` file, then empty `staging/paxofi-media`.
+- **Not monitored, not backed up:** staging can be rebuilt from a release at any time. UptimeRobot watches the live site only.
+- **If staging is ever reachable without the password:** stop the staging Node app (Setup Node.js App → **Stop App**) and check `SITE_ENVIRONMENT` and `STAGING_PASSWORD`.
 
 ## Escalation
 

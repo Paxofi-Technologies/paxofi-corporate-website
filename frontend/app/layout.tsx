@@ -2,6 +2,7 @@ import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
+import { isStaging } from "@/lib/staging";
 
 // Render every page per request. Prerendered pages are sent with
 // "Cache-Control: s-maxage=31536000", which lets the host's shared cache
@@ -11,7 +12,7 @@ import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
 // request is cheap; hashed /_next/static assets are still cached long-term.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: { default: `${SITE.name} — Technology for a Brighter Tomorrow`, template: `%s | ${SITE.name}` },
   description: SITE.description,
@@ -20,6 +21,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+/** Read per request, so the staging copy (D-013) is marked noindex at run time. */
+export function generateMetadata(): Metadata {
+  return isStaging() ? { ...metadata, robots: { index: false, follow: false } } : metadata;
+}
+
 export const viewport: Viewport = { themeColor: "#0A1F44", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +33,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // admin/ for the staff area (decision D-009).
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {isStaging() && (
+          <p className="staging-banner" role="note">
+            Staging site for testing. Changes here do not affect the live website.
+          </p>
+        )}
+        {children}
+      </body>
     </html>
   );
 }

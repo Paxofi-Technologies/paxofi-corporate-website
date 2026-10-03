@@ -10,7 +10,8 @@ This release is deployed by uploading files through **cPanel File Manager** and 
 
 | File | Where it goes |
 |---|---|
-| `database-upgrade-{{VERSION}}.sql` | phpMyAdmin → database `paxoalhu_corporate` → **Import** |
+| `database-upgrade-{{VERSION}}.sql` | phpMyAdmin → database `paxoalhu_corporate` → **Import** (and the staging database, Step 11) |
+| `database-install-{{VERSION}}.sql` | Only when creating the staging copy: phpMyAdmin → the new, empty staging database → **Import** (Step 11) |
 | `paxofi-api-runtime-{{VERSION}}.zip` | Extracted into `/home/paxoalhu/release-{{VERSION}}`, then moved to `/home/paxoalhu/paxofi-api-runtime` |
 | `paxofi-corporate-website-{{VERSION}}.zip` | Extracted into `/home/paxoalhu/release-{{VERSION}}`, then moved to `/home/paxoalhu/paxofi-corporate-website` |
 | `SHA256SUMS` | Optional: integrity checksums of the files above |
@@ -208,6 +209,55 @@ Good to know:
 - Only administrators delete files, and only when no product or service uses them.
 - **Back up** the `paxofi-media` folder with the database (Step 1): File Manager → right-click `paxofi-media` → **Compress** → download the ZIP.
 
+## Step 11 — One time: create the staging copy (about 45 minutes)
+
+The staging copy is a private second website where each new release is installed and checked **before** it goes live (decision D-013). It uses the same release files as the live site, its own database, folders and media, and a password, so nothing done there touches the live website.
+
+| | Live | Staging |
+|---|---|---|
+| Website | `corporate.paxofi.com` | `staging.corporate.paxofi.com` |
+| API | `api.paxofi.com` | `api-staging.paxofi.com` |
+| Folders in `/home/paxoalhu/` | `paxofi-api-runtime`, `paxofi-corporate-website`, `paxofi-media` | the same three names inside `staging/` |
+| Database | `paxoalhu_corporate` | `paxoalhu_corporate_staging` |
+
+1. **Folders:** File Manager → `/home/paxoalhu/` → **+ Folder** `staging`. Inside `staging`, create `paxofi-media`.
+2. **Domains:** cPanel → **Domains** → **Create A New Domain**:
+    - `api-staging.paxofi.com`, document root `/staging/paxofi-api-runtime/backend/public` (untick *Share document root*);
+    - `staging.corporate.paxofi.com`, document root `/staging.corporate.paxofi.com` (its own folder, like the live site).
+    - Then **SSL/TLS Status** → select both → **Run AutoSSL**, and turn on **Force HTTPS Redirect** for both under **Domains**. If a new address does not open after 30 minutes, the domain's DNS is managed elsewhere: add the two names there (same IP address as `corporate.paxofi.com`).
+3. **Database:** cPanel → **MySQL Databases** → create database `corporate_staging` (shown as `paxoalhu_corporate_staging`), create a new user with a new password, and **Add User To Database** with **ALL PRIVILEGES**. Then phpMyAdmin → click the new database → **Import** → `database-install-{{VERSION}}.sql` → **Import**. Use the *install* file only here, and only once.
+4. **API:** upload and extract `paxofi-api-runtime-{{VERSION}}.zip` into `/home/paxoalhu/staging/` (you get `staging/paxofi-api-runtime/`). In `backend/`, copy `.env.example` to `.env`, **Edit** it and set:
+
+        APP_ENV=production
+        DB_DATABASE=paxoalhu_corporate_staging
+        DB_USERNAME=the staging database user
+        DB_PASSWORD="the staging database password"
+        CORS_ALLOWED_ORIGINS=https://staging.corporate.paxofi.com
+        ADMIN_SETUP_TOKEN=a new 32+ character code (delete after step 7)
+        MFA_ENCRYPTION_KEY=a NEW 40+ character key (not the live one)
+        MEDIA_STORAGE_PATH=/home/paxoalhu/staging/paxofi-media
+
+    **Change Permissions** → `600`. cPanel → **MultiPHP Manager** → tick `api-staging.paxofi.com` → **PHP 8.4** → **Apply**. Check `https://api-staging.paxofi.com/api/v1/readiness` shows `"database":true`.
+5. **Website:** upload and extract `paxofi-corporate-website-{{VERSION}}.zip` into `/home/paxoalhu/staging/`. cPanel → **Setup Node.js App** → **Create Application**:
+    - Node.js version **22**, Application mode **Production**;
+    - Application root `staging/paxofi-corporate-website`, Application URL `staging.corporate.paxofi.com`, startup file `app.js`;
+    - **Environment variables:** `API_BASE_URL` = `https://api-staging.paxofi.com/api/v1`, `SITE_ENVIRONMENT` = `staging`, `STAGING_PASSWORD` = a password of 12 or more characters (keep it in your password manager; share it only with staff who test);
+    - **Create**, then **Start App**. Do not click *Run NPM Install*.
+6. **Check it is private:** open `https://staging.corporate.paxofi.com` in a private window. The browser asks for a user name and password: enter any user name (for example `paxofi`) and the staging password. A yellow line at the top says *Staging site for testing*. Without the password nothing is shown.
+7. **Staff account on staging:** open `https://staging.corporate.paxofi.com/admin/setup` and create an administrator with the staging `ADMIN_SETUP_TOKEN`, as in Step 7. Then delete the `ADMIN_SETUP_TOKEN` line from the staging `.env`. Staging accounts are separate from live accounts.
+
+Staging holds no real enquiries or staff accounts. Do not copy the live database into it: it contains personal data (D-008).
+
+## Release routine from now on: staging first
+
+For every new release:
+
+1. **Staging:** do Steps 2–4 on the staging copy, with these changes: the database is `paxoalhu_corporate_staging`; the folders are inside `/home/paxoalhu/staging/` (so `release-{{VERSION}}` goes there too, and the `.env` is copied from `staging/paxofi-api-runtime/backend/`); the PHP version and Node.js app are the staging ones; addresses start with `staging.` / `api-staging.`. The *upgrade* file is used here as on live. A staging backup (Step 1) is optional.
+2. **Test on staging:** the release notes say what to check (the UAT scenarios). Tell engineering about anything wrong; the live site is untouched.
+3. **Live:** when staging is right, do Steps 1–5 on the live site as usual, with the same files.
+
+If staging and live ever differ in a setting, the difference must be one of: the database name and user, `CORS_ALLOWED_ORIGINS`, `MFA_ENCRYPTION_KEY`, `MEDIA_STORAGE_PATH`, `API_BASE_URL`, and the two staging variables. Everything else is the same.
+
 ## If something goes wrong
 
 | Symptom | Fix |
@@ -233,6 +283,9 @@ Good to know:
 | Upload says *The server did not accept a file this large* | PHP's `post_max_size` is below the file size: Step 10, point 3. |
 | Upload says *The server cannot process pictures* | PHP's `gd` extension is off: cPanel → **Select PHP Version** (or MultiPHP Manager) → turn on `gd` for PHP 8.4. Documents still upload. |
 | Pictures do not show on the website but open from **Media** | The website's `API_BASE_URL` must be the same API address the pictures come from; restart the Node app after changing it. |
+| Staging shows *STAGING_PASSWORD is not set* | The staging Node app needs `STAGING_PASSWORD` with 12 or more characters (Step 11.5); **Save** and **Restart**. |
+| Staging keeps asking for the password | Use the `STAGING_PASSWORD` value from the staging Node app; the user name can be anything. Close the private window and try again. |
+| Staging pages show the live site's content or enquiries arrive in the live database | The staging Node app's `API_BASE_URL` must be `https://api-staging.paxofi.com/api/v1`, and the staging `.env` must name `paxoalhu_corporate_staging`. |
 | *Too many attempts* on sign-in | Wait 15 minutes. An administrator cannot lift the block early; if it keeps happening, check the *Audit log* for `staff.sign_in` failures. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveApiBase } from "@/lib/contact";
 import { contentSecurityPolicy, createNonce } from "@/lib/csp";
+import { isStaging, stagingGate } from "@/lib/staging";
 
 // Sets the Content-Security-Policy on every page response, per request:
 // - a fresh script nonce, which Next.js applies to its own scripts when it
@@ -9,6 +10,16 @@ import { contentSecurityPolicy, createNonce } from "@/lib/csp";
 //   cannot read after the build.
 // The development server needs eval for hot reloading, so CSP is production-only.
 export function proxy(request: NextRequest) {
+  // Staging copy (D-013): password first, for every path, before anything else.
+  const gate = stagingGate(request.headers.get("authorization"));
+  if (gate) return new NextResponse(gate.body, { status: gate.status, headers: gate.headers });
+  const response = route(request);
+  // Staging is never indexed, whatever the page says.
+  if (isStaging()) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+function route(request: NextRequest): NextResponse {
   // /admin → the inbox as a bare redirect. A page-level redirect() sends a full
   // HTML page (ZAP 10044 "Big Redirect"); Next writes the target URL as the
   // body here, so label it (ZAP 10019 "Content-Type Header Missing").

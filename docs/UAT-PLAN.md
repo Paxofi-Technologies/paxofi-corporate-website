@@ -147,3 +147,18 @@ Record sign-off ("Phase 2.4 UAT passed for release X") in Asana.
 ### Results — release 20261003-a95b522 (3 Oct 2026)
 
 **Phase 2.4 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder): "deployed and everything runs fine". Guide Steps 1–5 and Step 10 (media folder and `MEDIA_STORAGE_PATH`) applied.
+
+## Phase 2.5 — staging copy (D-013)
+
+Run after guide Step 11. About 15 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| S1 | Private | Open `https://staging.corporate.paxofi.com` in a private window → **Cancel** at the password prompt | Nothing of the site is shown | |
+| S2 | Password works | Open it again, enter any user name and the staging password | The site opens with the yellow *Staging site for testing* line | |
+| S3 | Not indexed | Open `https://staging.corporate.paxofi.com/robots.txt` | `Disallow: /` | |
+| S4 | Its own data | Send the contact form on staging; check phpMyAdmin | The enquiry is in `paxoalhu_corporate_staging`, **not** in the live database | |
+| S5 | Its own staff area | Sign in at staging `/admin` with the staging administrator; edit and publish a product summary | The change shows on staging only; the live site is unchanged | |
+| S6 | Live unchanged | Open `https://corporate.paxofi.com` and its `robots.txt` | No password, no yellow line, `robots.txt` allows the site | |
+
+Record sign-off ("Phase 2.5 UAT passed") in Asana.

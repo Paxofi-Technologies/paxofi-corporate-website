@@ -170,3 +170,21 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - Uploading through cPanel only: no link to products and services, and no checks.
 - An external file host or CDN: another account and service to secure; revisit with the VPS move if traffic grows.
 - Showing PDFs in the browser: inline documents on the API's address are a larger attack surface than downloads.
+
+## D-013 — Staging copy on the same hosting account (3 Oct 2026)
+
+**Decision (CTO, owner said "start" on 3 Oct 2026; slice P2.5):** a private staging copy runs next to the live site on the same cPanel account. Every release is installed and checked there first.
+
+- **Same files as live:** the release package is not rebuilt for staging. The Node app's settings switch it to staging mode, so what is tested is exactly what goes live.
+- **Staging mode** (`SITE_ENVIRONMENT=staging`):
+  - every page and file needs the staging password (HTTP Basic, `STAGING_PASSWORD`, 12+ characters);
+  - it **fails closed**: without a usable password it serves nothing (503);
+  - `X-Robots-Tag: noindex, nofollow` on every response, `noindex` in the pages, `robots.txt` disallows everything and the sitemap is empty;
+  - a banner on every page says it is the staging site.
+- **Separate everything else:** subdomains `staging.corporate.paxofi.com` and `api-staging.paxofi.com`, folders under `/home/paxoalhu/staging/`, database `paxoalhu_corporate_staging`, its own staff accounts, two-factor key and media folder. The API needs no staging code: it runs with `APP_ENV=production` and its own `.env`.
+- **Data:** staging starts from `database-install-<version>.sql`, a new file in each release for a new, empty database. The live database is never copied to staging (D-008).
+- **Not chosen:**
+  - cPanel *Directory Privacy* for the password: it is not covered by tests and can clash with the Node.js routing file;
+  - a password on the staging API: it would break the staff area's cross-site calls, and the API holds only test data;
+  - a separate staging build: it would no longer test the exact live files;
+  - a second hosting account or the VPS: extra cost now. Revisit with the VPS move.
