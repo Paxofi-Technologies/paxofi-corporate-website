@@ -27,11 +27,14 @@ use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
 use Paxofi\CorporateWebsite\Application\Contact\EnquiryValidator;
 use Paxofi\CorporateWebsite\Application\Content\ContentService;
+use Paxofi\CorporateWebsite\Application\Media\ImageProcessor;
+use Paxofi\CorporateWebsite\Application\Media\MediaLibrary;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
@@ -39,6 +42,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
 use Paxofi\CorporateWebsite\Http\Controllers\HealthController;
+use Paxofi\CorporateWebsite\Http\Controllers\MediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\NavigationController;
 use Paxofi\CorporateWebsite\Http\Controllers\ReadinessController;
 use Paxofi\CorporateWebsite\Http\Middleware\CorsMiddleware;
@@ -46,6 +50,8 @@ use Paxofi\CorporateWebsite\Http\Middleware\ErrorHandlingMiddleware;
 use Paxofi\CorporateWebsite\Http\Middleware\RequestIdMiddleware;
 use Paxofi\CorporateWebsite\Http\Middleware\SecurityHeadersMiddleware;
 use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
+use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
+use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
@@ -56,11 +62,13 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoLoginAttempts;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoMediaRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoSessionStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoStaffRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoTwoFactorStore;
 use Paxofi\CorporateWebsite\Infrastructure\Security\NativeStaffPasswordHasher;
 use Paxofi\CorporateWebsite\Infrastructure\Security\OpenSslSecretEncryption;
+use Paxofi\CorporateWebsite\Infrastructure\Support\Uuid;
 
 /**
  * Composition root for the public API.
@@ -83,6 +91,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/services'],
         ['GET', '/api/v1/careers'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
+        ['GET', '/api/v1/media/{id}/{filename}'],
     ];
 
     /** Staff routes (decision D-009); each checks the session and permission itself. */
@@ -115,6 +124,10 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/catalog/{type}/{id}/publish'],
         ['POST', '/api/v1/admin/catalog/{type}/{id}/visibility'],
         ['POST', '/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore'],
+        ['GET', '/api/v1/admin/media'],
+        ['POST', '/api/v1/admin/media'],
+        ['PATCH', '/api/v1/admin/media/{id}'],
+        ['DELETE', '/api/v1/admin/media/{id}'],
     ];
 
     private readonly HttpHandler $pipeline;
@@ -133,6 +146,7 @@ final class ApiApplication implements HttpHandler
         ?Closure $connect = null,
         ?Closure $clock = null,
         ?PasswordHashing $hasher = null,
+        private readonly ?ImageProcessor $imageProcessor = null,
     ) {
         $this->database = new Database($connect ?? fn (): PDO => Connection::make($settings->environment));
         $this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable('now', new DateTimeZone('UTC'));
@@ -168,6 +182,7 @@ final class ApiApplication implements HttpHandler
         }
 
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
+        $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
 
         $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
         $router->get('/api/v1/admin/setup', static fn (HttpRequest $r): HttpResponse => $session()->setupStatus($r));
@@ -209,7 +224,12 @@ final class ApiApplication implements HttpHandler
         $router->add('PATCH', '/api/v1/admin/users/{id}', static fn (HttpRequest $r): HttpResponse => $staff()->update($r));
 
         $catalog = fn (): AdminCatalogController => new AdminCatalogController(
-            new CatalogEditor(new PdoCatalogEditorRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database)),
+            new CatalogEditor(
+                new PdoCatalogEditorRepository($this->database),
+                new PdoAuditRecorder($this->database),
+                new LazyTransactionManager($this->database),
+                new PdoMediaRepository($this->database),
+            ),
             $this->adminGuard(),
         );
         $router->get('/api/v1/admin/catalog/{type}', static fn (HttpRequest $r): HttpResponse => $catalog()->list($r));
@@ -220,6 +240,12 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/admin/catalog/{type}/{id}/publish', static fn (HttpRequest $r): HttpResponse => $catalog()->publish($r));
         $router->post('/api/v1/admin/catalog/{type}/{id}/visibility', static fn (HttpRequest $r): HttpResponse => $catalog()->visibility($r));
         $router->post('/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore', static fn (HttpRequest $r): HttpResponse => $catalog()->restore($r));
+
+        $media = fn (): AdminMediaController => new AdminMediaController($this->mediaLibrary(), $this->adminGuard());
+        $router->get('/api/v1/admin/media', static fn (HttpRequest $r): HttpResponse => $media()->list($r));
+        $router->post('/api/v1/admin/media', static fn (HttpRequest $r): HttpResponse => $media()->upload($r));
+        $router->add('PATCH', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->update($r));
+        $router->add('DELETE', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->delete($r));
 
         $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
 
@@ -263,6 +289,18 @@ final class ApiApplication implements HttpHandler
             new PdoAuditRecorder($this->database),
             new LazyTransactionManager($this->database),
             $this->clock,
+        );
+    }
+
+    private function mediaLibrary(): MediaLibrary
+    {
+        return new MediaLibrary(
+            new PdoMediaRepository($this->database),
+            new FilesystemMediaStorage($this->settings->mediaStoragePath),
+            $this->imageProcessor ?? GdImageProcessor::create(),
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            Uuid::v4(...),
         );
     }
 

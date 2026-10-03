@@ -184,6 +184,30 @@ From this release, the products and services on the website are edited in the st
 5. **Hide from website** / **Show on website** controls whether visitors see the item. New items start hidden.
 6. **Earlier versions** → **Restore as draft** brings back any previous wording; publish it to put it live again.
 
+## Step 10 — One time: turn on uploads for pictures and documents (10 minutes)
+
+From this release, staff can upload pictures and documents under **Media** and choose them for a product or service (decision D-012). Files are kept in their own folder, outside the release folders, so later releases never remove them.
+
+1. **Create the folder:** File Manager → `/home/paxoalhu/` → **+ Folder** → name `paxofi-media` → **Create New Folder**. It must sit next to `paxofi-api-runtime`, not inside it and not inside `public_html` or `corporate.paxofi.com`.
+2. **Tell the API where it is:** File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/` → right-click `.env` → **Edit** → add one line at the end → **Save Changes**:
+
+        MEDIA_STORAGE_PATH=/home/paxoalhu/paxofi-media
+
+    The `.env` is copied over in Step 3.4 of every release, so this stays. **Do not delete this line.**
+
+3. **Check the upload size limit:** sign in at {{SITE_URL}}/admin → **Media**.
+    - If the page says *The server currently accepts files up to … MB*, PHP's limit is below 10 MB. This release sets it to 16 MB itself (file `backend/public/.user.ini`); wait 5 minutes and reload.
+    - If the message stays: cPanel → **MultiPHP INI Editor** → **Basic Mode** → choose the API domain (`api.paxofi.com`) → set `post_max_size` to `16M` → **Apply**.
+4. **Test:** upload a picture (with a short description) and a PDF. Both appear in the list. **Open** shows the picture; the PDF downloads.
+5. **Use them:** **Content** → an item → **Picture** and **Document to download** → **Save draft** → **Publish**. The card on the website shows the picture and a download link.
+
+Good to know:
+
+- Anyone with a file's link can open it. Upload only material meant for the public.
+- Pictures are cleaned on upload: turned upright, camera and location details removed, and shrunk to at most 2400 pixels wide.
+- Only administrators delete files, and only when no product or service uses them.
+- **Back up** the `paxofi-media` folder with the database (Step 1): File Manager → right-click `paxofi-media` → **Compress** → download the ZIP.
+
 ## If something goes wrong
 
 | Symptom | Fix |
@@ -205,6 +229,10 @@ From this release, the products and services on the website are edited in the st
 | *That code is not valid* although the app shows it | The phone's clock is wrong: turn on automatic date and time on the phone. Each code also works only once, so wait for the next one. |
 | Everyone's codes stopped working after a change to `.env` | `MFA_ENCRYPTION_KEY` was changed or removed. Put the original key back. If it is lost: sign in with recovery codes, and administrators reset each other's two-factor (RB-11). |
 | Published changes do not appear on the website | The website server reads products and services from the API. If it cannot reach it within 1.5 seconds, it shows the built-in wording, and `paxofi-corporate-website/stderr.log` has a line starting `catalog: showing built-in`. Check that `API_BASE_URL` on the Node app is the full `https://api…/api/v1` address and that `{{API_URL}}/products` opens in a browser, then restart the app. |
+| **Media** says *File uploads are not set up on the server yet* | `MEDIA_STORAGE_PATH` is missing from the API `.env`, or the folder does not exist or cannot be written (Step 10). The path must be the full path, e.g. `/home/paxoalhu/paxofi-media`. |
+| Upload says *The server did not accept a file this large* | PHP's `post_max_size` is below the file size: Step 10, point 3. |
+| Upload says *The server cannot process pictures* | PHP's `gd` extension is off: cPanel → **Select PHP Version** (or MultiPHP Manager) → turn on `gd` for PHP 8.4. Documents still upload. |
+| Pictures do not show on the website but open from **Media** | The website's `API_BASE_URL` must be the same API address the pictures come from; restart the Node app after changing it. |
 | *Too many attempts* on sign-in | Wait 15 minutes. An administrator cannot lift the block early; if it keeps happening, check the *Audit log* for `staff.sign_in` failures. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 
@@ -226,7 +254,7 @@ If the site shows an error after saving, remove the three added lines again and 
 
 ### Roll back to the previous release
 
-1. File Manager: rename the new folders to `…-failed`, and rename the `…-old-{{VERSION}}` folders back to `paxofi-api-runtime` and `paxofi-corporate-website`.
+1. File Manager: rename the new folders to `…-failed`, and rename the `…-old-{{VERSION}}` folders back to `paxofi-api-runtime` and `paxofi-corporate-website`. Leave `paxofi-media` as it is.
 2. Setup Node.js App → **Restart**.
 3. Only if the database is the problem: phpMyAdmin → Import the Step 1 export.
 

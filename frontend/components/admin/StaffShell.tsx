@@ -10,6 +10,7 @@ import { AdminApiError, StaffUser, TWO_FACTOR_PATH, adminRequest } from "@/lib/a
 const NAV = [
   { href: "/admin/enquiries", label: "Enquiries", permission: "enquiries.read" },
   { href: "/admin/content", label: "Content", permission: "content.edit" },
+  { href: "/admin/media", label: "Media", permission: "content.edit" },
   { href: "/admin/users", label: "Users", permission: "users.manage" },
   { href: "/admin/audit", label: "Audit log", permission: "audit.read" },
   { href: "/admin/account", label: "My account", permission: null },

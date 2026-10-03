@@ -39,7 +39,7 @@ try {
     $logger = new StreamLogger(fopen('php://stderr', 'wb'));
     $application = new ApiApplication(Settings::fromEnvironment($environment), $logger);
 
-    $response = $application->handle(RequestFactory::fromGlobals($_SERVER, $_GET, RequestFactory::readBody()));
+    $response = $application->handle(RequestFactory::fromGlobals($_SERVER, $_GET, RequestFactory::readBody(RequestFactory::bodyLimit($_SERVER))));
 } catch (Throwable $exception) {
     // Configuration/bootstrap failure: fail closed without leaking details.
     error_log('paxofi-corporate-website-api bootstrap failure: ' . $exception::class . ': ' . $exception->getMessage());

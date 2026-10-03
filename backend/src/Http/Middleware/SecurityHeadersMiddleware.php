@@ -22,9 +22,12 @@ final class SecurityHeadersMiddleware implements HttpMiddleware
             ->withHeader('x-content-type-options', 'nosniff')
             ->withHeader('x-frame-options', 'DENY')
             ->withHeader('referrer-policy', 'no-referrer')
-            ->withHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'")
-            ->withHeader('cross-origin-resource-policy', 'same-site');
+            ->withHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
 
+        // Media files (D-012) declare their own policy so the website may embed them.
+        if ($response->header('cross-origin-resource-policy') === null) {
+            $response = $response->withHeader('cross-origin-resource-policy', 'same-site');
+        }
         if ($response->header('cache-control') === null) {
             $response = $response->withHeader('cache-control', 'no-store');
         }

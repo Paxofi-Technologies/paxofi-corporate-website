@@ -8,6 +8,11 @@
 
 export type CatalogType = "products" | "services";
 
+/** A picture chosen in the staff area (D-012); src is an absolute URL on the API host. */
+export type CatalogImage = { src: string; alt: string; width: number; height: number };
+/** A downloadable document, e.g. a brochure (D-012). */
+export type CatalogDocument = { href: string; title: string; format: string; sizeBytes: number };
+
 export type CatalogItem = {
   slug: string;
   name: string;
@@ -15,6 +20,8 @@ export type CatalogItem = {
   icon: string;
   summary: string;
   points: string[];
+  image?: CatalogImage | null;
+  document?: CatalogDocument | null;
 };
 
 /** Icons the staff area can choose; backend CatalogContent::ICONS keeps the same list. */
@@ -126,8 +133,47 @@ export const FALLBACK_CATALOG: Record<CatalogType, CatalogItem[]> = {
 
 const TIMEOUT_MS = 1500;
 
+/**
+ * Absolute URL of a media file from its API path (/api/v1/media/…), on the
+ * API's origin; null for anything else, so only our own files are linked.
+ */
+export function mediaUrl(apiBase: string | undefined, path: unknown): string | null {
+  if (typeof path !== "string" || !/^\/api\/v1\/media\/[0-9a-f-]{36}\/[A-Za-z0-9._%-]+$/.test(path)) return null;
+  try {
+    const origin = new URL(apiBase ?? "").origin;
+    return /^https?:\/\//.test(origin) ? origin + path : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "PDF, 1.2 MB": format and size for a download link. */
+export function describeDownload(format: string, sizeBytes: number): string {
+  const size =
+    sizeBytes >= 1024 * 1024
+      ? `${(sizeBytes / 1024 / 1024).toFixed(1).replace(/\.0$/, "")} MB`
+      : `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+  return `${format}, ${size}`;
+}
+
+function parseImage(raw: unknown, apiBase: string | undefined): CatalogImage | null {
+  if (!isRecord(raw)) return null;
+  const src = mediaUrl(apiBase, raw.path);
+  const width = Number(raw.width);
+  const height = Number(raw.height);
+  if (!src || typeof raw.alt !== "string" || !(width > 0) || !(height > 0)) return null;
+  return { src, alt: raw.alt, width, height };
+}
+
+function parseDocument(raw: unknown, apiBase: string | undefined): CatalogDocument | null {
+  if (!isRecord(raw)) return null;
+  const href = mediaUrl(apiBase, raw.path);
+  if (!href || typeof raw.title !== "string" || raw.title === "" || typeof raw.format !== "string") return null;
+  return { href, title: raw.title, format: raw.format, sizeBytes: Number(raw.size_bytes) || 0 };
+}
+
 /** Validates an API response; returns null when it is not a usable list. */
-export function parseCatalog(payload: unknown): CatalogItem[] | null {
+export function parseCatalog(payload: unknown, apiBase?: string): CatalogItem[] | null {
   const data =
     isRecord(payload) && Array.isArray(payload.data) ? payload.data : null;
   if (!data) return null;
@@ -156,6 +202,8 @@ export function parseCatalog(payload: unknown): CatalogItem[] | null {
             .filter((p): p is string => typeof p === "string" && p !== "")
             .slice(0, 5)
         : [],
+      image: parseImage(raw.image, apiBase),
+      document: parseDocument(raw.document, apiBase),
     });
   }
   return items;
@@ -172,7 +220,7 @@ export async function loadCatalog(type: CatalogType, apiBase: string | undefined
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!response.ok) return fallback(type, `HTTP ${response.status}`);
-    return parseCatalog(await response.json()) ?? fallback(type, "unexpected response");
+    return parseCatalog(await response.json(), base) ?? fallback(type, "unexpected response");
   } catch (error) {
     return fallback(type, error instanceof Error ? error.message : "request failed");
   }

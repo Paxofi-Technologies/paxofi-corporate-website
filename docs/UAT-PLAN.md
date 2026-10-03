@@ -121,3 +121,25 @@ Run after deploying the release that includes **Content** in the staff area. Abo
 | C5 | Hide and show | **Hide from website** on a service; reload /services; then **Show on website** | It disappears, then comes back in the same place | |
 | C6 | Business Development | Sign in as a Business Development user → **Content** → change a summary → **Save draft** | There is no **Publish** button; "An administrator will publish it" | |
 | C7 | Audit | **Audit log** | Shows the draft, publish, restore and hide/show actions with names and times | |
+
+### Results — release 20261003-ec0b070 (3 Oct 2026)
+
+**Phase 2.3 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder): "I have deployed and everything works perfectly fine". Guide Steps 1–5 applied (database upgrade with migration 009); no new server settings.
+
+## Phase 2.4 — pictures and documents (D-012)
+
+Run after deploying the release with **Media** and completing guide Step 10. About 20 minutes. Have a photo from a phone (JPEG), a PDF and a Word document ready.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| M1 | Uploads are set up | **Media** | No "not set up" or "server accepts files up to" warning | |
+| M2 | Upload a picture | Choose the phone photo → enter a description → **Upload** | It appears upright in the list with its size; **Open** shows it | |
+| M3 | Description is required | Choose a picture, leave the description empty → **Upload** | "Describe the picture in a few words." Nothing is uploaded | |
+| M4 | Upload documents | Upload the PDF (title empty), then the Word file with a title | Both listed; the PDF's title is its file name; **Open** downloads the file | |
+| M5 | Unsuitable files refused | Try an `.exe`, `.zip` or `.svg` file | A clear message saying which files are accepted | |
+| M6 | Picture and brochure on the website | **Content** → Paxofi Pay → choose the picture and the PDF → **Publish**; open /products and the home page | The card shows the picture; /products shows "PDF, … MB" download link that downloads the file | |
+| M7 | Files in use are protected | **Media** → the picture | **Delete** is unavailable and says it is used by Paxofi Pay | |
+| M8 | Business Development | Sign in as Business Development → **Media** | Can upload; no **Delete** button | |
+| M9 | Clean up and audit | Remove the test picture and PDF from Paxofi Pay → **Publish** → **Delete** them in **Media**; **Audit log** | They are gone from the website; the audit log shows `media.uploaded`, `media.deleted` with names and times | |
+
+Record sign-off ("Phase 2.4 UAT passed for release X") in Asana.
