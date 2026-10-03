@@ -103,3 +103,7 @@ Run after deploying the release that includes two-factor (from P2.2) and complet
 | T5 | Optional for Business Development | Sign in as a Business Development user | They reach **Enquiries** without being forced; *My account* offers **Set up two-factor sign-in** | |
 | T6 | Lost phone | As administrator: *Users* → **Edit** on a person with two-factor on → **Reset two-factor** | Confirmation shown; that person is signed out and signs in with their password only | |
 | T7 | Audit | **Audit log** | Shows the set-up, the recovery code use and the reset, with names and times | |
+
+### Results — release 20261003-f6c67fe (3 Oct 2026)
+
+**Phase 2.2 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder). T1–T7 passed on the live site after guide Step 8 (`MFA_ENCRYPTION_KEY` set; administrator authenticator set up and recovery codes saved).
