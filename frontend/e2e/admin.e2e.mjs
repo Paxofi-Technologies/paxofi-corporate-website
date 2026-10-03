@@ -3,7 +3,10 @@
 // so no backend is needed. Run after `npm run build`: npm run test:e2e
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { API_BASE, assertAccessible, startHarness } from "./harness.mjs";
+
+const PAGE_COPY = JSON.parse(readFileSync(new URL("../lib/page-copy.json", import.meta.url), "utf8")).pages;
 
 const { base: BASE, newPage } = startHarness(Number(process.env.E2E_PORT || 3123) + 1);
 const PASSWORD = "correct horse battery staple";
@@ -48,6 +51,7 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
   ];
   const state = {
     signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor, media, uploads: 0,
+    pages: {},
     catalog: { [PAY]: { kind: "products", item: { id: PAY, slug: "paxofi-pay", name: "Paxofi Pay", visible: true, has_draft: false, sort_order: 10, updated_at: "2026-10-03 09:00:00", content: payContent }, draft: null, revisions: [] } },
   };
   const detail = (id) => {
@@ -191,6 +195,33 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
         entry.item.visible = body.visible;
       }
       return reply(route, 200, detail(id));
+    }
+    if (path === "/pages" && method === "GET") {
+      return reply(route, 200, Object.entries(PAGE_COPY).map(([key, p]) => ({ page: key, label: p.label, path: p.path, published_at: state.pages[key]?.live?.published_at ?? null, has_draft: Boolean(state.pages[key]?.draft) })));
+    }
+    const pageText = path.match(/^\/pages\/([a-z]+)(\/.*)?$/);
+    if (pageText) {
+      const [, key, action = ""] = pageText;
+      if (!PAGE_COPY[key]) return reply(route, 404, { code: "NOT_FOUND", message: "Page not found." });
+      const entry = (state.pages[key] ??= { live: null, draft: null, revisions: [] });
+      if (action === "/draft" && method === "POST") {
+        const errors = {};
+        for (const f of PAGE_COPY[key].fields) {
+          const value = (body.fields?.[f.key] ?? "").trim();
+          if (!value) errors[f.key] = "Enter some text.";
+          else if (value.length > f.max) errors[f.key] = `Use at most ${f.max} characters.`;
+        }
+        if (Object.keys(errors).length) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: errors } });
+        entry.draft = { fields: body.fields, saved_at: "2026-10-03 10:00:00", author_name: state.user.display_name };
+      } else if (action === "/draft" && method === "DELETE") {
+        entry.draft = null;
+      } else if (action === "/publish") {
+        if (!state.user.permissions.includes("content.publish")) return reply(route, 403, { code: "FORBIDDEN", message: "An administrator publishes changes." });
+        entry.live = { fields: entry.draft.fields, published_at: "2026-10-03 10:01:00" };
+        entry.revisions.unshift({ id: "p" + entry.revisions.length, created_at: "2026-10-03 10:01:00", author_name: state.user.display_name });
+        entry.draft = null;
+      }
+      return reply(route, 200, { page: key, label: PAGE_COPY[key].label, path: PAGE_COPY[key].path, fields: PAGE_COPY[key].fields, ...entry });
     }
     if (path === "/analytics" && method === "GET") {
       const days = Number(url.searchParams.get("days") ?? 30);
@@ -670,6 +701,49 @@ describe("staff area", () => {
     await page.context().close();
   });
 
+  test("staff edit a page's wording, with limits, and publish it", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/content`);
+    await page.getByRole("button", { name: "Page text" }).click();
+    await page.getByRole("table").getByRole("link", { name: "Home", exact: true }).click();
+    await page.getByRole("heading", { name: "Home page text" }).waitFor();
+    await page.getByRole("group", { name: "Top of the page" }).waitFor();
+    await assertAccessible(page, "on the page text editor");
+
+    const lead = page.getByRole("group", { name: "Top of the page" }).getByLabel("Introduction", { exact: true });
+    const field = PAGE_COPY.home.fields.find((f) => f.key === "hero_lead");
+    await lead.fill("x".repeat(field.max + 5));
+    await page.getByText(`Keep this to ${field.max} characters.`).waitFor();
+    await lead.fill("A shorter, edited introduction.");
+    await page.getByText(`31 of ${field.max} characters`).waitFor();
+    await page.getByRole("button", { name: "Use original wording" }).click();
+    assert.equal(await lead.inputValue(), field.default);
+    await lead.fill("A shorter, edited introduction.");
+
+    await page.getByRole("button", { name: "Publish" }).click();
+    await page.getByText("Published.", { exact: false }).waitFor();
+    const draft = api.calls.findLast((c) => c.method === "POST" && c.path === "/pages/home/draft");
+    assert.equal(draft.body.fields.hero_lead, "A shorter, edited introduction.");
+    assert.equal(Object.keys(draft.body.fields).length, PAGE_COPY.home.fields.length, "every field is sent");
+    await page.getByRole("button", { name: "Restore as draft" }).waitFor();
+
+    await page.getByRole("link", { name: "← Content" }).click();
+    await page.getByRole("cell", { name: /Edited, published/ }).waitFor();
+    await page.context().close();
+  });
+
+  test("Business Development saves page text but cannot publish it", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { user: BD, signedIn: true });
+    await page.goto(`${BASE}/admin/content/pages/contact`);
+    await page.getByRole("heading", { name: "Contact page text" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "Publish" }).count(), 0);
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await page.getByText("Draft saved. An administrator will publish it.").waitFor();
+    await page.context().close();
+  });
+
   test("staff see visitor analytics with a chart, tables and a period switch", async () => {
     const page = await newPage();
     const api = await fakeAdminApi(page, { signedIn: true });
@@ -704,7 +778,7 @@ describe("staff area", () => {
   test("on a phone the staff area fits the screen", async () => {
     const page = await newPage({ viewport: { width: 360, height: 740 } });
     await fakeAdminApi(page, { signedIn: true });
-    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01", "/admin/media", "/admin/analytics"]) {
+    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01", "/admin/media", "/admin/analytics", "/admin/content/pages/home"]) {
       await page.goto(BASE + path);
       await page.locator("h1").waitFor();
       await page.waitForLoadState("networkidle");

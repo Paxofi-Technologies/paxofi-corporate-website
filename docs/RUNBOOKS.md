@@ -180,3 +180,13 @@ Alert contact: the operations email (verify it in **My Settings → Alert Contac
 | **Dependabot** | `PCF_GITHUB_TOKEN` | `<token>` on its own (no JSON) | Dependabot reading PCF to propose Composer updates |
 
 `<token>` is a GitHub fine-grained personal access token with **read-only Contents** access to `Paxofi-Technologies/paxofi-core-framework` only. Rotate it before it expires and update all three secrets.
+
+
+## RB-16 Page text
+
+Staff change the wording of the main pages under **Content → Page text** (D-015). Each page shows its published text, and the original wording for anything not published.
+
+- **A change is not showing:** publishing takes up to one minute to appear (the API caches page text for 60 seconds). Check that the page says *Edited text published …* and has no unpublished changes.
+- **A page shows the original wording after it was edited:** the website could not read the API in time. Check that `https://api…/api/v1/pages/home` answers, and look for `page-copy: showing built-in` in the website's `stderr.log`.
+- **Undo a change:** open the page, choose **Restore as draft** on an earlier version, then **Publish**. To go back to the original wording, use **Use original wording** on each changed field, then **Publish**.
+- **Change Privacy or Terms:** these stay in code. Change them through a pull request and a release.

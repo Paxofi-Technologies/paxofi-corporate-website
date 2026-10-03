@@ -28,6 +28,12 @@ const SERVICES = [
   { slug: "software-web-engineering", name: "Software & Web Engineering", label: null, icon: "code", summary: "Web platforms and business applications.", points: [], sort_order: 10 },
 ];
 
+// Published page text (D-015): only the fields staff changed.
+const PAGE_TEXT = {
+  home: { hero_title_start: "Edited", hero_title_highlight: "headline", hero_title_end: "from staff.", meta_description: "Edited search description." },
+  contact: { signoff: "Speak soon." },
+};
+
 let api;
 before(async () => {
   api = createServer((request, response) => {
@@ -48,6 +54,11 @@ before(async () => {
     if (path.startsWith("/api/v1/media/")) {
       // As the API serves media: embeddable by the website, which requires CORP (COEP require-corp).
       response.writeHead(200, { "content-type": path.endsWith(".png") ? "image/png" : "application/pdf", "cross-origin-resource-policy": "cross-origin" }).end(PNG);
+      return;
+    }
+    const pageText = path.match(/^\/api\/v1\/pages\/([a-z]+)$/);
+    if (pageText) {
+      response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ success: true, data: { page: pageText[1], fields: PAGE_TEXT[pageText[1]] ?? {}, published_at: null }, meta: {} }));
       return;
     }
     const data = path === "/api/v1/products" ? PRODUCTS : path === "/api/v1/services" ? SERVICES : null;
@@ -103,6 +114,34 @@ describe("catalogue pages", () => {
     assert.deepEqual(await page.locator(".product-card h2").allTextContents(), ["Paxofi Pay", "Paxofi Core Framework"]);
     await page.goto(`${BASE}/services`);
     assert.equal(await page.locator(".icon-card h3").count(), 6);
+    await page.context().close();
+    mode.value = "ok";
+  });
+});
+
+describe("page text (D-015)", () => {
+  test("published wording replaces the built-in text; the rest stays", async () => {
+    mode.value = "ok";
+    const page = await newPage();
+    await page.goto(BASE);
+    assert.equal((await page.locator("h1").textContent()).replace(/\s+/g, " ").trim(), "Edited headline from staff.");
+    assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), "Edited search description.");
+    await page.getByRole("link", { name: "Talk to us" }).first().waitFor();
+    await page.goto(`${BASE}/contact`);
+    await page.getByText("Speak soon.").waitFor();
+    await page.getByRole("heading", { name: "Send us a message" }).waitFor();
+    await assertAccessible(page, "on contact with edited text");
+    await page.context().close();
+  });
+
+  test("when the API fails, every page shows its built-in wording", async () => {
+    mode.value = "down";
+    const page = await newPage();
+    for (const path of ["/", "/about", "/careers", "/contact"]) {
+      assert.equal((await page.goto(BASE + path)).status(), 200, path);
+    }
+    await page.goto(BASE);
+    assert.doesNotMatch(await page.locator("h1").textContent(), /Edited/);
     await page.context().close();
     mode.value = "ok";
   });
