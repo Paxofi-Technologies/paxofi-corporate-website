@@ -181,3 +181,20 @@ Run after deploying the release with **Analytics**. About 10 minutes. Use a norm
 | A6 | Business Development | Sign in as Business Development | **Analytics** is visible | |
 
 Record sign-off ("Phase 2.6 UAT passed") in Asana.
+
+
+## Phase 2.7 — page text editing (D-015)
+
+Do this on **staging first** (RB-14), then on live. About 15 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| T1 | Unchanged until edited | After deploying, open every page | All wording is exactly as before | |
+| T2 | Edit and publish | Staff area → **Content → Page text → Home**; change the headline and the introduction; **Publish** | Within a minute the Home page shows the new wording | |
+| T3 | Limits | Type a very long headline | A message asks to keep it within the limit; it cannot be saved | |
+| T4 | Original wording | Click **Use original wording** on a changed field and publish | The original text is back on the website | |
+| T5 | Earlier version | **Restore as draft** on an earlier version, then **Publish** | The website shows that version | |
+| T6 | Business Development | Sign in as Business Development; edit Contact page text | **Save draft** works; there is no **Publish** button | |
+| T7 | Search description | Change Home's *Description in search results*; publish; view the page source | `<meta name="description">` shows the new text | |
+
+Record sign-off ("Phase 2.7 UAT passed") in Asana.

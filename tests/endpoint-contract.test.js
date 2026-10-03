@@ -19,6 +19,7 @@ const routes = [
   ["POST", "/api/v1/forms/{form_key}/submit", "public+rate-limit"],
   ["GET", "/api/v1/media/{id}/{filename}", "public"],
   ["POST", "/api/v1/analytics/pageview", "public"],
+  ["GET", "/api/v1/pages/{page}", "public"],
   ["GET", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/session", "admin-entry"],
@@ -52,6 +53,12 @@ const routes = [
   ["PATCH", "/api/v1/admin/media/{id}", "admin"],
   ["DELETE", "/api/v1/admin/media/{id}", "admin"],
   ["GET", "/api/v1/admin/analytics", "admin"],
+  ["GET", "/api/v1/admin/pages", "admin"],
+  ["GET", "/api/v1/admin/pages/{page}", "admin"],
+  ["POST", "/api/v1/admin/pages/{page}/draft", "admin"],
+  ["DELETE", "/api/v1/admin/pages/{page}/draft", "admin"],
+  ["POST", "/api/v1/admin/pages/{page}/publish", "admin"],
+  ["POST", "/api/v1/admin/pages/{page}/revisions/{revision}/restore", "admin"],
 ];
 
 test("endpoint RTM has unique method/route entries", () => {
@@ -93,11 +100,6 @@ test("every admin controller action goes through AdminGuard", () => {
   }
 });
 
-test("admin areas not built yet (page text CMS) are not exposed", () => {
-  const sources = read("backend", "config", "routes.php") + read("backend", "src", "Bootstrap", "ApiApplication.php");
-  for (const route of ["/api/v1/admin/content"]) assert.ok(!sources.includes(route), route);
-});
-
 test("media uploads read large bodies on the upload route only (D-012)", () => {
   const factory = read("backend", "src", "Http", "RequestFactory.php");
   assert.match(factory, /UPLOAD_PATH = '\/api\/v1\/admin\/media'/);
@@ -107,4 +109,8 @@ test("media uploads read large bodies on the upload route only (D-012)", () => {
 test("the RTM documents every route", () => {
   const rtm = read("docs", "ENDPOINT-RTM-V1.md");
   for (const [, route] of routes) assert.ok(rtm.includes(route), route + " missing from docs/ENDPOINT-RTM-V1.md");
+});
+
+test("the website and the API use the same page text fields (D-015)", () => {
+  assert.equal(read("frontend", "lib", "page-copy.json"), read("backend", "config", "page-copy.json"));
 });

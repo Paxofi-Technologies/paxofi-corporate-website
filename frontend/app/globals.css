@@ -1741,3 +1741,29 @@ textarea:focus-visible {
   padding-left: 8px;
   overflow-wrap: anywhere;
 }
+
+/* Page text editor (D-015) */
+.admin-fieldset {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 20px 0 0;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.admin-fieldset:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.admin-fieldset legend {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 0;
+  margin-bottom: 4px;
+}
+.admin-fieldset .admin-link-button {
+  justify-self: start;
+  font-size: 14px;
+}

@@ -2,31 +2,23 @@ import { ServiceCard } from "@/components/CatalogCards";
 import { CtaBand, PageHero, SectionHead } from "@/components/Sections";
 import { loadCatalog } from "@/lib/catalog";
 import { resolveApiBase } from "@/lib/contact";
+import { pageCopy } from "@/lib/page-copy-server";
 import { pageMetadata } from "@/lib/site";
 
-export const metadata = pageMetadata(
-  "Services",
-  "Software and web engineering, APIs, product strategy, digital transformation, cloud foundations and digital growth from Paxofi Technologies.",
-  "/services",
-);
+export async function generateMetadata() {
+  const t = await pageCopy("services");
+  return pageMetadata("Services", t.meta_description, "/services");
+}
 
-const deliverySteps = [
-  { step: "01", title: "Discover", text: "We understand your goals, users and constraints before writing code." },
-  { step: "02", title: "Build", text: "We design and engineer in small, tested increments you can review." },
-  { step: "03", title: "Operate", text: "We deploy, monitor and support what we build." },
-  { step: "04", title: "Scale", text: "We improve and extend the product as your needs grow." },
-];
+// Step numbers stay fixed; their words are edited in the staff area (D-015).
+const deliverySteps = ["01", "02", "03", "04"];
 
 export default async function Services() {
   // Edited in the staff area (D-011); falls back to the built-in copy if the API cannot be read.
-  const services = await loadCatalog("services", resolveApiBase(process.env));
+  const [services, t] = await Promise.all([loadCatalog("services", resolveApiBase(process.env)), pageCopy("services")]);
   return (
     <>
-      <PageHero
-        eyebrow="Capabilities"
-        title="From strategy to software."
-        intro="Structured delivery focused on maintainability, measurable outcomes and a clear path to production."
-      />
+      <PageHero eyebrow={t.hero_eyebrow} title={t.hero_title} intro={t.hero_intro} />
 
       <section className="section">
         <div className="container grid grid-3">
@@ -38,23 +30,20 @@ export default async function Services() {
 
       <section className="section section--tint">
         <div className="container">
-          <SectionHead eyebrow="How we deliver" title="A clear path from idea to operation." />
+          <SectionHead eyebrow={t.delivery_eyebrow} title={t.delivery_title} />
           <ol className="steps steps--4">
-            {deliverySteps.map(({ step, title, text }) => (
-              <li className="step" key={title}>
+            {deliverySteps.map((step, i) => (
+              <li className="step" key={step}>
                 <span className="step-number" aria-hidden="true">{step}</span>
-                <h3>{title}</h3>
-                <p>{text}</p>
+                <h3>{t[`step_${i + 1}_title`]}</h3>
+                <p>{t[`step_${i + 1}_text`]}</p>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      <CtaBand
-        title="Need a capable technology partner?"
-        text="Tell us about your project and we'll suggest a practical way forward."
-      />
+      <CtaBand title={t.cta_title} text={t.cta_text} label={t.cta_button} />
     </>
   );
 }
