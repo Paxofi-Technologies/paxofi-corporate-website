@@ -67,7 +67,7 @@ cPanel → **phpMyAdmin** → click `paxoalhu_corporate` on the left → **Expor
 1. phpMyAdmin → click `paxoalhu_corporate` → **Import**.
 2. **Choose file** → `database-upgrade-{{VERSION}}.sql`. Leave the other options at their defaults (character set *utf-8*, *Enable foreign key checks* ticked) → **Import**.
 3. You should see a green *"Import has been successfully finished"* message.
-4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, and `schema_migrations` lists the migrations up to the latest one.
+4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (Administrator, Business Development), there is a `login_attempts` table, and `schema_migrations` lists the migrations up to the latest one (`007_staff_sign_in_and_roles` or later).
 
 The import is safe to run again if it is interrupted.
 
@@ -114,7 +114,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
 
 ## Step 6 — One time: schedule the data retention clean-up (5 minutes)
 
-From this release the API includes `backend/bin/purge-retention.php`, which deletes enquiries older than 24 months, removes the IP address and browser details from enquiries older than 90 days, and deletes audit records older than 24 months (as the privacy page states). Schedule it once; it then runs every night.
+From this release the API includes `backend/bin/purge-retention.php`, which deletes enquiries older than 24 months, removes the IP address and browser details from enquiries older than 90 days, deletes audit records older than 24 months (as the privacy page states), and deletes staff sign-in records older than 90 days and ended staff sessions after 30 days. Schedule it once; it then runs every night.
 
 1. cPanel → **Cron Jobs**. Under *Cron Email*, enter the operations email and click **Update Email**.
 2. Under *Add New Cron Job*: Common Settings → **Once Per Day**. Change *Minute* to `17` and *Hour* to `3`.
@@ -126,6 +126,28 @@ From this release the API includes `backend/bin/purge-retention.php`, which dele
 
 4. **Add New Cron Job**. If a scheduled job already exists from an earlier release, skip this step.
 5. The next day, open `/home/paxoalhu/logs/purge-retention.log` in File Manager. It shows a line like `… retention purge: 0 enquiries deleted, …`. If it says `Could not open input file` or a PHP version error, edit the cron job and replace `/usr/local/bin/php` with `/opt/cpanel/ea-php84/root/usr/bin/php`.
+
+## Step 7 — One time: create the first staff administrator (10 minutes)
+
+From this release, Paxofi staff read and manage enquiries at **{{SITE_URL}}/admin** instead of phpMyAdmin (decision D-009). The first administrator is created once, with a one-time setup code. Skip this step if anyone can already sign in at `/admin`.
+
+1. **Make a setup code.** Use a password manager, or cPanel → **MySQL Databases** → *Add New User* → **Password Generator** (length **40** or more, letters and numbers). Copy it; do not create the database user.
+2. File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/` → right-click `.env` → **Edit** → add one line at the end, then **Save Changes**:
+
+```text
+ADMIN_SETUP_TOKEN=paste-the-code-here
+```
+
+3. Open {{SITE_URL}}/admin/setup in your browser. Enter the setup code, your name, your work email and a password of at least 12 characters (a short phrase of unrelated words works well) → **Create administrator**. You are signed in and see the enquiries inbox.
+4. **Remove the setup code:** edit `.env` again, delete the `ADMIN_SETUP_TOKEN` line, **Save Changes**. (Setup closes by itself once an account exists, but the code should not stay on the server.)
+5. **Add the team:** *Users* → **Add a user** → name, email, role (*Business Development* reads and updates enquiries; *Administrator* can also manage users and read the audit log) and a temporary password. Give the password to the person by phone or in person, not by email, and ask them to change it at *My account* after signing in.
+
+Using the staff area:
+
+- **Enquiries** shows new enquiries first. Open one to read it, reply with **Reply by email**, then set its status (*In progress*, *Replied*, *Closed* or *Spam*). Reply within 2 business days (D-007).
+- Forgotten password: an administrator opens *Users* → **Edit** → sets a new temporary password. This signs the person out everywhere.
+- Someone leaves: *Users* → **Edit** → *Account* → **Disabled**. They are signed out at once and cannot sign in.
+- Sessions end after 30 minutes without activity, and after 8 hours at most. After 5 wrong passwords for one email (or 20 from one network) sign-in is blocked for 15 minutes.
 
 ## If something goes wrong
 
@@ -141,6 +163,10 @@ From this release the API includes `backend/bin/purge-retention.php`, which dele
 | Website shows a file list, *403 Forbidden*, downloads a file, or the default cPanel page | The `corporate.paxofi.com` document root is wrong or its Node.js routing was not written: redo Step 0, then Setup Node.js App → **Edit** → **Save** → **Restart**. |
 | Website still shows the previous release (`/release.txt` shows the old version, or old pages appear after a restart) | Check `paxofi-corporate-website/RELEASE.txt` in File Manager. If it is old, the new folder was moved *inside* the old one: rename the outer folder to `…-old-{{VERSION}}`, move the inner `paxofi-corporate-website` to `/`, then **Restart**. If `RELEASE.txt` is new but pages are old, the server cache is serving copies of an earlier release: do the one-time cache step below. |
 | Website shows *503* / *Incomplete response* | The Node app is stopped or failed: Setup Node.js App → **Start**/**Restart**; check `stderr.log` in `paxofi-corporate-website/`. Make sure the startup file is `app.js`. |
+| `/admin/setup` says *Setup is not available* | An account already exists (sign in at `/admin/login`), or `ADMIN_SETUP_TOKEN` is missing or shorter than 32 characters in the API `.env` (Step 7). |
+| Staff sign-in says *The admin service could not be reached* | Same causes as a CORS contact-form failure: HTTPS on both domains, `CORS_ALLOWED_ORIGINS` exactly `{{SITE_URL}}`, `API_BASE_URL` set on the Node app. |
+| Staff are sent back to *Sign in* straight after signing in | The browser did not keep the session cookie: the API must be opened over `https://` and `APP_ENV` must be `production`. Check that the API domain is a subdomain of the same site (`api.paxofi.com` next to `corporate.paxofi.com`). |
+| *Too many attempts* on sign-in | Wait 15 minutes. An administrator cannot lift the block early; if it keeps happening, check the *Audit log* for `staff.sign_in` failures. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 
 ### One-time: stop the server cache from serving old pages
