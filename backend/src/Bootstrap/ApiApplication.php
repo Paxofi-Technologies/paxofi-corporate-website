@@ -20,6 +20,7 @@ use Paxofi\CorporateWebsite\Application\Admin\AdminEnquiryService;
 use Paxofi\CorporateWebsite\Application\Admin\AuthService;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
+use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -31,6 +32,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
@@ -53,7 +55,9 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoLoginAttempts;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoSessionStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoStaffRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoTwoFactorStore;
 use Paxofi\CorporateWebsite\Infrastructure\Security\NativeStaffPasswordHasher;
+use Paxofi\CorporateWebsite\Infrastructure\Security\OpenSslSecretEncryption;
 
 /**
  * Composition root for the public API.
@@ -86,12 +90,19 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/admin/session'],
         ['DELETE', '/api/v1/admin/session'],
         ['POST', '/api/v1/admin/session/password'],
+        ['POST', '/api/v1/admin/session/mfa'],
+        ['GET', '/api/v1/admin/account/two-factor'],
+        ['POST', '/api/v1/admin/account/two-factor/setup'],
+        ['POST', '/api/v1/admin/account/two-factor/enable'],
+        ['POST', '/api/v1/admin/account/two-factor/recovery-codes'],
+        ['POST', '/api/v1/admin/account/two-factor/disable'],
         ['GET', '/api/v1/admin/enquiries'],
         ['GET', '/api/v1/admin/enquiries/{id}'],
         ['PATCH', '/api/v1/admin/enquiries/{id}'],
         ['GET', '/api/v1/admin/users'],
         ['POST', '/api/v1/admin/users'],
         ['PATCH', '/api/v1/admin/users/{id}'],
+        ['POST', '/api/v1/admin/users/{id}/two-factor/reset'],
         ['GET', '/api/v1/admin/audit'],
     ];
 
@@ -154,6 +165,15 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->current($r));
         $router->add('DELETE', '/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->signOut($r));
         $router->post('/api/v1/admin/session/password', static fn (HttpRequest $r): HttpResponse => $session()->changePassword($r));
+        $router->post('/api/v1/admin/session/mfa', static fn (HttpRequest $r): HttpResponse => $session()->verifySecondFactor($r));
+
+        $twoFactor = fn (): AdminTwoFactorController => new AdminTwoFactorController($this->twoFactorService(), $this->adminGuard());
+        $router->get('/api/v1/admin/account/two-factor', static fn (HttpRequest $r): HttpResponse => $twoFactor()->status($r));
+        $router->post('/api/v1/admin/account/two-factor/setup', static fn (HttpRequest $r): HttpResponse => $twoFactor()->setup($r));
+        $router->post('/api/v1/admin/account/two-factor/enable', static fn (HttpRequest $r): HttpResponse => $twoFactor()->enable($r));
+        $router->post('/api/v1/admin/account/two-factor/recovery-codes', static fn (HttpRequest $r): HttpResponse => $twoFactor()->recoveryCodes($r));
+        $router->post('/api/v1/admin/account/two-factor/disable', static fn (HttpRequest $r): HttpResponse => $twoFactor()->disable($r));
+        $router->post('/api/v1/admin/users/{id}/two-factor/reset', static fn (HttpRequest $r): HttpResponse => $twoFactor()->reset($r));
 
         $enquiries = fn (): AdminEnquiryController => new AdminEnquiryController(
             new AdminEnquiryService(new PdoAdminEnquiryRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database)),
@@ -202,6 +222,23 @@ final class ApiApplication implements HttpHandler
             new LazyTransactionManager($this->database),
             $this->clock,
             $this->settings->adminSetupToken,
+            twoFactor: $this->twoFactorService(),
+        );
+    }
+
+    private function twoFactorService(): TwoFactorService
+    {
+        $key = $this->settings->mfaEncryptionKey;
+
+        return new TwoFactorService(
+            new PdoTwoFactorStore($this->database),
+            $key === null ? null : new OpenSslSecretEncryption($key),
+            new PdoStaffRepository($this->database),
+            new PdoSessionStore($this->database),
+            $this->hasher,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
         );
     }
 

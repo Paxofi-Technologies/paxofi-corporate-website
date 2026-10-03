@@ -14,7 +14,7 @@ final class PdoStaffRepository implements StaffRepository
 {
     use GuardedQueries;
 
-    private const SELECT = 'SELECT u.id, u.email, u.display_name, u.status, u.password_hash, u.last_login_at,
+    private const SELECT = 'SELECT u.id, u.email, u.display_name, u.status, u.password_hash, u.last_login_at, u.totp_enabled_at,
             (SELECT r.name FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = u.id ORDER BY r.name LIMIT 1) AS role_name
         FROM users u';
 
@@ -123,6 +123,7 @@ final class PdoStaffRepository implements StaffRepository
             role: $role,
             permissions: array_values(array_map('strval', $permissions)),
             lastLoginAt: isset($row['last_login_at']) ? (string) $row['last_login_at'] : null,
+            twoFactorEnabled: ($row['totp_enabled_at'] ?? null) !== null,
         );
     }
 }

@@ -19,6 +19,7 @@ final readonly class StaffUser
         public ?Role $role,
         public array $permissions,
         public ?string $lastLoginAt = null,
+        public bool $twoFactorEnabled = false,
     ) {
     }
 
@@ -44,6 +45,7 @@ final readonly class StaffUser
             'role_label' => $this->role?->label(),
             'permissions' => $this->permissions,
             'last_login_at' => $this->lastLoginAt,
+            'two_factor_enabled' => $this->twoFactorEnabled,
         ];
     }
 }

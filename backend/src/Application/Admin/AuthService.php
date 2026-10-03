@@ -6,6 +6,7 @@ namespace Paxofi\CorporateWebsite\Application\Admin;
 
 use Closure;
 use DateTimeImmutable;
+use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
 use Paxofi\Core\Contracts\TransactionManager;
 use Paxofi\CorporateWebsite\Application\Audit\AuditEvent;
 use Paxofi\CorporateWebsite\Application\Audit\AuditRecorder;
@@ -24,6 +25,9 @@ use Paxofi\CorporateWebsite\Application\RequestContext;
  *   unknown email still pays the hashing cost).
  * - Sign-in is throttled per email and per IP address.
  * - Sessions expire after an absolute lifetime or a period without activity.
+ * - With two-factor on (D-010), a correct password opens only a short session
+ *   for entering the authenticator code; the code then replaces it with a new,
+ *   full session (new token).
  */
 final class AuthService
 {
@@ -32,6 +36,8 @@ final class AuthService
     public const MAX_FAILURES_PER_IP = 20;
     private const TOUCH_INTERVAL_SECONDS = 60;
     private const SIGN_IN_FAILED = 'Email or password is incorrect.';
+    /** Time allowed to enter the authenticator code after the password. */
+    public const SECOND_FACTOR_MINUTES = 5;
 
     private ?string $dummyHash = null;
 
@@ -47,6 +53,7 @@ final class AuthService
         private readonly ?string $setupToken = null,
         private readonly int $absoluteMinutes = 480,
         private readonly int $idleMinutes = 30,
+        private readonly ?TwoFactorService $twoFactor = null,
     ) {
     }
 
@@ -118,7 +125,40 @@ final class AuthService
             $this->staff->updatePassword($user->id, $this->hasher->hash($password));
         }
 
-        return $this->startSession($user->id, $context);
+        return $this->startSession($user->id, $context, secondFactorPending: $user->twoFactorEnabled);
+    }
+
+    /**
+     * Second sign-in step: checks the authenticator (or recovery) code for a
+     * pending session and replaces it with a full session.
+     */
+    public function verifySecondFactor(AuthenticatedStaff $pending, array $input, RequestContext $context): SignIn
+    {
+        if (!$pending->secondFactorPending) {
+            throw new Conflict('This session is already verified.');
+        }
+        $email = $pending->user->email;
+        $failures = $this->attempts->recentFailures($email, $context->clientIp, self::FAILURE_WINDOW_MINUTES);
+        if ($failures['email'] >= self::MAX_FAILURES_PER_EMAIL || $failures['ip'] >= self::MAX_FAILURES_PER_IP) {
+            $this->sessions->revoke($pending->sessionHash);
+            $this->audit->record(new AuditEvent('staff.sign_in.second_factor', AuditEvent::OUTCOME_DENIED, 'user', $pending->user->id, requestId: $context->requestId));
+            throw new RateLimited(self::FAILURE_WINDOW_MINUTES * 60);
+        }
+
+        $code = is_string($input['code'] ?? null) ? mb_substr(trim($input['code']), 0, 64) : '';
+        $method = $code === '' || $this->twoFactor === null ? null : $this->twoFactor->verify($pending->user->id, $code);
+        $this->attempts->record($email, $context->clientIp, $method !== null);
+        if ($method === null) {
+            $this->audit->record(new AuditEvent('staff.sign_in.second_factor', AuditEvent::OUTCOME_FAILURE, 'user', $pending->user->id, requestId: $context->requestId));
+            throw new ValidationFailed(['code' => TwoFactorService::INVALID_CODE], 'Please correct the highlighted fields.');
+        }
+
+        $this->sessions->revoke($pending->sessionHash);
+        if ($method === 'recovery') {
+            $this->audit->record(new AuditEvent('staff.two_factor.recovery_code_used', AuditEvent::OUTCOME_SUCCESS, 'user', $pending->user->id, $pending->user->id, $context->requestId));
+        }
+
+        return $this->startSession($pending->user->id, $context);
     }
 
     /** Resolves a session token to the signed-in staff member, or null when it is missing, expired or revoked. */
@@ -146,8 +186,9 @@ final class AuthService
         if ($now->getTimestamp() - $session->lastSeenAt->getTimestamp() >= self::TOUCH_INTERVAL_SECONDS) {
             $this->sessions->touch($hash, $now);
         }
+        $enrollmentRequired = !$user->twoFactorEnabled && ($this->twoFactor?->requiredFor($user) ?? false);
 
-        return new AuthenticatedStaff($user, $hash);
+        return new AuthenticatedStaff($user, $hash, $session->secondFactorPending, $enrollmentRequired);
     }
 
     public function signOut(AuthenticatedStaff $staff, RequestContext $context): void
@@ -180,14 +221,20 @@ final class AuthService
         });
     }
 
-    private function startSession(string $userId, RequestContext $context): SignIn
+    private function startSession(string $userId, RequestContext $context, bool $secondFactorPending = false): SignIn
     {
         $now = ($this->clock)();
-        $expiresAt = $now->modify("+{$this->absoluteMinutes} minutes");
+        $minutes = $secondFactorPending ? self::SECOND_FACTOR_MINUTES : $this->absoluteMinutes;
+        $expiresAt = $now->modify("+{$minutes} minutes");
         $token = SessionToken::generate();
 
-        $this->transactions->transaction(function () use ($token, $userId, $now, $expiresAt, $context): void {
-            $this->sessions->create(SessionToken::hash($token), $userId, $now, $expiresAt, $context);
+        $this->transactions->transaction(function () use ($token, $userId, $now, $expiresAt, $context, $secondFactorPending): void {
+            $this->sessions->create(SessionToken::hash($token), $userId, $now, $expiresAt, $context, $secondFactorPending);
+            if ($secondFactorPending) {
+                $this->audit->record(new AuditEvent('staff.sign_in.password_accepted', AuditEvent::OUTCOME_SUCCESS, 'user', $userId, $userId, $context->requestId));
+
+                return;
+            }
             $this->staff->recordLogin($userId);
             $this->audit->record(new AuditEvent('staff.sign_in', AuditEvent::OUTCOME_SUCCESS, 'user', $userId, $userId, $context->requestId));
         });
@@ -197,7 +244,7 @@ final class AuthService
             throw new Unauthenticated();
         }
 
-        return new SignIn($token, $user, $expiresAt);
+        return new SignIn($token, $user, $expiresAt, $secondFactorPending);
     }
 
     private function dummyHash(): string
