@@ -67,7 +67,7 @@ cPanel → **phpMyAdmin** → click `paxoalhu_corporate` on the left → **Expor
 1. phpMyAdmin → click `paxoalhu_corporate` → **Import**.
 2. **Choose file** → `database-upgrade-{{VERSION}}.sql`. Leave the other options at their defaults (character set *utf-8*, *Enable foreign key checks* ticked) → **Import**.
 3. You should see a green *"Import has been successfully finished"* message.
-4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (Administrator, Business Development), there is a `login_attempts` table, and `schema_migrations` lists the migrations up to the latest one (`007_staff_sign_in_and_roles` or later).
+4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (`administrator`, `business_development`), there is a `login_attempts` table, and `schema_migrations` lists the migrations up to the latest one (`007_staff_sign_in_and_roles` or later).
 
 The import is safe to run again if it is interrupted.
 
