@@ -75,7 +75,9 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 
 ## RB-9 Dependency and security updates
 
-Dependabot opens weekly update PRs against `develop`. CI fails on any known vulnerability (`npm audit`, `composer audit`). Merge only green PRs, promote `develop` → `main`, then deploy the new packages (RB-1).
+Dependabot opens weekly update PRs against `develop`. CI fails on any known vulnerability (`composer audit`; frontend `npm run audit`). Merge only green PRs, promote `develop` → `main`, then deploy the new packages (RB-1).
+
+Frontend exceptions: the website's runtime dependencies must always audit clean. An advisory in a development-only tool (linter, test runner) that has no fixed release may be accepted in `frontend/audit-exceptions.json` with the advisory ID, the reason it cannot be exploited here, and an expiry date. CI fails when an entry expires: then update the tool, or renew the entry with a fresh review. Current entry: GHSA-vfj7-8cjw-p6xm (`braces`, via the linter), until 1 Nov 2026 (30-day review).
 
 ## RB-10 Data retention clean-up (daily cron job)
 

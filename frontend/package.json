@@ -8,6 +8,7 @@
     "start": "node app.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "audit": "node scripts/audit.mjs",
     "test": "node --import tsx --test 'tests/*.test.ts' 'tests/*.test.tsx'",
     "test:e2e": "node --test --test-concurrency=1 'e2e/*.e2e.mjs'"
   },
