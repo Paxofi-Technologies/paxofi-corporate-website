@@ -21,8 +21,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - name: Dependency audit (fails on known vulnerabilities)
-        run: npm audit --audit-level=moderate
+      - name: Dependency audit (runtime must be clean; dev-only exceptions need a reason and expiry)
+        run: npm run audit
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
@@ -157,6 +157,7 @@ jobs:
           test -f database/004_seed_published_catalog.sql
           test -f database/005_audit_event_action_index.sql
           test -f database/006_innodb_utf8mb4_and_foreign_keys.sql
+          test -f database/007_staff_sign_in_and_roles.sql
           test -f backend/composer.lock
           if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md' --exclude='.gitignore'; then
             echo 'Potential secret-bearing file detected.'

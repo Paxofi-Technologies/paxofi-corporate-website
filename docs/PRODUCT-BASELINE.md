@@ -28,6 +28,8 @@ corporate.paxofi.com
 ├── /privacy     Privacy notice
 └── /terms       Terms of use
 Utility: /sitemap.xml, /robots.txt, /release.txt, /.well-known/security.txt, 404 page
+Staff area (Phase 2.1, D-009; not indexed): /admin/login, /admin/setup, /admin/enquiries,
+  /admin/enquiries/{id}, /admin/users, /admin/audit, /admin/account
 ```
 
 Main navigation: About, Services, Products, Careers, and the **Talk to us** button (Contact). Footer: Explore, Contact (email, contact form, careers site), Company (Privacy, Terms).
@@ -57,7 +59,7 @@ Version 1 page copy lives in the frontend code (`frontend/app/**/page.tsx`), rev
 ## 6. Careers and enquiry requirements (CW-PD-006)
 
 - **Careers:** D-001. No application form or CV upload on the corporate site.
-- **Enquiry:** name (required, ≤ 160), email (required, valid), company (optional, ≤ 255), message (required, ≤ 10 000). Hidden honeypot field. Rate limit: 5 per 10 minutes per email or IP address (configurable). Stored with request reference and an `enquiry.submitted` audit event in one transaction. CORS allows only the website origin. Retention per D-008. Business Development reads enquiries in phpMyAdmin and replies within 2 business days.
+- **Enquiry:** name (required, ≤ 160), email (required, valid), company (optional, ≤ 255), message (required, ≤ 10 000). Hidden honeypot field. Rate limit: 5 per 10 minutes per email or IP address (configurable). Stored with request reference and an `enquiry.submitted` audit event in one transaction. CORS allows only the website origin. Retention per D-008. Business Development reads enquiries in the staff area (`/admin`, Phase 2.1, D-009), sets their status (new, in progress, replied, closed, spam) and replies within 2 business days.
 
 ## 7. SEO, accessibility and performance requirements (CW-PD-007)
 
@@ -67,7 +69,7 @@ Version 1 page copy lives in the frontend code (`frontend/app/**/page.tsx`), rev
 | Accessibility | WCAG 2.1 AA, one h1 per page, skip link, keyboard menu, visible focus, form errors linked to fields | axe scan on every page in 3 browsers; keyboard E2E |
 | Performance | Lighthouse ≥ 90 mobile, LCP ≤ 2.5 s, no layout shift from fonts (self-hosted Inter) | QUALITY-REPORT.md |
 | Responsive | 360 px to 1920 px with no horizontal scroll | E2E viewport tests |
-| Security | CSP, HSTS, nosniff, frame-ancestors none, COOP/CORP/COEP, no cookies, dependency audit, ZAP baseline | E2E + CI |
+| Security | CSP, HSTS, nosniff, frame-ancestors none, COOP/CORP/COEP, no visitor cookies, dependency audit, ZAP baseline; staff area: hashed session tokens, HttpOnly SameSite=Strict cookie, Origin check, sign-in throttling, RBAC, audit trail (D-009) | E2E + CI, AdminApiTest |
 
 ## 8. Requirements baseline and hand-off (CW-PD-008)
 

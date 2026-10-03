@@ -4,24 +4,14 @@
 //
 //   npm run test:e2e
 //
-// E2E_BROWSER selects the engine: chromium (default), firefox or webkit.
-// Set PLAYWRIGHT_CHROMIUM_PATH to use a preinstalled Chromium.
-import { after, before, describe, test } from "node:test";
+// E2E_BROWSER selects the engine (see harness.mjs).
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { setTimeout as sleep } from "node:timers/promises";
-import { chromium, firefox, webkit } from "playwright";
-import AxeBuilder from "@axe-core/playwright";
+import { API_BASE, assertAccessible, startHarness } from "./harness.mjs";
 
-const PORT = Number(process.env.E2E_PORT || 3123);
-const BASE = `http://127.0.0.1:${PORT}`;
-const API_BASE = "https://api.e2e.test/api/v1";
+const { base: BASE, newPage } = startHarness(Number(process.env.E2E_PORT || 3123));
 const CONTACT_URL = `${API_BASE}/forms/contact/submit`;
 const ROUTES = ["/", "/about", "/services", "/products", "/careers", "/contact", "/privacy", "/terms"];
-
-const ENGINES = { chromium, firefox, webkit };
-const BROWSER = process.env.E2E_BROWSER || "chromium";
-assert.ok(ENGINES[BROWSER], `unknown E2E_BROWSER ${BROWSER}`);
 
 // Phone, tablet, laptop and wide desktop. The menu collapses at 860px and below.
 const VIEWPORTS = [
@@ -30,41 +20,6 @@ const VIEWPORTS = [
   { name: "laptop", width: 1280, height: 800, collapsedMenu: false },
   { name: "desktop", width: 1920, height: 1080, collapsedMenu: false },
 ];
-
-let server;
-let browser;
-
-before(async () => {
-  const root = new URL("..", import.meta.url).pathname;
-  // Own process group, so the whole server tree can be stopped afterwards.
-  server = spawn(`${root}node_modules/.bin/next`, ["start", "-p", String(PORT), "-H", "127.0.0.1"], {
-    cwd: root,
-    detached: true,
-    env: { ...process.env, API_BASE_URL: API_BASE, NODE_ENV: "production" },
-    stdio: ["ignore", "ignore", "inherit"],
-  });
-  for (let attempt = 0; attempt < 60; attempt++) {
-    try {
-      if ((await fetch(BASE)).ok) break;
-    } catch {
-      // server not listening yet
-    }
-    await sleep(500);
-  }
-  const executablePath = BROWSER === "chromium" ? process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined : undefined;
-  browser = await ENGINES[BROWSER].launch({ executablePath });
-});
-
-after(async () => {
-  await browser?.close();
-  if (server?.pid) process.kill(-server.pid, "SIGTERM");
-});
-
-/** A page in its own browser context (axe-core requires one per page). */
-async function newPage(options = {}) {
-  const context = await browser.newContext(options);
-  return context.newPage();
-}
 
 /** Answers the contact API (including the CORS preflight) inside the browser. */
 async function mockContactApi(page, respond) {
@@ -96,9 +51,7 @@ describe("public pages", () => {
       assert.ok(await page.locator('meta[name="description"]').getAttribute("content"));
       assert.ok(await page.locator('meta[property="og:title"]').getAttribute("content"));
 
-      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
-      const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
-      assert.deepEqual(summary, [], "WCAG 2.1 AA violations");
+      await assertAccessible(page);
       await page.context().close();
     });
   }

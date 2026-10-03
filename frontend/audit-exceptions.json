@@ -1,0 +1,12 @@
+{
+  "$comment": "Dependency advisories accepted for development-only tools. scripts/audit.mjs fails CI for any other advisory, for an expired entry, or for an entry that reaches the runtime dependencies. Review every entry by its expiry date (RUNBOOKS RB-9).",
+  "exceptions": [
+    {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "reason": "Stack-exhaustion DoS from deeply nested glob patterns. Reached only through the linter (eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch -> braces), which matches the repository's own fixed patterns; no untrusted input. No patched braces release exists (all versions <= 3.0.3). Not in the shipped website.",
+      "accepted": "2026-10-03",
+      "expires": "2026-11-01"
+    }
+  ]
+}

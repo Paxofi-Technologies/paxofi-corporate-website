@@ -11,9 +11,12 @@ use Paxofi\Core\Contracts\HttpResponse;
 use Paxofi\Core\Contracts\Logger;
 use Paxofi\Core\Http\HttpException;
 use Paxofi\CorporateWebsite\Application\Exception\ApplicationException;
+use Paxofi\CorporateWebsite\Application\Exception\Conflict;
 use Paxofi\CorporateWebsite\Application\Exception\DependencyUnavailable;
+use Paxofi\CorporateWebsite\Application\Exception\Forbidden;
 use Paxofi\CorporateWebsite\Application\Exception\RateLimited;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
+use Paxofi\CorporateWebsite\Application\Exception\Unauthenticated;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
 use Paxofi\CorporateWebsite\Http\ApiResponse;
 use Throwable;
@@ -51,6 +54,9 @@ final class ErrorHandlingMiddleware implements HttpMiddleware
         [$status, $headers] = match (true) {
             $exception instanceof ValidationFailed => [422, []],
             $exception instanceof ResourceNotFound => [404, []],
+            $exception instanceof Unauthenticated => [401, []],
+            $exception instanceof Forbidden => [403, []],
+            $exception instanceof Conflict => [409, []],
             $exception instanceof RateLimited => [429, ['retry-after' => (string) $exception->retryAfterSeconds()]],
             $exception instanceof DependencyUnavailable => [503, ['retry-after' => '30']],
             default => [400, []],

@@ -1,4 +1,6 @@
 <?php declare(strict_types=1);
+// [method, path, access, purpose, permission]
+// access: public | public+rate-limit | admin-entry (no session; origin-checked) | admin (staff session + permission)
 return [
  ['GET','/api/v1/health','public','health'],
  ['GET','/api/v1/readiness','public','readiness'],
@@ -8,7 +10,17 @@ return [
  ['GET','/api/v1/services','public','published services'],
  ['GET','/api/v1/careers','public','published careers'],
  ['POST','/api/v1/forms/{form_key}/submit','public+rate-limit','form submission'],
- ['GET','/api/v1/admin/content','admin','content management'],
- ['GET','/api/v1/admin/media','admin','media management'],
- ['GET','/api/v1/admin/audit','admin','audit log'],
+ ['GET','/api/v1/admin/setup','admin-entry','first administrator setup available?'],
+ ['POST','/api/v1/admin/setup','admin-entry','create the first administrator (one-time setup code)'],
+ ['POST','/api/v1/admin/session','admin-entry','staff sign-in (throttled)'],
+ ['GET','/api/v1/admin/session','admin','current staff member',null],
+ ['DELETE','/api/v1/admin/session','admin','sign out',null],
+ ['POST','/api/v1/admin/session/password','admin','change own password',null],
+ ['GET','/api/v1/admin/enquiries','admin','enquiries inbox','enquiries.read'],
+ ['GET','/api/v1/admin/enquiries/{id}','admin','enquiry detail','enquiries.read'],
+ ['PATCH','/api/v1/admin/enquiries/{id}','admin','change enquiry status','enquiries.update'],
+ ['GET','/api/v1/admin/users','admin','staff accounts','users.manage'],
+ ['POST','/api/v1/admin/users','admin','create staff account','users.manage'],
+ ['PATCH','/api/v1/admin/users/{id}','admin','update staff account','users.manage'],
+ ['GET','/api/v1/admin/audit','admin','audit log','audit.read'],
 ];

@@ -128,27 +128,58 @@ final class ApiApplicationTest extends TestCase
     {
         foreach (require dirname(__DIR__, 3) . '/config/routes.php' as [$method, $path, $auth]) {
             if ($auth === 'admin') {
-                yield $method . ' ' . $path => [$method, $path];
+                yield $method . ' ' . $path => [$method, str_replace('{id}', '00000000-0000-4000-8000-000000000001', $path)];
             }
         }
     }
 
     #[DataProvider('adminRoutes')]
-    public function testAdminRoutesAreNotExposedUntilAuthExists(string $method, string $path): void
+    public function testAdminRoutesRequireASessionAndNeverTouchTheDatabaseWithout(string $method, string $path): void
     {
-        self::assertSame(404, $this->app()->handle(self::request($method, $path))->status());
+        $response = $this->app()->handle(self::request($method, $path, ['origin' => 'https://paxofi.com']));
+
+        self::assertSame(401, $response->status());
+        self::assertSame('UNAUTHENTICATED', self::decode($response)['error']['code']);
+        self::assertSame(0, $this->connectAttempts);
     }
 
-    public function testRegisteredPublicRoutesMatchEndpointInventory(): void
+    public function testMalformedSessionCookieIsRejectedWithoutDatabase(): void
     {
-        $inventory = [];
+        $response = $this->app()->handle(self::request('GET', '/api/v1/admin/enquiries', ['cookie' => 'paxofi_admin=not-a-token']));
+
+        self::assertSame(401, $response->status());
+        self::assertSame(0, $this->connectAttempts);
+    }
+
+    public function testSignInFromAnotherSiteIsRefused(): void
+    {
+        $response = $this->app()->handle(self::jsonPost('/api/v1/admin/session', ['email' => 'a@example.com', 'password' => 'x'], ['origin' => 'https://evil.example']));
+
+        self::assertSame(403, $response->status());
+        self::assertSame(0, $this->connectAttempts);
+    }
+
+    public function testSetupIsHiddenWithoutASetupCode(): void
+    {
+        $response = $this->app()->handle(self::jsonPost('/api/v1/admin/setup', ['setup_token' => 'x'], ['origin' => 'https://paxofi.com']));
+
+        self::assertSame(404, $response->status());
+    }
+
+    public function testRegisteredRoutesMatchEndpointInventory(): void
+    {
+        $public = [];
+        $admin = [];
         foreach (require dirname(__DIR__, 3) . '/config/routes.php' as [$method, $path, $auth]) {
-            if ($auth !== 'admin') {
-                $inventory[] = [$method, $path];
+            if (str_starts_with($auth, 'admin')) {
+                $admin[] = [$method, $path];
+            } else {
+                $public[] = [$method, $path];
             }
         }
 
-        self::assertEqualsCanonicalizing($inventory, ApiApplication::PUBLIC_ROUTES);
+        self::assertEqualsCanonicalizing($public, ApiApplication::PUBLIC_ROUTES);
+        self::assertEqualsCanonicalizing($admin, ApiApplication::ADMIN_ROUTES);
     }
 
     private function app(): ApiApplication

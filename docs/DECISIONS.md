@@ -84,3 +84,30 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 | Database backups | 30 days | deleted |
 
 **Implementation:** `backend/bin/purge-retention.php` applies the first three rows, runs daily from cPanel → Cron Jobs (RUNBOOKS.md RB-10), and records a `data_retention.purged` audit event when it removes anything. Tested against MariaDB in CI (`RetentionPurgeTest`). The privacy page states these periods. Individuals can ask for earlier deletion (hello@paxofi.com).
+
+## D-009 — Phase 2 architecture: staff sign-in and the admin area (3 Oct 2026)
+
+**Decision (CTO, under the owner's standing approval of 2 Oct 2026):** Phase 2 starts with staff sign-in, roles and an enquiries inbox (slice P2.1). The design is chosen for shared cPanel hosting now and moves unchanged to the planned VPS.
+
+- **Where:** the admin area is `https://corporate.paxofi.com/admin` (same Next.js app, never indexed, `Disallow: /admin`). It calls `https://api.paxofi.com/api/v1/admin/*`.
+- **Sign-in:** email + password, hashed with PHP `password_hash` (Argon2id when the host supports it, otherwise bcrypt). Passwords are 12–256 characters and must not contain the email address. Wrong email and wrong password give the same message, and unknown accounts still pay the hashing cost.
+- **Throttling:** after 5 failed sign-ins for one email or 20 from one IP address within 15 minutes, further attempts get *429* until the window passes. Attempts are kept 90 days.
+- **Sessions:** a random 256-bit token in an `HttpOnly`, `Secure`, `SameSite=Strict`, host-only cookie (`__Host-paxofi_admin`) on the API domain. The database stores only its SHA-256 hash (`sessions.id`). Sessions expire after 8 hours, or 30 minutes without activity. Sign-out and password change revoke them.
+- **Cross-site protection:** SameSite=Strict, plus every state-changing admin request must carry an `Origin` from `CORS_ALLOWED_ORIGINS`. CORS allows credentials only for those exact origins.
+- **Roles (RBAC):**
+
+  | Role | Permissions |
+  |---|---|
+  | Administrator | `enquiries.read`, `enquiries.update`, `users.manage`, `audit.read` |
+  | Business Development | `enquiries.read`, `enquiries.update` |
+
+  Every admin action writes an audit event with the actor's id. A user can't disable or demote their own account.
+- **First administrator:** created once through `/admin/setup` with a one-time `ADMIN_SETUP_TOKEN` from the API `.env`. This only works while there are no users; the owner then removes the token. No terminal is needed.
+- **Enquiry workflow:** `new` → `in_progress` → `replied` → `closed`, plus `spam`.
+
+**Later slices:**
+- P2.2: two-factor sign-in (TOTP) for administrators.
+- P2.3: editable products, services and page text (uses `content_items` / `content_revisions`).
+- P2.4: media uploads, stored outside the web root.
+- P2.5: a staging site on `stage.paxofi.com`.
+- P2.6: cookieless self-hosted analytics, after the VPS move.
