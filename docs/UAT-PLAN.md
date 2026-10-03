@@ -162,3 +162,7 @@ Run after guide Step 11. About 15 minutes.
 | S6 | Live unchanged | Open `https://corporate.paxofi.com` and its `robots.txt` | No password, no yellow line, `robots.txt` allows the site | |
 
 Record sign-off ("Phase 2.5 UAT passed") in Asana.
+
+### Results — release 20261003-f48adc7 (3 Oct 2026)
+
+**Phase 2.5 accepted**, signed off by Samuel Kehinde Adeniji (owner and founder): "Everything has been setup properly and all running fine", then "ssl now working". Release deployed to live (Steps 1–5) and the staging copy created (Step 11). Screenshots confirm: the staging banner on every page, the staging staff area with its own administrator and two-factor requirement, and HTTPS on `staging.corporate.paxofi.com`. The first check found staging on `http://` without staging mode; both were fixed before sign-off (SITE_ENVIRONMENT set, certificate installed).
