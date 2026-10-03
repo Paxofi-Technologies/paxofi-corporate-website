@@ -36,8 +36,9 @@ function enquiries() {
 }
 
 /** A stateful fake of /api/v1/admin/* answering inside the browser. */
-async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailable = false } = {}) {
-  const state = { signedIn, user, rows: enquiries(), calls: [] };
+async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailable = false, twoFactor = "off", setupStatus } = {}) {
+  // twoFactor: "off", "on" (code asked after the password) or "enrol" (administrator must set it up first).
+  const state = { signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor };
   const cors = {
     "Access-Control-Allow-Origin": BASE,
     "Access-Control-Allow-Credentials": "true",
@@ -63,7 +64,10 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
     const body = request.postData() ? request.postDataJSON() : null;
     state.calls.push({ method, path, body });
 
-    if (path === "/setup" && method === "GET") return reply(route, 200, { available: setupAvailable });
+    if (path === "/setup" && method === "GET") {
+      if (setupStatus === "down") return route.abort("connectionrefused");
+      return reply(route, 200, { available: setupAvailable });
+    }
     if (path === "/setup" && method === "POST") {
       if (body.setup_token !== "s".repeat(32)) return reply(route, 403, { code: "FORBIDDEN", message: "The setup code is incorrect." });
       state.signedIn = true;
@@ -73,12 +77,43 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
       if (body.email !== state.user.email || body.password !== PASSWORD) {
         return reply(route, 401, { code: "UNAUTHENTICATED", message: "The email or password is incorrect." });
       }
+      if (state.twoFactor === "on") {
+        state.pending = true;
+        return reply(route, 200, { mfa_required: true });
+      }
       state.signedIn = true;
       return reply(route, 200, state.user);
     }
+    if (path === "/session/mfa") {
+      if (!state.pending) return reply(route, 401, unauthenticated);
+      if (body.code !== "123456" && body.code !== "abcde-fghjk") {
+        return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { code: "That code is not valid." } } });
+      }
+      state.pending = false;
+      state.signedIn = true;
+      return reply(route, 200, { ...state.user, two_factor_enabled: true, mfa_required: false });
+    }
+    if (state.pending) return reply(route, 401, { code: "MFA_REQUIRED", message: "Enter the code from your authenticator app to finish signing in." });
     if (!state.signedIn) return reply(route, 401, unauthenticated);
 
-    if (path === "/session" && method === "GET") return reply(route, 200, state.user);
+    if (path === "/session" && method === "GET") {
+      return reply(route, 200, { ...state.user, two_factor_enabled: state.twoFactor === "on", two_factor_enrollment_required: state.twoFactor === "enrol" });
+    }
+    if (path === "/account/two-factor" && method === "GET") {
+      return reply(route, 200, { configured: true, enabled: state.twoFactor === "on", required: state.user.role === "administrator", recovery_codes_left: state.twoFactor === "on" ? 10 : 0 });
+    }
+    if (path === "/account/two-factor/setup") {
+      return reply(route, 200, { secret: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", otpauth_uri: "otpauth://totp/Paxofi:ada%40paxofi.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Paxofi" });
+    }
+    if (path === "/account/two-factor/enable") {
+      if (body.code !== "654321") {
+        return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { code: "That code does not match." } } });
+      }
+      state.twoFactor = "on";
+      return reply(route, 200, { enabled: true, recovery_codes: ["abcde-fghjk", "mnpqr-stuvw", "xyz23-45678", "aaaaa-bbbbb", "ccccc-ddddd", "eeeee-fffff", "ggggg-hhhhh", "jjjjj-kkkkk", "mmmmm-nnnnn", "ppppp-qqqqq"] });
+    }
+    if (/^\/users\/[0-9a-f-]+\/two-factor\/reset$/.test(path)) return reply(route, 200, { ...BD, two_factor_enabled: false });
+    if (state.twoFactor === "enrol") return reply(route, 403, { code: "MFA_ENROLLMENT_REQUIRED", message: "Set up two-factor sign-in to continue." });
     if (path === "/session" && method === "DELETE") {
       state.signedIn = false;
       return reply(route, 200, { signed_out: true });
@@ -107,7 +142,7 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
       return reply(route, 403, { code: "FORBIDDEN", message: "You do not have permission." });
     }
     if (path === "/users" && method === "GET") {
-      return reply(route, 200, [ADMIN, BD], { roles: [{ value: "administrator", label: "Administrator" }, { value: "business_development", label: "Business Development" }] });
+      return reply(route, 200, [ADMIN, { ...BD, two_factor_enabled: true }], { roles: [{ value: "administrator", label: "Administrator" }, { value: "business_development", label: "Business Development" }] });
     }
     if (path === "/audit") {
       return reply(route, 200, [
@@ -302,6 +337,98 @@ describe("staff area", () => {
     await page.getByRole("button", { name: "Create administrator" }).click();
     await page.waitForURL(`${BASE}/admin/enquiries`);
     assert.ok(api.calls.some((c) => c.method === "POST" && c.path === "/setup"));
+    await page.context().close();
+  });
+
+  test("with two-factor on, sign-in asks for the authenticator code", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { twoFactor: "on" });
+    await page.goto(`${BASE}/admin/login?next=${encodeURIComponent("/admin/audit")}`);
+    await page.getByLabel("Email").fill(ADMIN.email);
+    await page.getByLabel("Password").fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await page.getByRole("heading", { name: "Enter your code" }).waitFor();
+    assert.equal(await page.getByLabel("Authenticator code").getAttribute("autocomplete"), "one-time-code");
+    await page.getByText("Lost your phone? Enter one of your recovery codes instead.").waitFor();
+    await assertAccessible(page, "on the code step");
+
+    await page.getByLabel("Authenticator code").fill("000000");
+    await page.getByRole("button", { name: "Verify and sign in" }).click();
+    await page.getByText("That code is not valid.").waitFor();
+    assert.equal(await page.getByLabel("Authenticator code").getAttribute("aria-invalid"), "true");
+
+    await page.getByLabel("Authenticator code").fill("123456");
+    await page.getByRole("button", { name: "Verify and sign in" }).click();
+    await page.waitForURL(`${BASE}/admin/audit`);
+    assert.ok(api.calls.some((c) => c.path === "/session/mfa" && c.body.code === "123456"));
+    await page.context().close();
+  });
+
+  test("a session still waiting for its code is sent back to the code step", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { twoFactor: "on" });
+    api.pending = true;
+    await page.goto(`${BASE}/admin/enquiries`);
+    await page.waitForURL(/\/admin\/login\?next=%2Fadmin%2Fenquiries&mfa=1/);
+    await page.getByLabel("Authenticator code").fill("abcde-fghjk");
+    await page.getByRole("button", { name: "Verify and sign in" }).click();
+    await page.waitForURL(`${BASE}/admin/enquiries`);
+    await page.context().close();
+  });
+
+  test("an administrator without two-factor sets it up before anything else", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { signedIn: true, twoFactor: "enrol" });
+    await page.goto(`${BASE}/admin/enquiries`);
+    await page.waitForURL(`${BASE}/admin/account/two-factor`);
+    await page.getByText("Administrators must use two-factor sign-in.").waitFor();
+    const nav = page.getByRole("navigation", { name: "Staff area" });
+    assert.equal(await nav.getByRole("link", { name: "Enquiries" }).count(), 0, "only My account while enrolling");
+
+    await page.getByRole("button", { name: "Set up two-factor sign-in" }).click();
+    const qr = page.getByRole("img", { name: "QR code to add Paxofi to your authenticator app" });
+    await qr.waitFor();
+    assert.match(await qr.getAttribute("src"), /^data:image\/svg\+xml;utf8,/);
+    await page.getByText("JBSW Y3DP EHPK 3PXP").waitFor();
+    await assertAccessible(page, "on two-factor set-up");
+
+    await page.getByLabel("6-digit code").fill("111111");
+    await page.getByRole("button", { name: "Turn on two-factor sign-in" }).click();
+    await page.getByText("That code does not match.").waitFor();
+    await page.getByLabel("6-digit code").fill("654321");
+    await page.getByRole("button", { name: "Turn on two-factor sign-in" }).click();
+
+    await page.getByRole("heading", { name: "Save your recovery codes" }).waitFor();
+    assert.equal(await page.locator(".admin-codes li").count(), 10);
+    const done = page.getByRole("button", { name: "Done" });
+    assert.equal(await done.isDisabled(), true, "Done waits for the saved checkbox");
+    await assertAccessible(page, "on recovery codes");
+    await page.getByLabel("I have saved my recovery codes").check();
+    await done.click();
+    await page.getByText("Recovery codes left:").waitFor();
+    await nav.getByRole("link", { name: "Enquiries" }).waitFor();
+    await page.context().close();
+  });
+
+  test("administrators can reset another person's two-factor", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/users`);
+    await page.getByText("Two-factor on").first().waitFor();
+    await page.getByText("Edit Ben Business").click();
+    await page.getByRole("button", { name: "Reset two-factor for Ben Business" }).click();
+    await page.getByText("Two-factor sign-in was reset for Ben Business.").waitFor();
+    assert.ok(api.calls.some((c) => c.method === "POST" && c.path === `/users/${BD.id}/two-factor/reset`));
+    await page.context().close();
+  });
+
+  test("first-time setup says when the staff service cannot be reached", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { setupStatus: "down" });
+    await page.goto(`${BASE}/admin/setup`);
+    await page.getByText("The staff service could not be reached").waitFor();
+    assert.equal(await page.getByText("Setup is not available").count(), 0);
     await page.context().close();
   });
 

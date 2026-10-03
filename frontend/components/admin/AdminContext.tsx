@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { AdminApiError, Envelope, StaffUser, adminRequest } from "@/lib/admin-api";
+import { AdminApiError, Envelope, StaffUser, TWO_FACTOR_PATH, adminRequest } from "@/lib/admin-api";
 
 type Request = <T>(path: string, init?: { method?: string; body?: unknown }) => Promise<Envelope<T>>;
 
@@ -27,9 +27,16 @@ export function AdminProvider({ apiBase, children }: { apiBase?: string; childre
       try {
         return await adminRequest(apiBase, path, init);
       } catch (error) {
-        if (error instanceof AdminApiError && error.status === 401 && path !== "/session") {
-          setUser(null);
-          router.replace(`/admin/login?next=${encodeURIComponent(pathname)}&expired=1`);
+        // Sign-in calls handle their own errors; anything else follows the session state.
+        const signInCall = path === "/session" || path === "/session/mfa";
+        if (error instanceof AdminApiError && !signInCall) {
+          if (error.status === 401) {
+            setUser(null);
+            const reason = error.code === "MFA_REQUIRED" ? "mfa=1" : "expired=1";
+            router.replace(`/admin/login?next=${encodeURIComponent(pathname)}&${reason}`);
+          } else if (error.status === 403 && error.code === "MFA_ENROLLMENT_REQUIRED") {
+            router.replace(TWO_FACTOR_PATH);
+          }
         }
         throw error;
       }
