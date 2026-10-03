@@ -64,3 +64,21 @@ Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Andro
 **KI-001 (accepted known issue):** Facebook's crawler gets HTTP 403 from the shared host's bot protection (Imunify360/WebShield) before the request reaches the website. ModSecurity was ruled out and the error log is empty. The website itself is correct: LinkedIn previews work. The owner deferred this to the planned move to a VPS, where the firewall is under Paxofi's control; retest with the Facebook Sharing Debugger after the move.
 
 **Sign-off:** UAT passed for release `20261002-747d5a8`, signed off by Samuel Kehinde Adeniji (owner and founder), 2 Oct 2026. All 12 scenarios pass on desktop, iPhone and Android, with KI-001 accepted.
+
+## Phase 2.1 — staff area (CW-UAT, D-009)
+
+Run after deploying the first release that includes `/admin` (from `20261003-4a341c6`) and completing guide Step 7. About 20 minutes on a desktop browser; S7 also on a phone.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| S1 | First administrator | Guide Step 7: set `ADMIN_SETUP_TOKEN`, open `/admin/setup`, create your account, remove the token | You land in **Enquiries**; afterwards `/admin/setup` says setup is not available | |
+| S2 | Wrong password | Sign out, sign in with a wrong password | "The email or password is incorrect."; nothing else is revealed | |
+| S3 | Inbox | Send a "UAT test" enquiry from `/contact`, then open **Enquiries** | It appears under **New** with name, email and the start of the message | |
+| S4 | Work an enquiry | Open it → **Reply by email** opens your mail app addressed to the sender → set status **Replied** | Status saved; the enquiry moves from **New** to **Replied** | |
+| S5 | Team member | **Users** → **Add a user** with role *Business Development* and a temporary password; sign in as them in a private window | They see **Enquiries** and **My account** only, not **Users** or **Audit log** | |
+| S6 | Leaver | As administrator, set that user to **Disabled** | Their private window is sent back to sign in on the next click; they cannot sign in again | |
+| S7 | Phone | Sign in on your phone | Pages fit the screen; the inbox scrolls sideways only inside the table | |
+| S8 | Audit | **Audit log** | Shows your sign-ins, the status change and the user changes, with names and times | |
+| S9 | Password | **My account** → change your password; sign in again with it | Works; the old password no longer does | |
+
+Afterwards mark the "UAT test" enquiry **Spam** or **Closed** (or delete it in phpMyAdmin) and disable or keep the test user. Record sign-off ("Phase 2.1 UAT passed for release X") in Asana.
