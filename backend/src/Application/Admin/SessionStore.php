@@ -10,7 +10,7 @@ use Paxofi\CorporateWebsite\Application\RequestContext;
 /** Staff sessions, keyed by the SHA-256 hash of the session token. */
 interface SessionStore
 {
-    public function create(string $tokenHash, string $userId, DateTimeImmutable $now, DateTimeImmutable $expiresAt, RequestContext $context): void;
+    public function create(string $tokenHash, string $userId, DateTimeImmutable $now, DateTimeImmutable $expiresAt, RequestContext $context, bool $secondFactorPending = false): void;
 
     public function find(string $tokenHash): ?StoredSession;
 

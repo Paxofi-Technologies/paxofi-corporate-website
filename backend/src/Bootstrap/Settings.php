@@ -17,6 +17,7 @@ final readonly class Settings
         public int $contactRateLimitMax,
         public int $contactRateLimitWindowMinutes,
         public ?string $adminSetupToken = null,
+        public ?string $mfaEncryptionKey = null,
     ) {
     }
 
@@ -36,6 +37,8 @@ final readonly class Settings
             contactRateLimitWindowMinutes: max(1, $environment->integer('CONTACT_RATE_LIMIT_WINDOW_MINUTES', 10) ?? 10),
             // One-time code for creating the first administrator (D-009); ignored when shorter than 32 characters.
             adminSetupToken: ($token = trim($environment->get('ADMIN_SETUP_TOKEN', '') ?? '')) === '' ? null : $token,
+            // Key for encrypting authenticator secrets (D-010); two-factor stays unavailable when shorter than 32 characters.
+            mfaEncryptionKey: strlen($key = trim($environment->get('MFA_ENCRYPTION_KEY', '') ?? '')) >= 32 ? $key : null,
         );
     }
 }

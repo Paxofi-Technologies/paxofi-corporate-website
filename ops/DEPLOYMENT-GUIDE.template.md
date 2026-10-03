@@ -67,7 +67,7 @@ cPanel → **phpMyAdmin** → click `paxoalhu_corporate` on the left → **Expor
 1. phpMyAdmin → click `paxoalhu_corporate` → **Import**.
 2. **Choose file** → `database-upgrade-{{VERSION}}.sql`. Leave the other options at their defaults (character set *utf-8*, *Enable foreign key checks* ticked) → **Import**.
 3. You should see a green *"Import has been successfully finished"* message.
-4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (Administrator, Business Development), there is a `login_attempts` table, and `schema_migrations` lists the migrations up to the latest one (`007_staff_sign_in_and_roles` or later).
+4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (`administrator`, `business_development`), there is a `login_attempts` table, and there is a `recovery_codes` table, and `schema_migrations` lists the migrations up to the latest one (`008_staff_two_factor` or later).
 
 The import is safe to run again if it is interrupted.
 
@@ -149,6 +149,32 @@ Using the staff area:
 - Someone leaves: *Users* → **Edit** → *Account* → **Disabled**. They are signed out at once and cannot sign in.
 - Sessions end after 30 minutes without activity, and after 8 hours at most. After 5 wrong passwords for one email (or 20 from one network) sign-in is blocked for 15 minutes.
 
+## Step 8 — One time: turn on two-factor sign-in (15 minutes)
+
+From this release, staff can protect their sign-in with a 6-digit code from an authenticator app on their phone (decision D-010). It is **required for administrators** and optional for Business Development. It needs one setting on the API, made once.
+
+1. **Make an encryption key** the same way as the setup code in Step 7: a password manager or cPanel's **Password Generator**, **40 or more** letters and numbers (no spaces, `#` or quotes).
+2. **Keep a copy of the key** in your password manager. If it is lost or changed, everyone's authenticator stops working: staff then sign in with a recovery code and set up their authenticator again.
+3. File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/` → right-click `.env` → **Edit** → add one line at the end → **Save Changes**:
+
+```text
+MFA_ENCRYPTION_KEY=paste-the-key-here
+```
+
+   When you deploy a later release, the `.env` is copied over in Step 3.4, so the key stays. Unlike the setup code, **do not delete this line**.
+
+4. **Set up your own two-factor:** sign in at {{SITE_URL}}/admin. As an administrator you are taken straight to **Two-factor sign-in**:
+   - install an authenticator app if you don't have one (Google Authenticator, Microsoft Authenticator or 1Password);
+   - **Set up two-factor sign-in** → scan the QR code with the app (or type the set-up key) → enter the 6-digit code the app shows → **Turn on two-factor sign-in**;
+   - **save the 10 recovery codes** (copy them into your password manager or download the file). Each works once if you lose your phone. They are not shown again.
+5. Sign out and sign in again: after your password, enter the current code from the app.
+6. Every other administrator does step 4 at their next sign-in. Business Development staff can turn it on at *My account* → **Set up two-factor sign-in** (recommended).
+
+Lost phone:
+
+- **Business Development:** an administrator opens *Users* → **Edit** → **Reset two-factor**. The person signs in with their password and sets it up again if they wish.
+- **Administrator:** sign in with one of your recovery codes, then ask another administrator to reset your two-factor and set it up again. With only one administrator and no recovery codes left, see RUNBOOKS RB-11.
+
 ## If something goes wrong
 
 | Symptom | Fix |
@@ -166,6 +192,9 @@ Using the staff area:
 | `/admin/setup` says *Setup is not available* | An account already exists (sign in at `/admin/login`), or `ADMIN_SETUP_TOKEN` is missing or shorter than 32 characters in the API `.env` (Step 7). |
 | Staff sign-in says *The admin service could not be reached* | Same causes as a CORS contact-form failure: HTTPS on both domains, `CORS_ALLOWED_ORIGINS` exactly `{{SITE_URL}}`, `API_BASE_URL` set on the Node app. |
 | Staff are sent back to *Sign in* straight after signing in | The browser did not keep the session cookie: the API must be opened over `https://` and `APP_ENV` must be `production`. Check that the API domain is a subdomain of the same site (`api.paxofi.com` next to `corporate.paxofi.com`). |
+| Two-factor page says *not available yet* | `MFA_ENCRYPTION_KEY` is missing from the API `.env`, or shorter than 32 characters (Step 8). |
+| *That code is not valid* although the app shows it | The phone's clock is wrong: turn on automatic date and time on the phone. Each code also works only once, so wait for the next one. |
+| Everyone's codes stopped working after a change to `.env` | `MFA_ENCRYPTION_KEY` was changed or removed. Put the original key back. If it is lost: sign in with recovery codes, and administrators reset each other's two-factor (RB-11). |
 | *Too many attempts* on sign-in | Wait 15 minutes. An administrator cannot lift the block early; if it keeps happening, check the *Audit log* for `staff.sign_in` failures. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 

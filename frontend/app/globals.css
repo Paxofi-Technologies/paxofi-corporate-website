@@ -1348,6 +1348,68 @@ textarea:focus-visible {
   font-size: 20px;
   margin: 0;
 }
+/* Two-factor sign-in (D-010) */
+.admin-callout {
+  background: #fff3d6;
+  color: #5c3a00;
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-weight: 600;
+}
+.admin-steps {
+  padding-left: 22px;
+  display: grid;
+  gap: 14px;
+}
+.admin-qr {
+  display: block;
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+.admin-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.admin-codes {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 17px;
+}
+.admin-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  font-weight: 600;
+}
+.admin-check input {
+  width: 20px;
+  height: 20px;
+}
+.admin-link-button {
+  font: inherit;
+  color: var(--blue-strong);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.admin-reset {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
 @media (max-width: 860px) {
   .admin-detail {
     grid-template-columns: 1fr;

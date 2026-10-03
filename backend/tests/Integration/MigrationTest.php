@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -71,6 +71,19 @@ final class MigrationTest extends DatabaseTestCase
         self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.name = 'business_development'"));
     }
 
+    public function testTwoFactorMigrationCanBeImportedAgain(): void
+    {
+        $file = array_values(array_filter(self::migrationFiles(), static fn (string $f): bool => str_contains($f, 'two_factor')))[0];
+        self::applySqlFile($file);
+
+        $columns = self::$pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['totp_secret', 'totp_pending_secret', 'totp_enabled_at', 'totp_last_step'] as $column) {
+            self::assertContains($column, $columns);
+        }
+        self::assertSame('0', (string) self::scalar("SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessions' AND COLUMN_NAME = 'mfa_pending'"));
+        self::assertSame('CASCADE', (string) self::scalar("SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'recovery_codes'"));
+    }
+
     public function testSessionExpiryIsNeverAutoUpdated(): void
     {
         $extra = (string) self::scalar("SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessions' AND COLUMN_NAME = 'expires_at'");
@@ -128,6 +141,6 @@ final class MigrationTest extends DatabaseTestCase
         }
 
         $foreignKeys = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()')->fetchColumn();
-        self::assertSame(8, $foreignKeys, 'foreign keys declared in 001');
+        self::assertSame(9, $foreignKeys, 'foreign keys: 8 declared in 001, plus recovery_codes.user_id (008)');
     }
 }

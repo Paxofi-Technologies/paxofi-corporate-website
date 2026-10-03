@@ -64,3 +64,42 @@ Tester: Samuel Kehinde Adeniji (owner and founder), on desktop, iPhone and Andro
 **KI-001 (accepted known issue):** Facebook's crawler gets HTTP 403 from the shared host's bot protection (Imunify360/WebShield) before the request reaches the website. ModSecurity was ruled out and the error log is empty. The website itself is correct: LinkedIn previews work. The owner deferred this to the planned move to a VPS, where the firewall is under Paxofi's control; retest with the Facebook Sharing Debugger after the move.
 
 **Sign-off:** UAT passed for release `20261002-747d5a8`, signed off by Samuel Kehinde Adeniji (owner and founder), 2 Oct 2026. All 12 scenarios pass on desktop, iPhone and Android, with KI-001 accepted.
+
+## Phase 2.1 — staff area (CW-UAT, D-009)
+
+Run after deploying the first release that includes `/admin` (from `20261003-4a341c6`) and completing guide Step 7. About 20 minutes on a desktop browser; S7 also on a phone.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| S1 | First administrator | Guide Step 7: set `ADMIN_SETUP_TOKEN`, open `/admin/setup`, create your account, remove the token | You land in **Enquiries**; afterwards `/admin/setup` says setup is not available | |
+| S2 | Wrong password | Sign out, sign in with a wrong password | "The email or password is incorrect."; nothing else is revealed | |
+| S3 | Inbox | Send a "UAT test" enquiry from `/contact`, then open **Enquiries** | It appears under **New** with name, email and the start of the message | |
+| S4 | Work an enquiry | Open it → **Reply by email** opens your mail app addressed to the sender → set status **Replied** | Status saved; the enquiry moves from **New** to **Replied** | |
+| S5 | Team member | **Users** → **Add a user** with role *Business Development* and a temporary password; sign in as them in a private window | They see **Enquiries** and **My account** only, not **Users** or **Audit log** | |
+| S6 | Leaver | As administrator, set that user to **Disabled** | Their private window is sent back to sign in on the next click; they cannot sign in again | |
+| S7 | Phone | Sign in on your phone | Pages fit the screen; the inbox scrolls sideways only inside the table | |
+| S8 | Audit | **Audit log** | Shows your sign-ins, the status change and the user changes, with names and times | |
+| S9 | Password | **My account** → change your password; sign in again with it | Works; the old password no longer does | |
+
+Afterwards mark the "UAT test" enquiry **Spam** or **Closed** (or delete it in phpMyAdmin) and disable or keep the test user. Record sign-off ("Phase 2.1 UAT passed for release X") in Asana.
+
+### Results — release 20261003-4a341c6 (3 Oct 2026)
+
+**Phase 2.1 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder). S1–S9 passed on the live site. Notes:
+
+- S1: `/admin/setup` first showed "Setup is not available". The page shows the same message when it cannot reach the API, which was the case during deployment. Once the API was in place, setup worked, and `GET /api/v1/admin/setup` now reports `"available":false`, as intended. Follow-up for the next release: show a distinct "could not reach the service" message on that page.
+- S5/S6: Business Development user (Temitope Koleosho) sees only **Enquiries** and **My account**. Once disabled, the account gets "The email or password is incorrect.", the same message as a wrong password, by design (the sign-in page does not reveal which accounts exist or are disabled). The attempt is recorded in the Audit log.
+
+## Phase 2.2 — two-factor sign-in (D-010)
+
+Run after deploying the release that includes two-factor (from P2.2) and completing guide **Step 8**. About 20 minutes; you need your phone with an authenticator app.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| T1 | Enforced for administrators | Sign in as an administrator | You go straight to **Two-factor sign-in** with "Administrators must use two-factor sign-in"; only **My account** is in the menu | |
+| T2 | Set up | **Set up two-factor sign-in** → scan the QR with the app → enter the code | Recovery codes appear; **Done** works only after ticking "I have saved my recovery codes"; the full menu returns | |
+| T3 | Sign in with a code | Sign out, sign in with your password | "Enter your code"; the current app code signs you in. A wrong code says it is not valid | |
+| T4 | Recovery code | Sign out, sign in, enter one recovery code instead | Signed in; the same recovery code does not work a second time; *Two-factor sign-in* shows 9 codes left | |
+| T5 | Optional for Business Development | Sign in as a Business Development user | They reach **Enquiries** without being forced; *My account* offers **Set up two-factor sign-in** | |
+| T6 | Lost phone | As administrator: *Users* → **Edit** on a person with two-factor on → **Reset two-factor** | Confirmation shown; that person is signed out and signs in with their password only | |
+| T7 | Audit | **Audit log** | Shows the set-up, the recovery code use and the reset, with names and times | |
