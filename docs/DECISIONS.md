@@ -54,6 +54,8 @@ Short record of decisions that shape the Corporate Website implementation. The c
 
 **Why:** no consent banner is needed under the Nigeria Data Protection Act 2023 / GDPR, the Content-Security-Policy allows only this site and the API, and pages stay fast. CW-OPS-007 and CW-ARCH-010 analytics parts are closed by this decision; revisit in Phase 2 with a cookieless, self-hosted option if traffic insight is needed. An E2E test asserts that no page sets a cookie.
 
+*Update 3 Oct 2026: the owner brought analytics into scope; see D-014 (cookieless, self-hosted). Everything else in this decision still holds: no cookies, no third-party scripts.*
+
 ## D-007 — Service levels (SRS Appendix K) (2 Oct 2026)
 
 **Decision (CTO, approved by owner), for shared cPanel hosting:**
@@ -188,3 +190,23 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
   - a password on the staging API: it would break the staff area's cross-site calls, and the API holds only test data;
   - a separate staging build: it would no longer test the exact live files;
   - a second hosting account or the VPS: extra cost now. Revisit with the VPS move.
+
+## D-014 — Cookieless, self-hosted visitor analytics (3 Oct 2026)
+
+**Decision (CTO; on 3 Oct 2026 the owner asked for analytics now; slice P2.6; updates D-006):** the website counts its own page views. No third party is involved, nothing is stored on the visitor's device, and no personal data is kept.
+
+- **What is sent:** after each page view, the page path, the screen width and, on the first page of a visit only, the referring site. It is a simple request (`text/plain`, no cookies or credentials) to `POST /api/v1/analytics/pageview`, which always answers 204.
+- **What is kept:** daily totals only (`analytics_daily`, `analytics_sources`, `analytics_devices`, migration 011):
+  - page views per public page; any other page counts as *(other)*;
+  - unique visitors per day;
+  - the referring site's domain (for example `google.com`), capped at 500 new domains a day;
+  - phone, tablet or desktop.
+- **Unique visitors without identification:** SHA-256 of (a random salt for the day + IP address + browser). The salt and the hashes are deleted when the day ends, so a visitor cannot be recognised on another day or traced to an IP address. Totals are kept for 25 months (retention purge).
+- **Not counted:** visitors with Do Not Track or Global Privacy Control switched on, known bots and monitors, and the staff area.
+- **Who sees it:** the staff area's **Analytics** page (`analytics.read`: Administrator, Business Development). It shows:
+  - views, daily visitors and enquiries for 7, 30 or 90 days;
+  - top pages, sources and devices.
+- **Privacy page:** updated to describe exactly this. No consent banner is needed, because nothing is stored on the device and no personal data is kept.
+- **Not chosen:**
+  - Google Analytics: uses cookies, needs consent, and sends visitor data to a third party.
+  - Plausible or Umami: they need a separate service, a database the hosting does not offer, or a subscription. Revisit after the VPS move if more detail is needed.

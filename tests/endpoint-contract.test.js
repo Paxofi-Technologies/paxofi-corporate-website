@@ -18,6 +18,7 @@ const routes = [
   ["GET", "/api/v1/careers", "public"],
   ["POST", "/api/v1/forms/{form_key}/submit", "public+rate-limit"],
   ["GET", "/api/v1/media/{id}/{filename}", "public"],
+  ["POST", "/api/v1/analytics/pageview", "public"],
   ["GET", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/session", "admin-entry"],
@@ -50,6 +51,7 @@ const routes = [
   ["POST", "/api/v1/admin/media", "admin"],
   ["PATCH", "/api/v1/admin/media/{id}", "admin"],
   ["DELETE", "/api/v1/admin/media/{id}", "admin"],
+  ["GET", "/api/v1/admin/analytics", "admin"],
 ];
 
 test("endpoint RTM has unique method/route entries", () => {

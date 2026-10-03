@@ -22,6 +22,7 @@ use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogEditor;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
+use Paxofi\CorporateWebsite\Application\Analytics\Analytics;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -31,6 +32,7 @@ use Paxofi\CorporateWebsite\Application\Media\ImageProcessor;
 use Paxofi\CorporateWebsite\Application\Media\MediaLibrary;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
@@ -38,6 +40,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
+use Paxofi\CorporateWebsite\Http\Controllers\AnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
@@ -53,6 +56,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
 use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
@@ -92,6 +96,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/careers'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
+        ['POST', '/api/v1/analytics/pageview'],
     ];
 
     /** Staff routes (decision D-009); each checks the session and permission itself. */
@@ -128,6 +133,7 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/media'],
         ['PATCH', '/api/v1/admin/media/{id}'],
         ['DELETE', '/api/v1/admin/media/{id}'],
+        ['GET', '/api/v1/admin/analytics'],
     ];
 
     private readonly HttpHandler $pipeline;
@@ -183,6 +189,7 @@ final class ApiApplication implements HttpHandler
 
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
+        $router->post('/api/v1/analytics/pageview', $this->lazy(fn (): Controller => new AnalyticsController($this->analytics())));
 
         $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
         $router->get('/api/v1/admin/setup', static fn (HttpRequest $r): HttpResponse => $session()->setupStatus($r));
@@ -247,6 +254,8 @@ final class ApiApplication implements HttpHandler
         $router->add('PATCH', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->update($r));
         $router->add('DELETE', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->delete($r));
 
+        $router->get('/api/v1/admin/analytics', fn (HttpRequest $r): HttpResponse => (new AdminAnalyticsController($this->analytics(), $this->adminGuard()))->report($r));
+
         $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
 
         return $router;
@@ -290,6 +299,17 @@ final class ApiApplication implements HttpHandler
             new LazyTransactionManager($this->database),
             $this->clock,
         );
+    }
+
+    private function analytics(): Analytics
+    {
+        // The website's own hosts: a visit from them is not counted as coming from another site.
+        $hosts = array_values(array_filter(array_map(
+            static fn (string $origin): string => strtolower((string) parse_url($origin, PHP_URL_HOST)),
+            $this->settings->corsAllowedOrigins,
+        )));
+
+        return new Analytics(new PdoAnalyticsStore($this->database), $hosts, $this->clock);
     }
 
     private function mediaLibrary(): MediaLibrary

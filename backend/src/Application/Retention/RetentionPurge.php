@@ -20,7 +20,7 @@ final class RetentionPurge
     {
     }
 
-    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int} */
+    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int, analytics_rows_deleted: int} */
     public function run(?DateTimeImmutable $now = null): array
     {
         $now = ($now ?? new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'));
@@ -50,6 +50,12 @@ final class RetentionPurge
                     'DELETE FROM sessions WHERE COALESCE(revoked_at, expires_at) < :cutoff AND expires_at < :cutoff2',
                     $this->policy->endedSessionCutoff($now),
                 ),
+                // Daily totals after 25 months; visitor hashes and salts as soon as their day is over (D-014).
+                'analytics_rows_deleted' => $this->execute('DELETE FROM analytics_daily WHERE day < :cutoff', $this->policy->analyticsCutoff($now))
+                    + $this->execute('DELETE FROM analytics_sources WHERE day < :cutoff', $this->policy->analyticsCutoff($now))
+                    + $this->execute('DELETE FROM analytics_devices WHERE day < :cutoff', $this->policy->analyticsCutoff($now))
+                    + $this->execute('DELETE FROM analytics_visitors WHERE day < :cutoff', $this->policy->analyticsVisitorCutoff($now))
+                    + $this->execute('DELETE FROM analytics_salts WHERE day < :cutoff', $this->policy->analyticsVisitorCutoff($now)),
             ];
 
             if (array_sum($result) > 0) {

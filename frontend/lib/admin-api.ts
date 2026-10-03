@@ -119,6 +119,18 @@ export async function uploadMedia(
   return (isRecord(payload) ? payload.data : null) as MediaItem;
 }
 
+/** Visitor analytics (D-014). */
+export type AnalyticsReport = {
+  days: number;
+  from: string;
+  to: string;
+  totals: { views: number; visitors: number; enquiries: number };
+  daily: { day: string; views: number; visitors: number; enquiries: number }[];
+  pages: { path: string; views: number; visitors: number }[];
+  sources: { source: string; views: number }[];
+  devices: { device: string; views: number }[];
+};
+
 export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
 
 /** Path of the page where staff set up two-factor sign-in. */

@@ -129,6 +129,15 @@ Staff upload files at `/admin` → **Media** (D-012). Files are in `/home/paxoal
 - **Moving server (VPS):** copy `paxofi-media` as it is and set `MEDIA_STORAGE_PATH` to its new path.
 - **Who uploaded or deleted what:** **Audit log**, actions `media.*`.
 
+## RB-15 Visitor analytics
+
+Cookieless counts of page views (D-014), shown in the staff area under **Analytics**. Only daily totals are stored, in tables `analytics_daily`, `analytics_sources` and `analytics_devices`.
+
+- **Numbers look low:** visitors with Do Not Track or Global Privacy Control are not counted, nor are bots. Ad blockers can also block the count. Treat the figures as a close estimate and compare trends rather than exact totals.
+- **Nothing is being counted:** the website's `API_BASE_URL` must be the absolute `https://api…/api/v1` address. Open a page, then check that today's row appears in `analytics_daily`.
+- **Personal data requests:** there is nothing to find. No IP address, cookie or identifier is stored beyond the end of each day.
+- **Staging** counts its own test visits in its own database.
+
 ## RB-14 Staging copy
 
 `staging.corporate.paxofi.com` + `api-staging.paxofi.com`, folders in `/home/paxoalhu/staging/`, database `paxoalhu_corporate_staging` (D-013). Same release files as live; the Node app's `SITE_ENVIRONMENT=staging` and `STAGING_PASSWORD` make it private and unindexed.
