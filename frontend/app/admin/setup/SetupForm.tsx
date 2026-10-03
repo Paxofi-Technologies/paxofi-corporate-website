@@ -6,13 +6,15 @@ import { FormEvent, useEffect, useState } from "react";
 import { AdminFrame } from "@/components/admin/AdminFrame";
 import { useAdmin } from "@/components/admin/AdminContext";
 import { Field, FormStatus, PASSWORD_HINT, formValues } from "@/components/admin/AdminForm";
-import { AdminApiError, StaffUser } from "@/lib/admin-api";
+import { AdminApiError, StaffUser, adminUrl } from "@/lib/admin-api";
 
 /** Creates the first administrator with the one-time ADMIN_SETUP_TOKEN (D-009). */
 export default function SetupForm() {
-  const { request, setUser } = useAdmin();
+  const { apiBase, request, setUser } = useAdmin();
   const router = useRouter();
-  const [available, setAvailable] = useState<boolean | null>(null);
+  // null while checking; "unreachable" when the API did not answer (not the same as setup being closed).
+  const [available, setAvailable] = useState<boolean | "unreachable" | null>(null);
+  const [checkError, setCheckError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -20,7 +22,10 @@ export default function SetupForm() {
   useEffect(() => {
     request<{ available: boolean }>("/setup")
       .then((result) => setAvailable(result.data.available))
-      .catch(() => setAvailable(false));
+      .catch((e) => {
+        setCheckError(e instanceof AdminApiError ? e.message : "");
+        setAvailable("unreachable");
+      });
   }, [request]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -47,6 +52,21 @@ export default function SetupForm() {
     return (
       <AdminFrame title="First-time setup">
         <p role="status">Checking…</p>
+      </AdminFrame>
+    );
+  }
+
+  if (available === "unreachable") {
+    return (
+      <AdminFrame title="First-time setup">
+        <p role="alert" className="form-status" data-state="error">
+          The staff service could not be reached, so we cannot tell whether setup is open.
+        </p>
+        {checkError && <p className="form-note">{checkError}</p>}
+        <p>
+          Check that the API is running the latest release (deployment guide, Step 3) and that
+          {" "}<code>{adminUrl(apiBase, "/setup")}</code> opens in your browser. Then reload this page.
+        </p>
       </AdminFrame>
     );
   }

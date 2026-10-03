@@ -13,7 +13,15 @@ export type StaffUser = {
   role_label: string | null;
   permissions: string[];
   last_login_at: string | null;
+  two_factor_enabled?: boolean;
+  /** Administrators must set up two-factor sign-in before using the staff area (D-010). */
+  two_factor_enrollment_required?: boolean;
 };
+
+export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
+
+/** Path of the page where staff set up two-factor sign-in. */
+export const TWO_FACTOR_PATH = "/admin/account/two-factor";
 
 export type EnquiryStatus = "new" | "in_progress" | "replied" | "closed" | "spam";
 

@@ -13,6 +13,7 @@ final readonly class StoredSession
         public DateTimeImmutable $expiresAt,
         public DateTimeImmutable $lastSeenAt,
         public bool $revoked,
+        public bool $secondFactorPending = false,
     ) {
     }
 }

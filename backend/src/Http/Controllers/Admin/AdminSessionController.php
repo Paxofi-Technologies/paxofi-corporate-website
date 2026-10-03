@@ -48,19 +48,29 @@ final class AdminSessionController
 
     public function current(HttpRequest $request): HttpResponse
     {
-        return ApiResponse::success($request, $this->guard->require($request)->user->toArray());
+        $staff = $this->guard->require($request, duringEnrollment: true);
+
+        return ApiResponse::success($request, $staff->user->toArray() + ['two_factor_enrollment_required' => $staff->enrollmentRequired]);
+    }
+
+    /** Second sign-in step (D-010): the authenticator or recovery code. */
+    public function verifySecondFactor(HttpRequest $request): HttpResponse
+    {
+        $pending = $this->guard->require($request, secondFactorStep: true, duringEnrollment: true);
+
+        return $this->signedIn($request, $this->auth->verifySecondFactor($pending, RequestBody::parse($request), RequestContexts::from($request)), 200);
     }
 
     public function signOut(HttpRequest $request): HttpResponse
     {
-        $this->auth->signOut($this->guard->require($request), RequestContexts::from($request));
+        $this->auth->signOut($this->guard->require($request, secondFactorStep: true, duringEnrollment: true), RequestContexts::from($request));
 
         return ApiResponse::success($request, ['signed_out' => true], [], 200, ['set-cookie' => SessionCookie::clear($this->guard->secureCookies())]);
     }
 
     public function changePassword(HttpRequest $request): HttpResponse
     {
-        $staff = $this->guard->require($request);
+        $staff = $this->guard->require($request, duringEnrollment: true);
         $this->auth->changePassword($staff, RequestBody::parse($request), RequestContexts::from($request));
 
         return ApiResponse::success($request, ['changed' => true]);
@@ -70,6 +80,9 @@ final class AdminSessionController
     {
         $cookie = SessionCookie::issue($signIn->token, $signIn->expiresAt, ($this->clock)(), $this->guard->secureCookies());
 
-        return ApiResponse::success($request, $signIn->user->toArray(), ['expires_at' => $signIn->expiresAt->format(DATE_ATOM)], $status, ['set-cookie' => $cookie]);
+        // Until the second factor is entered, nothing about the account is returned.
+        $data = $signIn->secondFactorPending ? ['mfa_required' => true] : $signIn->user->toArray() + ['mfa_required' => false];
+
+        return ApiResponse::success($request, $data, ['expires_at' => $signIn->expiresAt->format(DATE_ATOM)], $status, ['set-cookie' => $cookie]);
     }
 }

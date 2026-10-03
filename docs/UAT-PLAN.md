@@ -82,3 +82,24 @@ Run after deploying the first release that includes `/admin` (from `20261003-4a3
 | S9 | Password | **My account** → change your password; sign in again with it | Works; the old password no longer does | |
 
 Afterwards mark the "UAT test" enquiry **Spam** or **Closed** (or delete it in phpMyAdmin) and disable or keep the test user. Record sign-off ("Phase 2.1 UAT passed for release X") in Asana.
+
+### Results — release 20261003-4a341c6 (3 Oct 2026)
+
+**Phase 2.1 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder). S1–S9 passed on the live site. Notes:
+
+- S1: `/admin/setup` first showed "Setup is not available". The page shows the same message when it cannot reach the API, which was the case during deployment. Once the API was in place, setup worked, and `GET /api/v1/admin/setup` now reports `"available":false`, as intended. Follow-up for the next release: show a distinct "could not reach the service" message on that page.
+- S5/S6: Business Development user (Temitope Koleosho) sees only **Enquiries** and **My account**. Once disabled, the account gets "The email or password is incorrect.", the same message as a wrong password, by design (the sign-in page does not reveal which accounts exist or are disabled). The attempt is recorded in the Audit log.
+
+## Phase 2.2 — two-factor sign-in (D-010)
+
+Run after deploying the release that includes two-factor (from P2.2) and completing guide **Step 8**. About 20 minutes; you need your phone with an authenticator app.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| T1 | Enforced for administrators | Sign in as an administrator | You go straight to **Two-factor sign-in** with "Administrators must use two-factor sign-in"; only **My account** is in the menu | |
+| T2 | Set up | **Set up two-factor sign-in** → scan the QR with the app → enter the code | Recovery codes appear; **Done** works only after ticking "I have saved my recovery codes"; the full menu returns | |
+| T3 | Sign in with a code | Sign out, sign in with your password | "Enter your code"; the current app code signs you in. A wrong code says it is not valid | |
+| T4 | Recovery code | Sign out, sign in, enter one recovery code instead | Signed in; the same recovery code does not work a second time; *Two-factor sign-in* shows 9 codes left | |
+| T5 | Optional for Business Development | Sign in as a Business Development user | They reach **Enquiries** without being forced; *My account* offers **Set up two-factor sign-in** | |
+| T6 | Lost phone | As administrator: *Users* → **Edit** on a person with two-factor on → **Reset two-factor** | Confirmation shown; that person is signed out and signs in with their password only | |
+| T7 | Audit | **Audit log** | Shows the set-up, the recovery code use and the reset, with names and times | |

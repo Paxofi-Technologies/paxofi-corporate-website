@@ -29,11 +29,11 @@ final class PdoSessionStore implements SessionStore
         return $this->database;
     }
 
-    public function create(string $tokenHash, string $userId, DateTimeImmutable $now, DateTimeImmutable $expiresAt, RequestContext $context): void
+    public function create(string $tokenHash, string $userId, DateTimeImmutable $now, DateTimeImmutable $expiresAt, RequestContext $context, bool $secondFactorPending = false): void
     {
         $this->write(
-            'INSERT INTO sessions (id, user_id, expires_at, last_seen_at, created_at, source_ip, user_agent)
-             VALUES (:id, :user_id, :expires_at, :last_seen_at, :created_at, :ip, :ua)',
+            'INSERT INTO sessions (id, user_id, expires_at, last_seen_at, created_at, source_ip, user_agent, mfa_pending)
+             VALUES (:id, :user_id, :expires_at, :last_seen_at, :created_at, :ip, :ua, :pending)',
             [
                 'id' => $tokenHash,
                 'user_id' => $userId,
@@ -42,13 +42,14 @@ final class PdoSessionStore implements SessionStore
                 'created_at' => self::utc($now),
                 'ip' => $context->clientIp,
                 'ua' => $context->userAgent === null ? null : mb_substr(mb_scrub($context->userAgent, 'UTF-8'), 0, 500),
+                'pending' => $secondFactorPending ? 1 : 0,
             ],
         );
     }
 
     public function find(string $tokenHash): ?StoredSession
     {
-        $rows = $this->select('SELECT user_id, expires_at, last_seen_at, created_at, revoked_at FROM sessions WHERE id = :id', ['id' => $tokenHash]);
+        $rows = $this->select('SELECT user_id, expires_at, last_seen_at, created_at, revoked_at, mfa_pending FROM sessions WHERE id = :id', ['id' => $tokenHash]);
         if ($rows === []) {
             return null;
         }
@@ -60,6 +61,7 @@ final class PdoSessionStore implements SessionStore
             expiresAt: new DateTimeImmutable((string) $row['expires_at'], $utc),
             lastSeenAt: new DateTimeImmutable((string) ($row['last_seen_at'] ?? $row['created_at']), $utc),
             revoked: $row['revoked_at'] !== null,
+            secondFactorPending: (int) ($row['mfa_pending'] ?? 0) === 1,
         );
     }
 

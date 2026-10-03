@@ -60,7 +60,8 @@ export default function StaffUsers() {
                 <span className="status-pill" data-status={staff.status}>{staff.status === "active" ? "Active" : "Disabled"}</span>
               </div>
               <p className="admin-sub">
-                {staff.email} · {staff.role_label ?? "No role"} · Last sign-in {formatDateTime(staff.last_login_at)}
+                {staff.email} · {staff.role_label ?? "No role"} · Two-factor {staff.two_factor_enabled ? "on" : "off"} · Last sign-in{" "}
+                {formatDateTime(staff.last_login_at)}
               </p>
               {staff.id === user?.id ? (
                 <p className="form-note">This is you. Change your password on the My account page.</p>
@@ -188,7 +189,38 @@ function EditUser({ staff, roles, onSaved }: { staff: StaffUser; roles: RoleOpti
       />
       <FormStatus state="error" message={error} />
       <button className="button button--primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+      {staff.two_factor_enabled && <ResetTwoFactor staff={staff} onReset={onSaved} />}
     </form>
+  );
+}
+
+/** For a lost phone: removes the person's two-factor and signs them out everywhere (D-010). */
+function ResetTwoFactor({ staff, onReset }: { staff: StaffUser; onReset: (message: string) => void }) {
+  const { request } = useAdmin();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function reset() {
+    setBusy(true);
+    setError("");
+    try {
+      await request(`/users/${encodeURIComponent(staff.id)}/two-factor/reset`, { method: "POST" });
+      onReset(`Two-factor sign-in was reset for ${staff.display_name}. They set it up again at their next sign-in${staff.role === "administrator" ? " (required for administrators)" : ""}.`);
+    } catch (e) {
+      setError(e instanceof AdminApiError ? e.message : "Two-factor could not be reset.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="admin-reset">
+      <p className="form-note">Lost phone? Resetting removes their authenticator and recovery codes and signs them out everywhere.</p>
+      <FormStatus state="error" message={error} />
+      <button type="button" className="button button--outline" onClick={reset} disabled={busy}>
+        {busy ? "Resetting…" : `Reset two-factor for ${staff.display_name}`}
+      </button>
+    </div>
   );
 }
 

@@ -111,3 +111,18 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - P2.4: media uploads, stored outside the web root.
 - P2.5: a staging site on `stage.paxofi.com`.
 - P2.6: cookieless self-hosted analytics, after the VPS move.
+
+## D-010 — Two-factor sign-in for staff (3 Oct 2026)
+
+**Decision (CTO, under the owner's standing approval; slice P2.2 of D-009):** staff can add a second sign-in factor: a 6-digit code from an authenticator app (TOTP, RFC 6238). It is **required for administrators** and optional for Business Development.
+
+- **Standard:** TOTP with HMAC-SHA1, 6 digits, 30-second steps, accepting one step either side for clock drift. This is what Google Authenticator, Microsoft Authenticator and 1Password expect. Each step is accepted only once (`users.totp_last_step`), so a code cannot be replayed.
+- **Secrets:** generated on the server (160 bits) and shown once as a QR code and a set-up key. They are stored encrypted with AES-256-GCM, using a key derived (HKDF-SHA256) from `MFA_ENCRYPTION_KEY` in the API `.env`. A database copy alone does not reveal them.
+- **Recovery codes:** 10 single-use codes of 50 bits each, shown once and stored as SHA-256. They work without the encryption key, so a lost key never locks staff out for good. They can be replaced with a current authenticator code.
+- **Sign-in flow:** a correct password opens a **5-minute** session that can only submit the code (`POST /admin/session/mfa`). A valid code replaces it with a new full session and a new token. Code failures count towards the same throttle as passwords (5 per email, 20 per IP address in 15 minutes); at the limit the pending session ends.
+- **Enforcement:** once the key is set, an administrator without two-factor can use only *My account*, password change and two-factor set-up until it is on (`MFA_ENROLLMENT_REQUIRED`). Administrators cannot turn it off. Business Development can turn it off with their password.
+- **Recovery:** an administrator can reset another person's two-factor; this signs them out everywhere. No one can reset their own. Removing the key never skips the second factor for accounts that have it on.
+- **Without the key:** two-factor is unavailable and not enforced. This keeps an upgrade safe before the key is added.
+- **Audit:** `staff.sign_in.password_accepted`, `staff.sign_in.second_factor` (failure or denied), `staff.two_factor.enabled`, `.disabled`, `.reset`, `.recovery_codes_replaced`, `.recovery_code_used`.
+
+**Not chosen:** SMS and email codes (interceptable, and they need a paid sender), and WebAuthn/passkeys. Passkeys are stronger but a bigger build; reconsider after the VPS move.

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Logo from "@/components/Logo";
 import { can, useAdmin } from "./AdminContext";
-import { AdminApiError, StaffUser, adminRequest } from "@/lib/admin-api";
+import { AdminApiError, StaffUser, TWO_FACTOR_PATH, adminRequest } from "@/lib/admin-api";
 
 const NAV = [
   { href: "/admin/enquiries", label: "Enquiries", permission: "enquiries.read" },
@@ -31,7 +31,8 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
       .catch((error) => {
         if (cancelled) return;
         if (error instanceof AdminApiError && error.status === 401) {
-          router.replace(`/admin/login?next=${encodeURIComponent(pathname)}`);
+          const step = error.code === "MFA_REQUIRED" ? "&mfa=1" : "";
+          router.replace(`/admin/login?next=${encodeURIComponent(pathname)}${step}`);
         } else {
           setFailure(error instanceof AdminApiError ? error.message : "The staff area could not be loaded.");
         }
@@ -40,6 +41,12 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
       cancelled = true;
     };
   }, [apiBase, user, setUser, router, pathname]);
+
+  // Administrators set up two-factor sign-in before anything else (D-010).
+  const enrolling = Boolean(user?.two_factor_enrollment_required);
+  useEffect(() => {
+    if (enrolling && pathname !== TWO_FACTOR_PATH) router.replace(TWO_FACTOR_PATH);
+  }, [enrolling, pathname, router]);
 
   async function signOut() {
     leaving.current = true;
@@ -64,7 +71,7 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
             <>
               <nav aria-label="Staff area" className="admin-nav">
                 <ul>
-                  {NAV.filter((item) => item.permission === null || can(user, item.permission)).map((item) => (
+                  {NAV.filter((item) => (enrolling ? item.permission === null : item.permission === null || can(user, item.permission))).map((item) => (
                     <li key={item.href}>
                       <Link href={item.href} aria-current={pathname.startsWith(item.href) ? "page" : undefined}>
                         {item.label}
@@ -87,8 +94,10 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
         </div>
       </header>
       <main id="main" tabIndex={-1} className="admin-main">
-        {user ? (
+        {user && (!enrolling || pathname === TWO_FACTOR_PATH) ? (
           children
+        ) : user ? (
+          <p role="status">Opening two-factor set-up…</p>
         ) : failure ? (
           <>
             <h1 className="admin-title">Staff area unavailable</h1>

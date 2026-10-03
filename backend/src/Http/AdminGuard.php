@@ -43,13 +43,25 @@ final class AdminGuard
         }
     }
 
-    public function require(HttpRequest $request, ?string $permission = null): AuthenticatedStaff
+    /**
+     * @param bool $secondFactorStep the endpoint that accepts the authenticator code;
+     *                               every other endpoint refuses a session still waiting for it
+     * @param bool $duringEnrollment the endpoint stays usable while an administrator
+     *                               still has to set up two-factor sign-in (D-010)
+     */
+    public function require(HttpRequest $request, ?string $permission = null, bool $secondFactorStep = false, bool $duringEnrollment = false): AuthenticatedStaff
     {
         $staff = $this->auth->authenticate(SessionCookie::read($request, $this->secureCookies));
         if ($staff === null) {
             throw new Unauthenticated();
         }
         $this->requireTrustedOrigin($request);
+        if ($staff->secondFactorPending && !$secondFactorStep) {
+            throw new Unauthenticated('Enter the code from your authenticator app to finish signing in.', 'MFA_REQUIRED');
+        }
+        if ($staff->enrollmentRequired && !$duringEnrollment) {
+            throw new Forbidden('Set up two-factor sign-in to continue.', 'MFA_ENROLLMENT_REQUIRED');
+        }
         if ($permission !== null && !$staff->user->can($permission)) {
             throw new Forbidden();
         }
