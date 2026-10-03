@@ -139,6 +139,14 @@ describe("staff area", () => {
     await page.context().close();
   });
 
+  test("/admin redirects to the inbox without a page body (ZAP 10044)", async () => {
+    const response = await fetch(`${BASE}/admin`, { redirect: "manual" });
+    assert.equal(response.status, 307);
+    assert.match(response.headers.get("location"), /\/admin\/enquiries$/);
+    assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.ok((await response.text()).length < 100, "redirect body stays tiny");
+  });
+
   test("a signed-out visitor is sent to sign in, then back to the page they asked for", async () => {
     const page = await newPage();
     const api = await fakeAdminApi(page);
