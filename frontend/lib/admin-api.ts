@@ -18,6 +18,20 @@ export type StaffUser = {
   two_factor_enrollment_required?: boolean;
 };
 
+/** Products and services edited in the staff area (D-011). */
+export type CatalogKind = "products" | "services";
+export type CatalogContent = { name: string; label: string | null; icon: string; summary: string; points: string[]; sort_order: number };
+export type CatalogSummary = { id: string; slug: string; name: string; visible: boolean; has_draft: boolean; sort_order: number; updated_at: string | null };
+export type CatalogDetail = {
+  item: CatalogSummary & { content: CatalogContent };
+  draft: { content: CatalogContent; saved_at: string; author_name: string | null } | null;
+  revisions: { id: string; state: string; created_at: string; author_name: string | null; content: CatalogContent }[];
+};
+export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: string }[] = [
+  { value: "products", label: "Products", singular: "product" },
+  { value: "services", label: "Services", singular: "service" },
+];
+
 export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
 
 /** Path of the page where staff set up two-factor sign-in. */
