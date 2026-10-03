@@ -1426,3 +1426,37 @@ textarea:focus-visible {
     padding: 20px;
   }
 }
+
+/* Content editing (D-011) */
+.admin-preview {
+  background: var(--light-gray);
+  border: 1px dashed #c9d3e2;
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.admin-preview h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.admin-actions {
+  margin-top: 4px;
+}
+.admin-panel-gap {
+  margin-top: 24px;
+}
+.admin-history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.admin-history li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}

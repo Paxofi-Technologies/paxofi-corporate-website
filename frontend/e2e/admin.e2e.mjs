@@ -15,7 +15,7 @@ const ADMIN = {
   status: "active",
   role: "administrator",
   role_label: "Administrator",
-  permissions: ["enquiries.read", "enquiries.update", "users.manage", "audit.read"],
+  permissions: ["audit.read", "content.edit", "content.publish", "enquiries.read", "enquiries.update", "users.manage"],
   last_login_at: "2026-10-02 09:00:00",
 };
 const BD = {
@@ -25,7 +25,7 @@ const BD = {
   display_name: "Ben Business",
   role: "business_development",
   role_label: "Business Development",
-  permissions: ["enquiries.read", "enquiries.update"],
+  permissions: ["content.edit", "enquiries.read", "enquiries.update"],
 };
 
 function enquiries() {
@@ -38,7 +38,16 @@ function enquiries() {
 /** A stateful fake of /api/v1/admin/* answering inside the browser. */
 async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailable = false, twoFactor = "off", setupStatus } = {}) {
   // twoFactor: "off", "on" (code asked after the password) or "enrol" (administrator must set it up first).
-  const state = { signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor };
+  const PAY = "7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01";
+  const payContent = { name: "Paxofi Pay", label: "Paxofi Product", icon: "shield-check", summary: "Digital payments infrastructure designed around reliability.", points: ["Transaction certainty"], sort_order: 10 };
+  const state = {
+    signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor,
+    catalog: { [PAY]: { kind: "products", item: { id: PAY, slug: "paxofi-pay", name: "Paxofi Pay", visible: true, has_draft: false, sort_order: 10, updated_at: "2026-10-03 09:00:00", content: payContent }, draft: null, revisions: [] } },
+  };
+  const detail = (id) => {
+    const entry = state.catalog[id];
+    return { item: { ...entry.item, has_draft: entry.draft !== null }, draft: entry.draft, revisions: entry.revisions };
+  };
   const cors = {
     "Access-Control-Allow-Origin": BASE,
     "Access-Control-Allow-Credentials": "true",
@@ -137,6 +146,41 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
       if (!row) return reply(route, 404, { code: "NOT_FOUND", message: "Enquiry not found." });
       if (method === "PATCH") row.status = body.status;
       return reply(route, 200, row);
+    }
+    const catalogList = path.match(/^\/catalog\/(products|services)$/);
+    if (catalogList && method === "GET") {
+      const items = Object.values(state.catalog).filter((e) => e.kind === catalogList[1]).map((e) => ({ ...e.item, has_draft: e.draft !== null }));
+      return reply(route, 200, items, { icons: ["shield-check", "cog", "code", "layers", "database"] });
+    }
+    if (catalogList && method === "POST") {
+      const id = "9b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f99";
+      state.catalog[id] = { kind: catalogList[1], item: { id, slug: "new-item", name: body.name, visible: false, has_draft: false, sort_order: 100, updated_at: null, content: { ...body, label: body.label || null } }, draft: null, revisions: [] };
+      return reply(route, 201, detail(id));
+    }
+    const catalogItem = path.match(/^\/catalog\/(products|services)\/([0-9a-f-]+)(\/.*)?$/);
+    if (catalogItem) {
+      const [, , id, action = ""] = catalogItem;
+      const entry = state.catalog[id];
+      if (!entry) return reply(route, 404, { code: "NOT_FOUND", message: "Item not found." });
+      const publisher = state.user.permissions.includes("content.publish");
+      if (action === "/draft" && method === "POST") {
+        if (!body.summary || body.summary.length < 10) {
+          return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { summary: "Enter 10 to 300 characters." } } });
+        }
+        entry.draft = { content: { ...body, label: body.label || null, sort_order: Number(body.sort_order) }, saved_at: "2026-10-03 10:00:00", author_name: state.user.display_name };
+      } else if (action === "/draft" && method === "DELETE") {
+        entry.draft = null;
+      } else if (action === "/publish") {
+        if (!publisher) return reply(route, 403, { code: "FORBIDDEN", message: "An administrator publishes changes." });
+        entry.item.content = entry.draft.content;
+        entry.item.name = entry.draft.content.name;
+        entry.revisions.unshift({ id: "r" + entry.revisions.length, state: "published", created_at: "2026-10-03 10:01:00", author_name: state.user.display_name, content: entry.draft.content });
+        entry.draft = null;
+      } else if (action === "/visibility") {
+        if (!publisher) return reply(route, 403, { code: "FORBIDDEN", message: "An administrator decides what is shown." });
+        entry.item.visible = body.visible;
+      }
+      return reply(route, 200, detail(id));
     }
     if (!state.user.permissions.includes("users.manage") && path.startsWith("/users")) {
       return reply(route, 403, { code: "FORBIDDEN", message: "You do not have permission." });
@@ -432,10 +476,70 @@ describe("staff area", () => {
     await page.context().close();
   });
 
+  test("administrators edit a product with a live preview, then publish it", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/content`);
+    await page.getByRole("link", { name: "Paxofi Pay" }).click();
+    await page.getByRole("heading", { name: "Paxofi Pay", level: 1 }).waitFor();
+    await page.getByText("Shown on the website").waitFor();
+    await assertAccessible(page, "on the content editor");
+
+    await page.getByLabel("Summary").fill("Payments you can rely on, with recovery built in.");
+    await page.locator(".admin-preview").getByText("Payments you can rely on, with recovery built in.").waitFor();
+
+    await page.getByRole("button", { name: "Publish" }).click();
+    await page.getByText("Published. The website shows the new version now.").waitFor();
+    const order = api.calls.filter((c) => c.path.startsWith("/catalog/products/") && c.method === "POST").map((c) => c.path.split("/").pop());
+    assert.deepEqual(order, ["draft", "publish"], "saves the form, then publishes it");
+    await page.getByText("Restore as draft").waitFor();
+
+    await page.getByRole("button", { name: "Hide from website" }).click();
+    await page.getByText("Hidden from the website.").waitFor();
+    await page.context().close();
+  });
+
+  test("Business Development saves drafts but cannot publish", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { user: BD, signedIn: true });
+    await page.goto(`${BASE}/admin/content`);
+    await page.getByRole("link", { name: "Paxofi Pay" }).click();
+    await page.getByLabel("Summary").waitFor();
+    assert.equal(await page.getByRole("button", { name: "Publish" }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: /from website|on website/ }).count(), 0);
+
+    await page.getByLabel("Summary").fill("short");
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await page.getByText("Enter 10 to 300 characters.").waitFor();
+    await page.getByLabel("Summary").fill("Wording proposed by business development.");
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await page.getByText("Draft saved. An administrator will publish it.").waitFor();
+    await page.getByText(/Unpublished changes saved .* by Ben Business/).waitFor();
+    await page.context().close();
+  });
+
+  test("a new service is added hidden and opens in the editor", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/content`);
+    await page.getByRole("button", { name: "Services" }).click();
+    await page.getByRole("link", { name: "Add a service" }).click();
+    await page.waitForURL(`${BASE}/admin/content/services/new`);
+    assert.equal(await page.getByLabel("Label (optional)").count(), 0, "services have no label");
+    await page.getByLabel("Name").fill("Data & AI Engineering");
+    await page.getByLabel("Icon").selectOption("database");
+    await page.getByLabel("Summary").fill("Data platforms and practical AI features.");
+    await assertAccessible(page, "on add content");
+    await page.getByRole("button", { name: "Add service (hidden)" }).click();
+    await page.waitForURL(/\/admin\/content\/services\/9b0f3a0e/);
+    await page.getByText("Hidden from the website").first().waitFor();
+    await page.context().close();
+  });
+
   test("on a phone the staff area fits the screen", async () => {
     const page = await newPage({ viewport: { width: 360, height: 740 } });
     await fakeAdminApi(page, { signedIn: true });
-    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account"]) {
+    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01"]) {
       await page.goto(BASE + path);
       await page.locator("h1").waitFor();
       await page.waitForLoadState("networkidle");

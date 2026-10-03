@@ -1,6 +1,6 @@
 # Field-level schema review — Version 1 and Phase 2.1 (CW-072.01)
 
-Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–008 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
+Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–009 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
 
 **Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on career.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
 
@@ -25,7 +25,8 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | | outcome | VARCHAR(32) | – | `success`, `failure`, `denied` | audit log | OK |
 | | request_id | VARCHAR(64) NULL | – | request | support | OK |
 | | created_at | TIMESTAMP, UTC | – | default | retention | Deleted after 24 months (D-008) |
-| products / services | id, slug (UNIQUE), name, summary, lifecycle_state, published_at, created_at, updated_at | see 001 | – | migration 004 (seed) | `/api/v1/products`, `/services` (published only) | OK; index (lifecycle_state, published_at) serves the published query |
+| products / services | id, slug (UNIQUE), name, summary, lifecycle_state, published_at, created_at, updated_at; from 009: label VARCHAR(60), icon VARCHAR(40), points JSON, sort_order INT | see 001/009 | – | migrations 004/009 (seed); staff area (D-011) | `/api/v1/products`, `/services` (published only, by sort_order) | OK; small tables, ordering in memory; shown = lifecycle_state 'published' |
+| catalog_revisions (009) | id, item_type (product/service), item_id, state (draft/published/created), data JSON, author_id, created_at; index (item_type, item_id, created_at) | 009 | – | staff area | staff area history | OK; at most one draft per item; no FK so history survives |
 | content_items | id, slug (UNIQUE), title, content_type, lifecycle_state, published_at, timestamps | see 001 | – | migration 004 | `/api/v1/content` | OK |
 | content_revisions | id, content_item_id FK, revision_no (UNIQUE per item), author_id FK NULL, content_json JSON, created_at | see 001/006 | – | migration 004 | latest revision per item | OK; JSON type restored in 006 |
 | career_opportunities | id, slug (UNIQUE), title, description, lifecycle_state, published_at, timestamps | see 001 | – | migration 004 | `/api/v1/careers` | Kept; not used by the website (D-001) |
