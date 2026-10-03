@@ -4,13 +4,14 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { can, useAdmin } from "@/components/admin/AdminContext";
 import { FormStatus } from "@/components/admin/AdminForm";
-import { CatalogForm, CatalogFormValues, toFormValues, toPayload } from "@/components/admin/CatalogForm";
+import { CatalogForm, CatalogFormValues, toFormValues, toPayload, useMediaList } from "@/components/admin/CatalogForm";
 import { NoAccess } from "@/components/admin/StaffShell";
 import { AdminApiError, CATALOG_KINDS, CatalogDetail, formatDateTime } from "@/lib/admin-api";
 
 /** Edit a product or service: drafts, publishing, show/hide and earlier versions (D-011). */
 export default function CatalogItemEditor({ type, id }: { type: string; id: string }) {
-  const { user, request } = useAdmin();
+  const { user, request, apiBase } = useAdmin();
+  const media = useMediaList();
   const kind = CATALOG_KINDS.find((k) => k.value === type);
   const [detail, setDetail] = useState<CatalogDetail | null>(null);
   const [values, setValues] = useState<CatalogFormValues | null>(null);
@@ -103,7 +104,7 @@ export default function CatalogItemEditor({ type, id }: { type: string; id: stri
       </p>
       <FormStatus state="success" message={notice} />
 
-      <CatalogForm kind={kind.value} values={values} onChange={setValues} fields={fields} onSubmit={submit}>
+      <CatalogForm kind={kind.value} values={values} onChange={setValues} fields={fields} onSubmit={submit} media={media} apiBase={apiBase}>
         <FormStatus state="error" message={error} />
         <div className="actions admin-actions">
           <button className="button button--outline" type="submit" disabled={busy}>Save draft</button>

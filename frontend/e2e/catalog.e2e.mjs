@@ -9,8 +9,17 @@ import { assertAccessible, startHarness } from "./harness.mjs";
 const API_PORT = Number(process.env.E2E_PORT || 3123) + 3;
 const mode = { value: "ok" };
 
+const IMAGE_ID = "c0ffee00-0000-4000-8000-000000000002";
+const DOC_ID = "c0ffee00-0000-4000-8000-000000000001";
+// A 1×1 PNG served by the stand-in API host.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+
 const PRODUCTS = [
-  { slug: "paxofi-pay", name: "Paxofi Pay Plus", label: "Paxofi Product", icon: "shield-check", summary: "Edited in the staff area.", points: ["Instant settlement", "Clear fees"], sort_order: 10 },
+  {
+    slug: "paxofi-pay", name: "Paxofi Pay Plus", label: "Paxofi Product", icon: "shield-check", summary: "Edited in the staff area.", points: ["Instant settlement", "Clear fees"], sort_order: 10,
+    image: { path: `/api/v1/media/${IMAGE_ID}/pay.png`, alt: "Paxofi Pay on a phone", width: 1200, height: 800 },
+    document: { path: `/api/v1/media/${DOC_ID}/Paxofi-Pay-brochure.pdf`, title: "Paxofi Pay brochure", format: "PDF", size_bytes: 1258291 },
+  },
   { slug: "paxofi-core-framework", name: "Paxofi Core Framework", label: "Paxofi Technology", icon: "cog", summary: "An independent PHP application framework.", points: [], sort_order: 20 },
 ];
 const SERVICES = [
@@ -26,6 +35,11 @@ before(async () => {
       return;
     }
     const path = new URL(request.url, "http://localhost").pathname;
+    if (path.startsWith("/api/v1/media/")) {
+      // As the API serves media: embeddable by the website, which requires CORP (COEP require-corp).
+      response.writeHead(200, { "content-type": path.endsWith(".png") ? "image/png" : "application/pdf", "cross-origin-resource-policy": "cross-origin" }).end(PNG);
+      return;
+    }
     const data = path === "/api/v1/products" ? PRODUCTS : path === "/api/v1/services" ? SERVICES : null;
     if (!data) {
       response.writeHead(404).end();
@@ -48,6 +62,13 @@ describe("catalogue pages", () => {
     assert.deepEqual(names, ["Paxofi Pay Plus", "Paxofi Core Framework"]);
     await page.getByText("Edited in the staff area.").waitFor();
     assert.deepEqual(await page.locator(".product-card").first().locator(".check-list li").allTextContents(), ["Instant settlement", "Clear fees"]);
+    const picture = page.getByRole("img", { name: "Paxofi Pay on a phone" });
+    await picture.scrollIntoViewIfNeeded();
+    assert.equal(await picture.getAttribute("src"), `http://127.0.0.1:${API_PORT}/api/v1/media/${IMAGE_ID}/pay.png`);
+    await page.waitForFunction(() => document.querySelector(".card-image")?.complete);
+    assert.ok(await picture.evaluate((img) => img.naturalWidth > 0), "the picture loads from the API host (CSP img-src)");
+    const download = page.getByRole("link", { name: "Paxofi Pay brochure (PDF, 1.2 MB)" });
+    assert.equal(await download.getAttribute("href"), `http://127.0.0.1:${API_PORT}/api/v1/media/${DOC_ID}/Paxofi-Pay-brochure.pdf`);
     await assertAccessible(page, "on products from the API");
 
     await page.goto(BASE);

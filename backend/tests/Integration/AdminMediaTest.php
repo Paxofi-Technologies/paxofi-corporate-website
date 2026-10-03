@@ -97,6 +97,8 @@ final class AdminMediaTest extends DatabaseTestCase
         self::assertStringStartsWith('inline;', (string) $served->header('content-disposition'));
         self::assertSame('public, max-age=31536000, immutable', $served->header('cache-control'));
         self::assertSame('nosniff', $served->header('x-content-type-options'));
+        self::assertSame('cross-origin', $served->header('cross-origin-resource-policy'), 'the website (COEP require-corp) can show it');
+        self::assertSame('same-site', $this->app()->handle(self::request('GET', '/api/v1/health'))->header('cross-origin-resource-policy'), 'other responses keep same-site');
         $notModified = $this->app()->handle(self::request('GET', $image['path'], ['if-none-match' => (string) $served->header('etag')]));
         self::assertSame(304, $notModified->status());
 

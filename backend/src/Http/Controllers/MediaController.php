@@ -18,6 +18,9 @@ use Paxofi\CorporateWebsite\Http\RequestContexts;
  * are shown in place; documents are always downloaded, never opened as a page
  * on the API's address. The content type is the one checked on upload, and
  * browsers may not guess another (nosniff, from SecurityHeadersMiddleware).
+ * The files are public, so any site may embed them (Cross-Origin-Resource-
+ * Policy: cross-origin): the website requires that for every picture it shows
+ * (Cross-Origin-Embedder-Policy), wherever the API is hosted.
  */
 final class MediaController implements Controller
 {
@@ -38,6 +41,7 @@ final class MediaController implements Controller
             'content-type' => str_starts_with($type, 'text/') ? $type . '; charset=utf-8' : $type,
             'cache-control' => 'public, max-age=31536000, immutable',
             'etag' => $etag,
+            'cross-origin-resource-policy' => 'cross-origin',
             'content-disposition' => ($isImage ? 'inline' : 'attachment') . '; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode($filename),
         ];
 
