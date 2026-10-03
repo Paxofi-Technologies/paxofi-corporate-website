@@ -37,6 +37,14 @@ const routes = [
   ["PATCH", "/api/v1/admin/users/{id}", "admin"],
   ["POST", "/api/v1/admin/users/{id}/two-factor/reset", "admin"],
   ["GET", "/api/v1/admin/audit", "admin"],
+  ["GET", "/api/v1/admin/catalog/{type}", "admin"],
+  ["POST", "/api/v1/admin/catalog/{type}", "admin"],
+  ["GET", "/api/v1/admin/catalog/{type}/{id}", "admin"],
+  ["POST", "/api/v1/admin/catalog/{type}/{id}/draft", "admin"],
+  ["DELETE", "/api/v1/admin/catalog/{type}/{id}/draft", "admin"],
+  ["POST", "/api/v1/admin/catalog/{type}/{id}/publish", "admin"],
+  ["POST", "/api/v1/admin/catalog/{type}/{id}/visibility", "admin"],
+  ["POST", "/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore", "admin"],
 ];
 
 test("endpoint RTM has unique method/route entries", () => {
