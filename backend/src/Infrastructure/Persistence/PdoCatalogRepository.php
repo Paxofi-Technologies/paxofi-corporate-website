@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Paxofi\CorporateWebsite\Infrastructure\Persistence;
 
+use Paxofi\Core\Persistence\Exception\PersistenceException;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogRepository;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
+use Paxofi\CorporateWebsite\Application\Exception\DependencyUnavailable;
+use Paxofi\CorporateWebsite\Application\Media\MediaPath;
+use Paxofi\CorporateWebsite\Application\Media\MediaRules;
 use Paxofi\CorporateWebsite\Application\Pagination;
 
 final class PdoCatalogRepository implements CatalogRepository
@@ -14,8 +18,8 @@ final class PdoCatalogRepository implements CatalogRepository
 
     /** Table and public column projection per catalog type. Identifiers are fixed, never user input. */
     private const SOURCES = [
-        'products' => ['table' => 'products', 'columns' => 'slug, name, label, icon, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
-        'services' => ['table' => 'services', 'columns' => 'slug, name, label, icon, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
+        'products' => ['table' => 'products', 'columns' => 'slug, name, label, icon, image_id, document_id, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
+        'services' => ['table' => 'services', 'columns' => 'slug, name, label, icon, image_id, document_id, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
         'careers' => ['table' => 'career_opportunities', 'columns' => 'slug, title, description, published_at', 'order' => 'published_at DESC, slug ASC'],
     ];
 
@@ -26,7 +30,59 @@ final class PdoCatalogRepository implements CatalogRepository
     public function findPublished(CatalogType $type, Pagination $pagination, ?string $slug = null): array
     {
         $source = self::SOURCES[$type->value];
+        $page = $this->publishedPage($this->database, $source['table'], $source['columns'], $pagination, $slug === null ? [] : ['slug' => $slug], $source['order']);
 
-        return $this->publishedPage($this->database, $source['table'], $source['columns'], $pagination, $slug === null ? [] : ['slug' => $slug], $source['order']);
+        return $type === CatalogType::Careers ? $page : ['items' => $this->withMedia($page['items']), 'total' => $page['total']];
+    }
+
+    /**
+     * Replaces image_id/document_id with what the website needs to show them (D-012):
+     * image {path, alt, width, height} and document {path, title, format, size_bytes}.
+     *
+     * @param list<array<string, mixed>> $items
+     * @return list<array<string, mixed>>
+     */
+    private function withMedia(array $items): array
+    {
+        $ids = array_values(array_unique(array_filter(array_merge(array_column($items, 'image_id'), array_column($items, 'document_id')), 'is_string')));
+        $media = [];
+        if ($ids !== []) {
+            $parameters = [];
+            foreach ($ids as $i => $id) {
+                $parameters['id' . $i] = $id;
+            }
+            try {
+                $rows = $this->database->reader()->fetchAll(
+                    "SELECT id, kind, filename, media_type, size_bytes, width, height, alt_text, title FROM media_assets
+                     WHERE lifecycle_state = 'active' AND id IN (:" . implode(', :', array_keys($parameters)) . ')',
+                    $parameters,
+                );
+            } catch (PersistenceException $exception) {
+                throw new DependencyUnavailable(previous: $exception);
+            }
+            foreach ($rows as $row) {
+                $media[(string) $row['id']] = $row;
+            }
+        }
+
+        return array_map(static function (array $item) use ($media): array {
+            $image = $media[$item['image_id'] ?? ''] ?? null;
+            $document = $media[$item['document_id'] ?? ''] ?? null;
+            unset($item['image_id'], $item['document_id']);
+            $item['image'] = $image === null || $image['kind'] !== 'image' ? null : [
+                'path' => MediaPath::for((string) $image['id'], (string) $image['filename']),
+                'alt' => (string) $image['alt_text'],
+                'width' => (int) $image['width'],
+                'height' => (int) $image['height'],
+            ];
+            $item['document'] = $document === null || $document['kind'] !== 'document' ? null : [
+                'path' => MediaPath::for((string) $document['id'], (string) $document['filename']),
+                'title' => (string) $document['title'],
+                'format' => MediaRules::formatLabel((string) $document['media_type']),
+                'size_bytes' => (int) $document['size_bytes'],
+            ];
+
+            return $item;
+        }, $items);
     }
 }

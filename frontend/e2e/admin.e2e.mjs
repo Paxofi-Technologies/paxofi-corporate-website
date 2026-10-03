@@ -7,6 +7,9 @@ import { API_BASE, assertAccessible, startHarness } from "./harness.mjs";
 
 const { base: BASE, newPage } = startHarness(Number(process.env.E2E_PORT || 3123) + 1);
 const PASSWORD = "correct horse battery staple";
+// A 1×1 PNG, for uploads and for pictures served from the fake API host.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+const BROCHURE = "c0ffee00-0000-4000-8000-000000000001";
 
 const ADMIN = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -40,8 +43,11 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
   // twoFactor: "off", "on" (code asked after the password) or "enrol" (administrator must set it up first).
   const PAY = "7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01";
   const payContent = { name: "Paxofi Pay", label: "Paxofi Product", icon: "shield-check", summary: "Digital payments infrastructure designed around reliability.", points: ["Transaction certainty"], sort_order: 10 };
+  const media = [
+    { id: BROCHURE, kind: "document", filename: "Paxofi-Pay-brochure.pdf", media_type: "application/pdf", format: "PDF", size_bytes: 1258291, width: null, height: null, alt_text: null, title: "Paxofi Pay brochure", path: `/api/v1/media/${BROCHURE}/Paxofi-Pay-brochure.pdf`, uploaded_by: "Ada Admin", created_at: "2026-10-03 09:00:00", used_by: ["Paxofi Pay (product)"] },
+  ];
   const state = {
-    signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor,
+    signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor, media, uploads: 0,
     catalog: { [PAY]: { kind: "products", item: { id: PAY, slug: "paxofi-pay", name: "Paxofi Pay", visible: true, has_draft: false, sort_order: 10, updated_at: "2026-10-03 09:00:00", content: payContent }, draft: null, revisions: [] } },
   };
   const detail = (id) => {
@@ -64,13 +70,17 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
     });
   const unauthenticated = { code: "UNAUTHENTICATED", message: "Please sign in." };
 
+  // Files from the media library, as the API host serves them.
+  await page.route(`${API_BASE}/media/**`, (route) => route.fulfill({ status: 200, contentType: "image/png", headers: { "Cross-Origin-Resource-Policy": "cross-origin" }, body: PNG }));
+
   await page.route(`${API_BASE}/admin/**`, async (route) => {
     const request = route.request();
     const method = request.method();
     if (method === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
     const url = new URL(request.url());
     const path = url.pathname.replace("/api/v1/admin", "");
-    const body = request.postData() ? request.postDataJSON() : null;
+    const json = (request.headers()["content-type"] ?? "").includes("json");
+    const body = json && request.postData() ? request.postDataJSON() : null;
     state.calls.push({ method, path, body });
 
     if (path === "/setup" && method === "GET") {
@@ -181,6 +191,39 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
         entry.item.visible = body.visible;
       }
       return reply(route, 200, detail(id));
+    }
+    if (path === "/media" && method === "GET") {
+      return reply(route, 200, state.media, { uploads: true, images: true, image_max_bytes: 5242880, document_max_bytes: 10485760, server_max_bytes: 8388608 });
+    }
+    if (path === "/media" && method === "POST") {
+      const filename = url.searchParams.get("filename") ?? "";
+      const image = /\.(png|jpe?g|webp)$/i.test(filename);
+      if (!/\.(png|jpe?g|webp|pdf|docx|xlsx|pptx|txt|csv)$/i.test(filename)) {
+        const message = "This type of file is not accepted. Use a JPEG, PNG or WebP image, or a PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), text or CSV document.";
+        return reply(route, 422, { code: "VALIDATION_ERROR", message, details: { fields: { file: message } } });
+      }
+      const id = `c0ffee00-0000-4000-8000-00000000010${state.uploads++}`;
+      const safe = filename.replace(/[^A-Za-z0-9._-]+/g, "-");
+      const item = image
+        ? { id, kind: "image", filename: safe, media_type: "image/png", format: "PNG", size_bytes: request.postDataBuffer()?.length ?? 0, width: 1200, height: 800, alt_text: url.searchParams.get("alt_text"), title: null }
+        : { id, kind: "document", filename: safe, media_type: "application/pdf", format: "PDF", size_bytes: 2048, width: null, height: null, alt_text: null, title: url.searchParams.get("title") || safe.replace(/\.[a-z]+$/, "") };
+      Object.assign(item, { path: `/api/v1/media/${id}/${safe}`, uploaded_by: state.user.display_name, created_at: "2026-10-03 11:00:00", used_by: [] });
+      state.media.unshift(item);
+      return reply(route, 201, item);
+    }
+    const mediaItem = path.match(/^\/media\/([0-9a-f-]+)$/);
+    if (mediaItem) {
+      const item = state.media.find((m) => m.id === mediaItem[1]);
+      if (!item) return reply(route, 404, { code: "NOT_FOUND", message: "File not found." });
+      if (method === "PATCH") {
+        if (item.kind === "image") item.alt_text = body.alt_text;
+        else item.title = body.title;
+        return reply(route, 200, item);
+      }
+      if (!state.user.permissions.includes("content.publish")) return reply(route, 403, { code: "FORBIDDEN", message: "You do not have permission." });
+      if (item.used_by.length > 0) return reply(route, 409, { code: "CONFLICT", message: `This file is used by ${item.used_by.join(", ")}.` });
+      state.media = state.media.filter((m) => m !== item);
+      return reply(route, 200, { deleted: true });
     }
     if (!state.user.permissions.includes("users.manage") && path.startsWith("/users")) {
       return reply(route, 403, { code: "FORBIDDEN", message: "You do not have permission." });
@@ -536,10 +579,89 @@ describe("staff area", () => {
     await page.context().close();
   });
 
+  test("staff upload pictures and documents to the media library", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/media`);
+    await page.getByRole("heading", { name: "Media", level: 1 }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "Media" }).getAttribute("aria-current"), "page");
+    await page.getByText("Used by Paxofi Pay (product)").waitFor();
+    await page.getByText("The server currently accepts files up to 8 MB.").waitFor();
+    await assertAccessible(page, "on the media library");
+
+    const file = page.getByLabel("File", { exact: true });
+    await file.setInputFiles({ name: "setup.exe", mimeType: "application/octet-stream", buffer: Buffer.from("MZ") });
+    await page.getByRole("button", { name: "Upload" }).click();
+    await page.getByText("This type of file is not accepted.", { exact: false }).first().waitFor();
+
+    await file.setInputFiles({ name: "Pay on a phone.png", mimeType: "image/png", buffer: PNG });
+    await page.getByRole("button", { name: "Upload" }).click();
+    await page.getByText("Describe the picture in a few words.").waitFor();
+    assert.equal(api.calls.filter((c) => c.path === "/media" && c.method === "POST").length, 1, "no request without a description");
+    await page.getByLabel("Description of the picture").fill("Paxofi Pay on a phone");
+    await page.getByRole("button", { name: "Upload" }).click();
+    await page.getByText("Pay-on-a-phone.png uploaded.").waitFor();
+    const thumb = page.locator(".media-card").first().locator("img");
+    await thumb.waitFor();
+    assert.ok(await thumb.evaluate((img) => img.complete && img.naturalWidth > 0), "the picture loads from the API host (CSP img-src)");
+
+    await file.setInputFiles({ name: "Price list.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4") });
+    assert.equal(await page.getByLabel("Title (optional)").count(), 1, "documents ask for a title, not a description");
+    await page.getByRole("button", { name: "Upload" }).click();
+    await page.getByText("Price-list.pdf uploaded.").waitFor();
+    const upload = api.calls.find((c) => c.method === "POST" && c.path === "/media");
+    assert.ok(upload, "uploaded as the request body");
+
+    await page.getByRole("button", { name: "Documents" }).click();
+    assert.equal(await page.locator(".media-card").count(), 2);
+    const priceList = page.locator(".media-card", { hasText: "Price-list.pdf" });
+    await priceList.getByLabel("Title").fill("Price list 2026");
+    await priceList.getByRole("button", { name: "Save title" }).click();
+    await page.getByText("Saved.").waitFor();
+
+    const brochure = page.locator(".media-card", { hasText: "Paxofi-Pay-brochure.pdf" });
+    assert.ok(await brochure.getByRole("button", { name: /^Delete/ }).isDisabled(), "a file in use cannot be deleted");
+    await priceList.getByRole("button", { name: /^Delete/ }).click();
+    await priceList.getByRole("button", { name: "Yes, delete" }).click();
+    await page.getByText("Price-list.pdf deleted.").waitFor();
+    assert.equal(await page.locator(".media-card").count(), 1);
+    await page.context().close();
+  });
+
+  test("a product gets a picture and a brochure from the library, shown in the preview", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    api.media.unshift({ id: "c0ffee00-0000-4000-8000-000000000002", kind: "image", filename: "pay.png", media_type: "image/png", format: "PNG", size_bytes: 68, width: 1200, height: 800, alt_text: "Paxofi Pay on a phone", title: null, path: "/api/v1/media/c0ffee00-0000-4000-8000-000000000002/pay.png", uploaded_by: "Ada Admin", created_at: null, used_by: [] });
+    await page.goto(`${BASE}/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01`);
+    await page.getByLabel("Picture (optional)").selectOption({ label: "Paxofi Pay on a phone (pay.png)" });
+    await page.getByLabel("Document to download (optional)").selectOption({ label: "Paxofi Pay brochure (PDF, 1.2 MB)" });
+    const preview = page.locator(".admin-preview");
+    await preview.getByRole("img", { name: "Paxofi Pay on a phone" }).waitFor();
+    await preview.getByRole("link", { name: "Paxofi Pay brochure (PDF, 1.2 MB)" }).waitFor();
+    await assertAccessible(page, "on the editor with media");
+
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await page.getByText("Draft saved.", { exact: false }).waitFor();
+    const draft = api.calls.findLast((c) => c.method === "POST" && c.path.endsWith("/draft"));
+    assert.equal(draft.body.image_id, "c0ffee00-0000-4000-8000-000000000002");
+    assert.equal(draft.body.document_id, BROCHURE);
+    await page.context().close();
+  });
+
+  test("Business Development uploads but does not delete files", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { user: BD, signedIn: true });
+    await page.goto(`${BASE}/admin/media`);
+    await page.getByRole("heading", { name: "Paxofi-Pay-brochure.pdf" }).waitFor();
+    await page.getByRole("button", { name: "Upload" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: /^Delete/ }).count(), 0);
+    await page.context().close();
+  });
+
   test("on a phone the staff area fits the screen", async () => {
     const page = await newPage({ viewport: { width: 360, height: 740 } });
     await fakeAdminApi(page, { signedIn: true });
-    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01"]) {
+    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01", "/admin/media"]) {
       await page.goto(BASE + path);
       await page.locator("h1").waitFor();
       await page.waitForLoadState("networkidle");

@@ -20,7 +20,16 @@ export type StaffUser = {
 
 /** Products and services edited in the staff area (D-011). */
 export type CatalogKind = "products" | "services";
-export type CatalogContent = { name: string; label: string | null; icon: string; summary: string; points: string[]; sort_order: number };
+export type CatalogContent = {
+  name: string;
+  label: string | null;
+  icon: string;
+  summary: string;
+  points: string[];
+  sort_order: number;
+  image_id?: string | null;
+  document_id?: string | null;
+};
 export type CatalogSummary = { id: string; slug: string; name: string; visible: boolean; has_draft: boolean; sort_order: number; updated_at: string | null };
 export type CatalogDetail = {
   item: CatalogSummary & { content: CatalogContent };
@@ -31,6 +40,84 @@ export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: strin
   { value: "products", label: "Products", singular: "product" },
   { value: "services", label: "Services", singular: "service" },
 ];
+
+/** A file in the media library (D-012). path is on the API host: /api/v1/media/{id}/{filename}. */
+export type MediaItem = {
+  id: string;
+  kind: "image" | "document";
+  filename: string;
+  media_type: string;
+  format: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  alt_text: string | null;
+  title: string | null;
+  path: string;
+  uploaded_by: string | null;
+  created_at: string | null;
+  used_by: string[];
+};
+export type MediaCapabilities = { uploads: boolean; images: boolean; image_max_bytes: number; document_max_bytes: number; server_max_bytes: number | null };
+
+/** File types the media library accepts (the API checks the content, not just the name). */
+export const MEDIA_ACCEPT = ".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx,.txt,.csv,image/jpeg,image/png,image/webp,application/pdf";
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
+
+/** True when a chosen file will be treated as an image (it then needs a description). */
+export function isImageFile(name: string, type = ""): boolean {
+  return type.startsWith("image/") || IMAGE_EXTENSIONS.test(name);
+}
+
+/** Absolute URL of a media file on the API host. */
+export function mediaHref(apiBase: string | undefined, path: string): string {
+  const base = (apiBase ?? "").trim();
+  try {
+    return new URL(path, /^https?:\/\//.test(base) ? base : window.location.origin).href;
+  } catch {
+    return path;
+  }
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1).replace(/\.0$/, "")} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * Uploads one file as the request body (D-012), with its description or
+ * title in the query. Errors come back as AdminApiError like other calls.
+ */
+export async function uploadMedia(
+  apiBase: string | undefined,
+  file: Blob & { name: string },
+  details: { alt_text?: string; title?: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<MediaItem> {
+  const query = new URLSearchParams({ filename: file.name });
+  if (details.alt_text) query.set("alt_text", details.alt_text);
+  if (details.title) query.set("title", details.title);
+  let response: Response;
+  try {
+    response = await fetchImpl(`${adminUrl(apiBase, "/media")}?${query}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json", "Content-Type": "application/octet-stream" },
+      body: file,
+      cache: "no-store",
+    });
+  } catch {
+    throw new AdminApiError(0, "NETWORK", "The file could not be sent. Check your connection and try again; very large files may be refused by the server.");
+  }
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 413) {
+      throw new AdminApiError(413, "TOO_LARGE", "The server refused a file this large. Images can be up to 5 MB and documents up to 10 MB.", { file: "Too large." });
+    }
+    throw toError(response.status, payload);
+  }
+  return (isRecord(payload) ? payload.data : null) as MediaItem;
+}
 
 export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
 

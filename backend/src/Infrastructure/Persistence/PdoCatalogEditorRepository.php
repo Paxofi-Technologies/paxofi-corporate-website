@@ -17,7 +17,7 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
 {
     use GuardedQueries;
 
-    private const COLUMNS = 'id, slug, name, label, icon, summary, points, sort_order, lifecycle_state, published_at, updated_at';
+    private const COLUMNS = 'id, slug, name, label, icon, image_id, document_id, summary, points, sort_order, lifecycle_state, published_at, updated_at';
 
     public function __construct(private readonly Database $database)
     {
@@ -56,8 +56,8 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
     {
         $id = Uuid::v4();
         $this->write(
-            'INSERT INTO ' . self::table($kind) . " (id, slug, name, label, icon, summary, points, sort_order, lifecycle_state, published_at)
-             VALUES (:id, :slug, :name, :label, :icon, :summary, :points, :sort_order, 'draft', NULL)",
+            'INSERT INTO ' . self::table($kind) . " (id, slug, name, label, icon, image_id, document_id, summary, points, sort_order, lifecycle_state, published_at)
+             VALUES (:id, :slug, :name, :label, :icon, :image_id, :document_id, :summary, :points, :sort_order, 'draft', NULL)",
             ['id' => $id, 'slug' => $slug] + self::columns($content),
         );
 
@@ -67,7 +67,7 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
     public function updateLive(CatalogKind $kind, string $id, CatalogContent $content): void
     {
         $this->write(
-            'UPDATE ' . self::table($kind) . ' SET name = :name, label = :label, icon = :icon, summary = :summary, points = :points, sort_order = :sort_order WHERE id = :id',
+            'UPDATE ' . self::table($kind) . ' SET name = :name, label = :label, icon = :icon, image_id = :image_id, document_id = :document_id, summary = :summary, points = :points, sort_order = :sort_order WHERE id = :id',
             ['id' => $id] + self::columns($content),
         );
     }
@@ -179,6 +179,8 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
             'name' => $content->name,
             'label' => $content->label,
             'icon' => $content->icon,
+            'image_id' => $content->imageId,
+            'document_id' => $content->documentId,
             'summary' => $content->summary,
             'points' => json_encode($content->points, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
             'sort_order' => $content->sortOrder,

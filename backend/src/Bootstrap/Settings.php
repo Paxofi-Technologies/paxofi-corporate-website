@@ -18,6 +18,7 @@ final readonly class Settings
         public int $contactRateLimitWindowMinutes,
         public ?string $adminSetupToken = null,
         public ?string $mfaEncryptionKey = null,
+        public ?string $mediaStoragePath = null,
     ) {
     }
 
@@ -39,6 +40,8 @@ final readonly class Settings
             adminSetupToken: ($token = trim($environment->get('ADMIN_SETUP_TOKEN', '') ?? '')) === '' ? null : $token,
             // Key for encrypting authenticator secrets (D-010); two-factor stays unavailable when shorter than 32 characters.
             mfaEncryptionKey: strlen($key = trim($environment->get('MFA_ENCRYPTION_KEY', '') ?? '')) >= 32 ? $key : null,
+            // Folder for uploaded media (D-012), outside the release folders; uploads stay off while unset.
+            mediaStoragePath: ($path = trim($environment->get('MEDIA_STORAGE_PATH', '') ?? '')) === '' ? null : $path,
         );
     }
 }

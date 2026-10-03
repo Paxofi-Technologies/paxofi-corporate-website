@@ -24,6 +24,8 @@ final readonly class CatalogContent
         public string $summary,
         public array $points,
         public int $sortOrder,
+        public ?string $imageId = null,
+        public ?string $documentId = null,
     ) {
     }
 
@@ -67,11 +69,14 @@ final readonly class CatalogContent
             $errors['sort_order'] = 'Enter a whole number from 0 to 999.';
         }
 
+        $imageId = self::mediaId($input, 'image_id', 'Choose an image from the media library.', $errors);
+        $documentId = self::mediaId($input, 'document_id', 'Choose a document from the media library.', $errors);
+
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
         }
 
-        return new self($name, $label === '' ? null : $label, $icon, $summary, $points, $order);
+        return new self($name, $label === '' ? null : $label, $icon, $summary, $points, $order, $imageId, $documentId);
     }
 
     /** @param array<string, mixed> $data */
@@ -84,10 +89,18 @@ final readonly class CatalogContent
             (string) ($data['summary'] ?? ''),
             array_values(array_filter(is_array($data['points'] ?? null) ? $data['points'] : [], 'is_string')),
             (int) ($data['sort_order'] ?? 100),
+            self::storedId($data['image_id'] ?? null),
+            self::storedId($data['document_id'] ?? null),
         );
     }
 
-    /** @return array{name: string, label: ?string, icon: string, summary: string, points: list<string>, sort_order: int} */
+    /** The same content with a different picture or document (null removes it). */
+    public function withMedia(?string $imageId, ?string $documentId): self
+    {
+        return new self($this->name, $this->label, $this->icon, $this->summary, $this->points, $this->sortOrder, $imageId, $documentId);
+    }
+
+    /** @return array{name: string, label: ?string, icon: string, summary: string, points: list<string>, sort_order: int, image_id: ?string, document_id: ?string} */
     public function toArray(): array
     {
         return [
@@ -97,7 +110,30 @@ final readonly class CatalogContent
             'summary' => $this->summary,
             'points' => $this->points,
             'sort_order' => $this->sortOrder,
+            'image_id' => $this->imageId,
+            'document_id' => $this->documentId,
         ];
+    }
+
+    /** @param array<string, string> $errors */
+    private static function mediaId(array $input, string $field, string $message, array &$errors): ?string
+    {
+        $value = $input[$field] ?? null;
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (!is_string($value) || self::storedId($value) === null) {
+            $errors[$field] = $message;
+
+            return null;
+        }
+
+        return $value;
+    }
+
+    private static function storedId(mixed $value): ?string
+    {
+        return is_string($value) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $value) === 1 ? $value : null;
     }
 
     /** @param array<string, string> $errors */
