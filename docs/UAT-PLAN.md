@@ -82,3 +82,10 @@ Run after deploying the first release that includes `/admin` (from `20261003-4a3
 | S9 | Password | **My account** → change your password; sign in again with it | Works; the old password no longer does | |
 
 Afterwards mark the "UAT test" enquiry **Spam** or **Closed** (or delete it in phpMyAdmin) and disable or keep the test user. Record sign-off ("Phase 2.1 UAT passed for release X") in Asana.
+
+### Results — release 20261003-4a341c6 (3 Oct 2026)
+
+**Phase 2.1 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder). S1–S9 passed on the live site. Notes:
+
+- S1: `/admin/setup` first showed "Setup is not available". The page shows the same message when it cannot reach the API, which was the case during deployment. Once the API was in place, setup worked, and `GET /api/v1/admin/setup` now reports `"available":false`, as intended. Follow-up for the next release: show a distinct "could not reach the service" message on that page.
+- S5/S6: Business Development user (Temitope Koleosho) sees only **Enquiries** and **My account**. Once disabled, the account gets "The email or password is incorrect.", the same message as a wrong password, by design (the sign-in page does not reveal which accounts exist or are disabled). The attempt is recorded in the Audit log.
