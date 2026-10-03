@@ -13,12 +13,13 @@ use Paxofi\CorporateWebsite\Http\ApiResponse;
 
 /**
  * Cross-origin access for the public website frontend (e.g. paxofi.com
- * calling api.paxofi.com). Only explicitly configured origins are allowed;
- * credentials are never allowed.
+ * calling api.paxofi.com). Only explicitly configured origins are allowed.
+ * Credentials (the staff session cookie, decision D-009) are allowed only for
+ * those exact origins, never for a wildcard.
  */
 final class CorsMiddleware implements HttpMiddleware
 {
-    private const ALLOWED_METHODS = 'GET, POST, OPTIONS';
+    private const ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
     private const ALLOWED_HEADERS = 'Accept, Content-Type, X-Request-Id';
     private const MAX_AGE_SECONDS = '600';
 
@@ -64,6 +65,7 @@ final class CorsMiddleware implements HttpMiddleware
     {
         return $response
             ->withHeader('access-control-allow-origin', $origin)
+            ->withHeader('access-control-allow-credentials', 'true')
             ->withHeader('access-control-expose-headers', 'X-Request-Id, Retry-After')
             ->withHeader('vary', 'Origin');
     }

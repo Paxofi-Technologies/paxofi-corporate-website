@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Paxofi\CorporateWebsite\Bootstrap;
 
 use Closure;
+use DateTimeImmutable;
+use DateTimeZone;
 use PDO;
 use Paxofi\Core\Contracts\Controller;
 use Paxofi\Core\Contracts\HttpHandler;
@@ -14,12 +16,21 @@ use Paxofi\Core\Contracts\Logger;
 use Paxofi\Core\Http\MiddlewarePipeline;
 use Paxofi\Core\Http\Router;
 use Paxofi\Core\Observability\HealthRegistry;
+use Paxofi\CorporateWebsite\Application\Admin\AdminEnquiryService;
+use Paxofi\CorporateWebsite\Application\Admin\AuthService;
+use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
+use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
 use Paxofi\CorporateWebsite\Application\Contact\EnquiryValidator;
 use Paxofi\CorporateWebsite\Application\Content\ContentService;
 use Paxofi\CorporateWebsite\Database\Connection;
+use Paxofi\CorporateWebsite\Http\AdminGuard;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
@@ -33,10 +44,16 @@ use Paxofi\CorporateWebsite\Http\Middleware\SecurityHeadersMiddleware;
 use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditRecorder;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoLoginAttempts;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoSessionStore;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoStaffRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Security\NativeStaffPasswordHasher;
 
 /**
  * Composition root for the public API.
@@ -49,11 +66,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
  */
 final class ApiApplication implements HttpHandler
 {
-    /**
-     * Public routes that are implemented. Admin routes from the endpoint
-     * inventory (config/routes.php) are deliberately NOT registered until
-     * authentication and authorization are implemented (CW-BE-010/011).
-     */
+    /** Public routes; config/routes.php is the inventory (asserted equal in tests). */
     public const PUBLIC_ROUTES = [
         ['GET', '/api/v1/health'],
         ['GET', '/api/v1/readiness'],
@@ -65,16 +78,43 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/forms/{form_key}/submit'],
     ];
 
+    /** Staff routes (decision D-009); each checks the session and permission itself. */
+    public const ADMIN_ROUTES = [
+        ['GET', '/api/v1/admin/setup'],
+        ['POST', '/api/v1/admin/setup'],
+        ['POST', '/api/v1/admin/session'],
+        ['GET', '/api/v1/admin/session'],
+        ['DELETE', '/api/v1/admin/session'],
+        ['POST', '/api/v1/admin/session/password'],
+        ['GET', '/api/v1/admin/enquiries'],
+        ['GET', '/api/v1/admin/enquiries/{id}'],
+        ['PATCH', '/api/v1/admin/enquiries/{id}'],
+        ['GET', '/api/v1/admin/users'],
+        ['POST', '/api/v1/admin/users'],
+        ['PATCH', '/api/v1/admin/users/{id}'],
+        ['GET', '/api/v1/admin/audit'],
+    ];
+
     private readonly HttpHandler $pipeline;
     private readonly Database $database;
+    /** @var Closure(): DateTimeImmutable */
+    private readonly Closure $clock;
+    private readonly PasswordHashing $hasher;
 
-    /** @param (Closure(): PDO)|null $connect override for tests */
+    /**
+     * @param (Closure(): PDO)|null $connect override for tests
+     * @param (Closure(): DateTimeImmutable)|null $clock override for tests
+     */
     public function __construct(
         private readonly Settings $settings,
         private readonly Logger $logger,
         ?Closure $connect = null,
+        ?Closure $clock = null,
+        ?PasswordHashing $hasher = null,
     ) {
         $this->database = new Database($connect ?? fn (): PDO => Connection::make($settings->environment));
+        $this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $this->hasher = $hasher ?? new NativeStaffPasswordHasher();
 
         $this->pipeline = new MiddlewarePipeline([
             new RequestIdMiddleware(),
@@ -107,6 +147,38 @@ final class ApiApplication implements HttpHandler
 
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
 
+        $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
+        $router->get('/api/v1/admin/setup', static fn (HttpRequest $r): HttpResponse => $session()->setupStatus($r));
+        $router->post('/api/v1/admin/setup', static fn (HttpRequest $r): HttpResponse => $session()->setup($r));
+        $router->post('/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->signIn($r));
+        $router->get('/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->current($r));
+        $router->add('DELETE', '/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->signOut($r));
+        $router->post('/api/v1/admin/session/password', static fn (HttpRequest $r): HttpResponse => $session()->changePassword($r));
+
+        $enquiries = fn (): AdminEnquiryController => new AdminEnquiryController(
+            new AdminEnquiryService(new PdoAdminEnquiryRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database)),
+            $this->adminGuard(),
+        );
+        $router->get('/api/v1/admin/enquiries', static fn (HttpRequest $r): HttpResponse => $enquiries()->list($r));
+        $router->get('/api/v1/admin/enquiries/{id}', static fn (HttpRequest $r): HttpResponse => $enquiries()->show($r));
+        $router->add('PATCH', '/api/v1/admin/enquiries/{id}', static fn (HttpRequest $r): HttpResponse => $enquiries()->update($r));
+
+        $staff = fn (): AdminStaffController => new AdminStaffController(
+            new StaffAdminService(
+                new PdoStaffRepository($this->database),
+                new PdoSessionStore($this->database),
+                $this->hasher,
+                new PdoAuditRecorder($this->database),
+                new LazyTransactionManager($this->database),
+            ),
+            $this->adminGuard(),
+        );
+        $router->get('/api/v1/admin/users', static fn (HttpRequest $r): HttpResponse => $staff()->list($r));
+        $router->post('/api/v1/admin/users', static fn (HttpRequest $r): HttpResponse => $staff()->create($r));
+        $router->add('PATCH', '/api/v1/admin/users/{id}', static fn (HttpRequest $r): HttpResponse => $staff()->update($r));
+
+        $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
+
         return $router;
     }
 
@@ -117,6 +189,25 @@ final class ApiApplication implements HttpHandler
     private function lazy(Closure $factory): Closure
     {
         return static fn (HttpRequest $request): HttpResponse => $factory()($request);
+    }
+
+    private function authService(): AuthService
+    {
+        return new AuthService(
+            new PdoStaffRepository($this->database),
+            new PdoSessionStore($this->database),
+            new PdoLoginAttempts($this->database),
+            $this->hasher,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
+            $this->settings->adminSetupToken,
+        );
+    }
+
+    private function adminGuard(): AdminGuard
+    {
+        return new AdminGuard($this->authService(), $this->settings->corsAllowedOrigins, $this->settings->environment->isProduction());
     }
 
     private function healthRegistry(): HealthRegistry

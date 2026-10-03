@@ -26,8 +26,9 @@ export default function Privacy() {
             <li>a technical request reference, so we can trace and resolve problems with a submission.</li>
           </ul>
           <p>
-            We use this information only to respond to your enquiry and to keep the service secure. We do not sell it
-            or use it for advertising.
+            We use this information only to respond to your enquiry and to keep the service secure. Only Paxofi staff
+            who handle enquiries can read it, through a signed-in staff area that records who viewed or updated each
+            enquiry. We do not sell it or use it for advertising.
           </p>
 
           <h2>How long we keep it</h2>
@@ -40,8 +41,9 @@ export default function Privacy() {
 
           <h2>Cookies and tracking</h2>
           <p>
-            This website sets no cookies and uses no analytics, advertising or third-party tracking. Fonts and images are
-            served from our own servers.
+            This website sets no cookies for visitors and uses no analytics, advertising or third-party tracking. Fonts
+            and images are served from our own servers. Paxofi staff who sign in to the staff area receive one strictly
+            necessary session cookie, which ends when they sign out or after 8 hours.
           </p>
 
           <h2>Job applications</h2>

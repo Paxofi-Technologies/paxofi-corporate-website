@@ -6,7 +6,9 @@ declare(strict_types=1);
  * Applies the data retention policy (decision D-008):
  *   - enquiries older than 24 months are deleted;
  *   - IP address and user-agent on enquiries older than 90 days are cleared;
- *   - audit events older than 24 months are deleted.
+ *   - audit events older than 24 months are deleted;
+ *   - staff sign-in attempts older than 90 days and sessions ended more than
+ *     30 days ago are deleted (D-009).
  *
  *   php bin/purge-retention.php
  *
@@ -31,11 +33,13 @@ try {
     $environment = Environment::from((new EnvLoader())->load(dirname(__DIR__) . '/.env'));
     $result = (new RetentionPurge(Connection::make($environment), new RetentionPolicy()))->run();
     fwrite(STDOUT, sprintf(
-        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted.\n",
+        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted, %d sign-in attempts deleted, %d sessions deleted.\n",
         gmdate('Y-m-d H:i:s'),
         $result['enquiries_deleted'],
         $result['enquiry_metadata_cleared'],
         $result['audit_events_deleted'],
+        $result['login_attempts_deleted'],
+        $result['sessions_deleted'],
     ));
 } catch (Throwable $exception) {
     fwrite(STDERR, 'Retention purge failed: ' . $exception->getMessage() . PHP_EOL);

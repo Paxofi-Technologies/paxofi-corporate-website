@@ -27,7 +27,10 @@ final class CorsMiddlewareTest extends TestCase
         self::assertSame('https://paxofi.com', $response->header('access-control-allow-origin'));
         self::assertStringContainsString('POST', (string) $response->header('access-control-allow-methods'));
         self::assertStringContainsString('Content-Type', (string) $response->header('access-control-allow-headers'));
-        self::assertNull($response->header('access-control-allow-credentials'));
+        // Staff session cookie (D-009): credentials only for exact, configured origins.
+        self::assertSame('true', $response->header('access-control-allow-credentials'));
+        self::assertStringContainsString('PATCH', (string) $response->header('access-control-allow-methods'));
+        self::assertStringContainsString('DELETE', (string) $response->header('access-control-allow-methods'));
     }
 
     public function testPreflightFromUnknownOriginIsDenied(): void
@@ -39,6 +42,7 @@ final class CorsMiddlewareTest extends TestCase
 
         self::assertSame(403, $response->status());
         self::assertNull($response->header('access-control-allow-origin'));
+        self::assertNull($response->header('access-control-allow-credentials'));
     }
 
     public function testSimpleRequestFromAllowedOriginGetsHeaders(): void

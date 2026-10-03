@@ -11,7 +11,8 @@ use InvalidArgumentException;
  * How long personal and operational data is kept (decision D-008, SRS
  * Appendix J). Enquiries are deleted after 24 months; the IP address and
  * user-agent recorded for abuse protection are cleared after 90 days; audit
- * events are deleted after 24 months.
+ * events are deleted after 24 months. Staff sign-in attempts are deleted after
+ * 90 days and ended staff sessions after 30 days (D-009).
  */
 final class RetentionPolicy
 {
@@ -19,8 +20,10 @@ final class RetentionPolicy
         public readonly int $enquiryMonths = 24,
         public readonly int $networkMetadataDays = 90,
         public readonly int $auditEventMonths = 24,
+        public readonly int $loginAttemptDays = 90,
+        public readonly int $endedSessionDays = 30,
     ) {
-        if ($enquiryMonths < 1 || $networkMetadataDays < 1 || $auditEventMonths < 1) {
+        if ($enquiryMonths < 1 || $networkMetadataDays < 1 || $auditEventMonths < 1 || $loginAttemptDays < 1 || $endedSessionDays < 1) {
             throw new InvalidArgumentException('Retention periods must be positive.');
         }
     }
@@ -38,5 +41,15 @@ final class RetentionPolicy
     public function auditEventCutoff(DateTimeImmutable $now): DateTimeImmutable
     {
         return $now->modify("-{$this->auditEventMonths} months");
+    }
+
+    public function loginAttemptCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->loginAttemptDays} days");
+    }
+
+    public function endedSessionCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->endedSessionDays} days");
     }
 }

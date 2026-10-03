@@ -699,6 +699,7 @@ a {
   color: var(--ink);
 }
 .contact-form input,
+.contact-form select,
 .contact-form textarea {
   font: inherit;
   font-size: 16px;
@@ -710,6 +711,7 @@ a {
   background: var(--white);
 }
 .contact-form input:focus,
+.contact-form select:focus,
 .contact-form textarea:focus {
   border-color: var(--paxofi-blue);
   box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.15);
@@ -1027,5 +1029,338 @@ textarea:focus-visible {
   .lead,
   .hero-lead {
     font-size: 18px;
+  }
+}
+
+/* Staff area (D-009). Same tokens as the public site; dense, work-focused layout. */
+.admin {
+  min-height: 100vh;
+  background: var(--light-gray);
+}
+.admin-bar {
+  background: var(--navy);
+  color: var(--white);
+}
+.admin-bar__inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+.admin-brand {
+  text-decoration: none;
+}
+.admin-badge {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--on-dark-muted);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.admin-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-nav a {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: var(--white);
+  font-weight: 600;
+  text-decoration: none;
+}
+.admin-nav a:hover,
+.admin-nav a[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.12);
+}
+.admin-nav a[aria-current="page"] {
+  box-shadow: inset 0 -3px 0 var(--sky-blue);
+}
+.admin-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 600;
+}
+.admin-user__role {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--on-dark-muted);
+}
+.admin-signout {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+.admin-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+.admin-main--narrow {
+  max-width: 560px;
+}
+.admin-title {
+  font-size: 32px;
+  margin: 8px 0 8px;
+}
+.admin-intro,
+.admin-help {
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+.admin-help {
+  margin: 24px 0 0;
+}
+.admin-field {
+  display: grid;
+  gap: 8px;
+}
+.admin-field label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-tab {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  min-height: 40px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-tab[aria-pressed="true"] {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--white);
+}
+.admin-count {
+  font-size: 13px;
+  background: var(--light-gray);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.admin-search {
+  display: flex;
+  gap: 8px;
+}
+.admin-search input,
+.admin-inline-label select {
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid #c9d3e2;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 0;
+  background: var(--white);
+  color: var(--ink);
+}
+.admin-search input {
+  width: min(320px, 60vw);
+}
+.admin-inline-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+.admin-table-wrap {
+  overflow-x: auto;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-table th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: #f8fafd;
+}
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.admin-strong-link {
+  font-weight: 700;
+  color: var(--blue-strong);
+}
+.admin-sub {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.admin-excerpt {
+  max-width: 460px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.status-pill {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #e8eef8;
+  color: var(--ink);
+}
+.status-pill[data-status="new"] {
+  background: #e0ecff;
+  color: #0047b3;
+}
+.status-pill[data-status="in_progress"] {
+  background: #fff3d6;
+  color: #7a4d00;
+}
+.status-pill[data-status="replied"],
+.status-pill[data-status="active"],
+.status-pill[data-status="success"] {
+  background: #dcf5ea;
+  color: #075e43;
+}
+.status-pill[data-status="spam"],
+.status-pill[data-status="disabled"],
+.status-pill[data-status="failure"],
+.status-pill[data-status="denied"] {
+  background: #fde4e5;
+  color: #9e1c22;
+}
+.admin-empty {
+  background: var(--white);
+  border: 1px dashed #c9d3e2;
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+.admin-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+.admin-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.admin .form-card {
+  padding: 28px;
+}
+.admin-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.admin-dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 16px 0 24px;
+}
+.admin-dl dt {
+  font-weight: 600;
+  color: var(--muted);
+}
+.admin-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.admin-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+}
+.admin-small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.admin-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--blue-strong);
+  min-height: 32px;
+}
+.admin-panel[open] summary {
+  margin-bottom: 8px;
+}
+.admin-cards {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: grid;
+  gap: 16px;
+}
+.admin-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.admin-card-head h2 {
+  font-size: 20px;
+  margin: 0;
+}
+@media (max-width: 860px) {
+  .admin-detail {
+    grid-template-columns: 1fr;
+  }
+  .admin-user {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .admin-title {
+    font-size: 26px;
+  }
+  .admin .form-card {
+    padding: 20px;
   }
 }

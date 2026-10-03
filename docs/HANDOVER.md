@@ -13,7 +13,7 @@ Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.c
 
 ## 2. Day-to-day
 
-- **Enquiries:** phpMyAdmin → `paxoalhu_corporate` → `enquiries` (newest first). Business Development replies within 2 business days (D-007).
+- **Enquiries:** staff area https://corporate.paxofi.com/admin → **Enquiries** (from the Phase 2.1 release; before it, phpMyAdmin → `enquiries`). Business Development replies within 2 business days (D-007). Staff accounts: RUNBOOKS RB-11.
 - **Monitoring:** UptimeRobot (5 monitors) emails the operations address. Alerts lead to `RUNBOOKS.md` RB-3/RB-5/RB-6.
 - **Weekly check (5 minutes):** `RUNBOOKS.md` → Daily/weekly checks.
 - **Retention:** the daily cron job `bin/purge-retention.php` (RB-10, guide Step 6). Confirm `logs/purge-retention.log` gains a line each day.
@@ -56,7 +56,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 |---|---|---|
 | KI-001 | Facebook link previews blocked (HTTP 403) by the shared host's bot protection | Retest with the Facebook Sharing Debugger after the move to the VPS; or ask Namecheap to whitelist `facebookexternalhit` |
 | D-004 | Interim logo mark | Replace `components/Logo.tsx`, `app/icon.svg` and `public/og-image.png` when the designer delivers the master logo |
-| D-005 | Phase 2: staff sign-in, CMS, media, staging | Asana tasks labelled "[Phase 2]" |
+| D-005 | Phase 2: staff sign-in (done: P2.1, D-009), two-factor sign-in (P2.2), CMS (P2.3), media (P2.4), staging (P2.5) | Asana tasks labelled "[Phase 2]" |
 | D-006 | No analytics in v1 | Revisit in Phase 2 (cookieless, self-hosted) |
 | VPS | Planned move from shared hosting | Then re-test Facebook (KI-001); consider Git-based deploys and server-level HTTPS/HSTS |
 

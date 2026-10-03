@@ -1,10 +1,7 @@
 import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
-import SiteFooter from "@/components/SiteFooter";
-import SiteHeader from "@/components/SiteHeader";
-import { SHARE_IMAGE, SITE, organizationJsonLd, siteUrl } from "@/lib/site";
+import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
 
 // Render every page per request. Prerendered pages are sent with
 // "Cache-Control: s-maxage=31536000", which lets the host's shared cache
@@ -25,23 +22,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#0A1F44", width: "device-width", initialScale: 1 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Per-request CSP nonce from proxy.ts (absent in development).
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Page chrome lives in the route groups: (site) for the public website,
+  // admin/ for the staff area (decision D-009).
   return (
     <html lang="en">
-      <body>
-        <a className="skip-link" href="#main">Skip to content</a>
-        <SiteHeader />
-        <main id="main" tabIndex={-1}>{children}</main>
-        <SiteFooter />
-        <script
-          type="application/ld+json"
-          nonce={nonce}
-          // Static, build-time data only; never interpolate user input here.
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
-        />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -20,7 +20,7 @@ final class RetentionPurge
     {
     }
 
-    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int} */
+    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int} */
     public function run(?DateTimeImmutable $now = null): array
     {
         $now = ($now ?? new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'));
@@ -40,6 +40,15 @@ final class RetentionPurge
                 'audit_events_deleted' => $this->execute(
                     'DELETE FROM audit_events WHERE created_at < :cutoff',
                     $this->policy->auditEventCutoff($now),
+                ),
+                'login_attempts_deleted' => $this->execute(
+                    'DELETE FROM login_attempts WHERE created_at < :cutoff',
+                    $this->policy->loginAttemptCutoff($now),
+                ),
+                // Ended = expired or revoked; both timestamps are older than the cutoff.
+                'sessions_deleted' => $this->execute(
+                    'DELETE FROM sessions WHERE COALESCE(revoked_at, expires_at) < :cutoff AND expires_at < :cutoff2',
+                    $this->policy->endedSessionCutoff($now),
                 ),
             ];
 
@@ -62,7 +71,11 @@ final class RetentionPurge
     private function execute(string $sql, DateTimeImmutable $cutoff): int
     {
         $statement = $this->pdo->prepare($sql);
-        $statement->execute(['cutoff' => $cutoff->format('Y-m-d H:i:s')]);
+        $parameters = ['cutoff' => $cutoff->format('Y-m-d H:i:s')];
+        if (str_contains($sql, ':cutoff2')) {
+            $parameters['cutoff2'] = $parameters['cutoff'];
+        }
+        $statement->execute($parameters);
 
         return $statement->rowCount();
     }

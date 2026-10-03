@@ -9,6 +9,14 @@ import { contentSecurityPolicy, createNonce } from "@/lib/csp";
 //   cannot read after the build.
 // The development server needs eval for hot reloading, so CSP is production-only.
 export function proxy(request: NextRequest) {
+  // /admin → the inbox as a bare redirect. A page-level redirect() sends a full
+  // HTML page (ZAP 10044 "Big Redirect"); Next writes the target URL as the
+  // body here, so label it (ZAP 10019 "Content-Type Header Missing").
+  if (request.nextUrl.pathname === "/admin") {
+    const response = NextResponse.redirect(new URL("/admin/enquiries", request.url), 307);
+    response.headers.set("Content-Type", "text/plain; charset=utf-8");
+    return response;
+  }
   if (process.env.NODE_ENV !== "production") return NextResponse.next();
 
   const nonce = createNonce();

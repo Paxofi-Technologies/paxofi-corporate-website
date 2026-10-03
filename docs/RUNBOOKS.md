@@ -16,7 +16,7 @@ Every request to the API returns an `X-Request-Id` header and a `request_id` in 
 ## Daily / weekly checks (5 minutes, weekly)
 
 1. Open `/release.txt`, `/api/v1/health` and `/api/v1/readiness`.
-2. phpMyAdmin → `enquiries`: new enquiries since last check are answered (owner: Business Development).
+2. Staff area https://corporate.paxofi.com/admin → **Enquiries**: nothing left in *New* for more than 2 business days (owner: Business Development). Administrators: glance at **Audit log** → *Sign-ins* for repeated failures.
 3. cPanel → **SSL/TLS Status**: both domains show a valid certificate (AutoSSL renews automatically; check it did).
 4. cPanel → **Disk Usage**: no sudden growth (logs, old release folders).
 5. Delete `…-old-<version>` folders and `release-<version>` folders older than one week.
@@ -69,7 +69,7 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 ## RB-8 Suspected security incident
 
 1. Preserve evidence: download `backend/public/error_log`, `stderr.log` and a phpMyAdmin export of `audit_events` before changing anything.
-2. Rotate secrets: change the database user's password (cPanel → MySQL Databases) and update `DB_PASSWORD` in `.env`; change the cPanel password.
+2. Rotate secrets: change the database user's password (cPanel → MySQL Databases) and update `DB_PASSWORD` in `.env`; change the cPanel password; make sure `ADMIN_SETUP_TOKEN` is not in `.env`. To sign every staff member out at once: phpMyAdmin → SQL → `UPDATE sessions SET revoked_at = UTC_TIMESTAMP() WHERE revoked_at IS NULL;`, then have staff change passwords.
 3. Check for unexpected files in the document roots and in `paxofi-api-runtime` (compare with the release ZIP).
 4. Redeploy the last known-good release (RB-1) and record the incident in PKDMS.
 
@@ -88,7 +88,19 @@ Set up once, after the release that ships `backend/bin/purge-retention.php`:
    If cPanel shows a different PHP 8.4 path (MultiPHP → *ea-php84*), use `/opt/cpanel/ea-php84/root/usr/bin/php`.
 4. Next day: open `logs/purge-retention.log`; each line reads `… retention purge: N enquiries deleted, …`. A line starting `Retention purge failed` → RB-5 (database).
 
-Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit events 24 months). To delete one person's enquiry on request: phpMyAdmin → `enquiries` → search by email → Delete.
+Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit events 24 months), plus staff sign-in records 90 days and ended staff sessions 30 days (D-009). To delete one person's enquiry on request: phpMyAdmin → `enquiries` → search by email → Delete (the staff area marks enquiries but does not delete them).
+
+## RB-11 Staff area access (/admin)
+
+Staff sign in at `https://corporate.paxofi.com/admin` (D-009). Roles: **Administrator** (enquiries, users, audit log) and **Business Development** (enquiries).
+
+- **First administrator:** guide Step 7 (one-time `ADMIN_SETUP_TOKEN`; it only works while no accounts exist). Keep **two** administrators so one can always reset the other.
+- **The only administrator has lost their password:** engineering generates a password hash for a temporary password and sends the operator one SQL statement (`UPDATE users SET password_hash = '…' WHERE email = '…';`) to run in phpMyAdmin → SQL; the administrator then signs in and changes it at *My account*. Never paste a plain password into the database.
+- **Forgotten password:** an administrator → *Users* → **Edit** → new temporary password (signs that person out everywhere).
+- **Leaver or lost device:** *Users* → **Edit** → *Account* → **Disabled**. Their sessions end immediately.
+- **"Too many attempts":** automatic 15-minute block (5 failures per email, 20 per network). Repeated blocks you cannot explain → RB-8.
+- **Sent back to sign in straight away:** cookie not kept: both sites must be on HTTPS and the API `.env` must have `APP_ENV=production` (guide, *If something goes wrong*).
+- **Suspected compromised account:** disable it, check **Audit log** for its actions, then RB-8. Disabling, a role change or a password reset revokes all its sessions.
 
 ## Escalation
 
