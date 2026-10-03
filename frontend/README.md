@@ -40,5 +40,7 @@ with the contact API intercepted in the browser.
 | `NEXT_PUBLIC_SITE_URL` | build | Canonical URLs, sitemap, robots, structured data. |
 | `NEXT_PUBLIC_API_URL` | build | Default API base for the contact form. |
 | `API_BASE_URL` | runtime | Overrides the API base without a rebuild (cPanel environment variable). |
+| `SITE_ENVIRONMENT` | runtime | `staging` turns on staging mode (D-013): password on every page, `noindex`, banner. Unset on the live site. |
+| `STAGING_PASSWORD` | runtime | Staging only: the password (12+ characters). Without it a staging site refuses to serve pages. |
 
 Content Security Policy and HSTS are sent by production builds only (`next.config.ts`).
