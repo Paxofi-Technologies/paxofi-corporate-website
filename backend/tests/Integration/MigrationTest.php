@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -59,6 +59,23 @@ final class MigrationTest extends DatabaseTestCase
         self::assertContains('idx_enquiries_email_created', $enquiryIndexes);
         self::assertContains('idx_enquiries_source_ip_created', $enquiryIndexes);
         self::assertContains('idx_audit_action_time', $auditIndexes);
+    }
+
+    public function testStaffMigrationSeedsRolesAndCanBeImportedAgain(): void
+    {
+        $file = array_values(array_filter(self::migrationFiles(), static fn (string $f): bool => str_contains($f, 'staff_sign_in')))[0];
+        self::applySqlFile($file);
+
+        self::assertSame(['administrator', 'business_development'], self::$pdo->query('SELECT name FROM roles ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
+        self::assertSame(6, (int) self::scalar('SELECT COUNT(*) FROM role_permissions'));
+        self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.name = 'business_development'"));
+    }
+
+    public function testSessionExpiryIsNeverAutoUpdated(): void
+    {
+        $extra = (string) self::scalar("SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessions' AND COLUMN_NAME = 'expires_at'");
+
+        self::assertStringNotContainsStringIgnoringCase('on update', $extra);
     }
 
     public function testSeedMigrationIsIdempotent(): void

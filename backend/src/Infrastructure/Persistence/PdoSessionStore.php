@@ -33,12 +33,13 @@ final class PdoSessionStore implements SessionStore
     {
         $this->write(
             'INSERT INTO sessions (id, user_id, expires_at, last_seen_at, created_at, source_ip, user_agent)
-             VALUES (:id, :user_id, :expires_at, :now, :now, :ip, :ua)',
+             VALUES (:id, :user_id, :expires_at, :last_seen_at, :created_at, :ip, :ua)',
             [
                 'id' => $tokenHash,
                 'user_id' => $userId,
                 'expires_at' => self::utc($expiresAt),
-                'now' => self::utc($now),
+                'last_seen_at' => self::utc($now),
+                'created_at' => self::utc($now),
                 'ip' => $context->clientIp,
                 'ua' => $context->userAgent === null ? null : mb_substr(mb_scrub($context->userAgent, 'UTF-8'), 0, 500),
             ],
