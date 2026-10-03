@@ -1,0 +1,99 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { can, useAdmin } from "@/components/admin/AdminContext";
+import { FormStatus } from "@/components/admin/AdminForm";
+import { NoAccess } from "@/components/admin/StaffShell";
+import { AdminApiError, CATALOG_KINDS, CatalogKind, CatalogSummary, formatDateTime } from "@/lib/admin-api";
+
+/** Products and services on the website, with their status (D-011). */
+export default function ContentList() {
+  const { user, request } = useAdmin();
+  const [kind, setKind] = useState<CatalogKind>("products");
+  const [rows, setRows] = useState<CatalogSummary[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!can(user, "content.edit")) return;
+    let cancelled = false;
+    request<CatalogSummary[]>(`/catalog/${kind}`)
+      .then((result) => {
+        if (cancelled) return;
+        setRows(result.data);
+        setError("");
+      })
+      .catch((e) => !cancelled && setError(e instanceof AdminApiError ? e.message : "Content could not be loaded."));
+    return () => {
+      cancelled = true;
+    };
+  }, [user, request, kind]);
+
+  if (!can(user, "content.edit")) return <NoAccess title="Content" />;
+  const current = CATALOG_KINDS.find((k) => k.value === kind)!;
+
+  return (
+    <>
+      <h1 className="admin-title">Content</h1>
+      <p className="admin-intro">
+        The products and services shown on the website. Changes are saved as drafts and appear on the site only when an administrator
+        publishes them.
+      </p>
+      <div className="admin-toolbar">
+        <div className="admin-tabs" role="group" aria-label="Collection">
+          {CATALOG_KINDS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="admin-tab"
+              aria-pressed={kind === option.value}
+              onClick={() => {
+                setRows(null);
+                setKind(option.value);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <Link className="button button--primary" href={`/admin/content/${kind}/new`}>
+          Add a {current.singular}
+        </Link>
+      </div>
+      <FormStatus state="error" message={error} />
+      {rows === null ? (
+        <p role="status">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="admin-empty">No {current.label.toLowerCase()} yet.</p>
+      ) : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <caption className="visually-hidden">{current.label} in display order</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">On the website</th>
+                <th scope="col">Draft</th>
+                <th scope="col">Order</th>
+                <th scope="col">Last changed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <Link href={`/admin/content/${kind}/${row.id}`} className="admin-strong-link">{row.name}</Link>
+                  </td>
+                  <td><span className="status-pill" data-status={row.visible ? "active" : "disabled"}>{row.visible ? "Shown" : "Hidden"}</span></td>
+                  <td>{row.has_draft ? <span className="status-pill" data-status="in_progress">Unpublished changes</span> : "—"}</td>
+                  <td>{row.sort_order}</td>
+                  <td>{formatDateTime(row.updated_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}

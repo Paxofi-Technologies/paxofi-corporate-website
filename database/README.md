@@ -23,6 +23,7 @@ Migration register (apply in filename order):
 | `006_innodb_utf8mb4_and_foreign_keys.sql` | Converts all tables to InnoDB + utf8mb4 and (re)creates the 001 foreign keys (production was built MyISAM + latin1) |
 | `007_staff_sign_in_and_roles.sql` | Phase 2 (D-009): user name/password columns, session activity, `login_attempts`, enquiry date index, roles `administrator` / `business_development` and their permissions |
 | `008_staff_two_factor.sql` | Phase 2 (D-010): encrypted TOTP secret, pending secret, enabled date and last used step on `users`; `sessions.mfa_pending`; `recovery_codes` (SHA-256 only) |
+| `009_editable_catalog.sql` | Phase 2 (D-011): label, icon, points and order on `products`/`services`; seeded rows aligned with the live website copy (only where unchanged); two more services; `catalog_revisions`; permissions `content.edit` / `content.publish` |
 
 ## Applying migrations
 

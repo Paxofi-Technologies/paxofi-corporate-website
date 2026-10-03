@@ -1,5 +1,7 @@
-import { Cloud, CodeXml, Megaphone, Network, Rocket, Workflow } from "lucide-react";
-import { CtaBand, IconCard, PageHero, SectionHead } from "@/components/Sections";
+import { ServiceCard } from "@/components/CatalogCards";
+import { CtaBand, PageHero, SectionHead } from "@/components/Sections";
+import { loadCatalog } from "@/lib/catalog";
+import { resolveApiBase } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site";
 
 export const metadata = pageMetadata(
@@ -8,23 +10,16 @@ export const metadata = pageMetadata(
   "/services",
 );
 
-const services = [
-  { icon: CodeXml, title: "Software & Web Engineering", text: "Web platforms and business applications engineered for reliability, security and maintainability." },
-  { icon: Network, title: "API & Platform Development", text: "Well-documented APIs and platform services that connect products, partners and data." },
-  { icon: Rocket, title: "Product Strategy & Prototyping", text: "Clarify the problem, shape the product and validate it with working prototypes." },
-  { icon: Workflow, title: "Digital Transformation", text: "Modernise processes and systems with practical, measurable steps." },
-  { icon: Cloud, title: "Cloud & Infrastructure Foundations", text: "Deployment, hosting, monitoring and recovery foundations that keep services running." },
-  { icon: Megaphone, title: "Digital Marketing & Growth", text: "Web presence, content and digital channels that help the right people find you." },
-];
-
-const process = [
+const deliverySteps = [
   { step: "01", title: "Discover", text: "We understand your goals, users and constraints before writing code." },
   { step: "02", title: "Build", text: "We design and engineer in small, tested increments you can review." },
   { step: "03", title: "Operate", text: "We deploy, monitor and support what we build." },
   { step: "04", title: "Scale", text: "We improve and extend the product as your needs grow." },
 ];
 
-export default function Services() {
+export default async function Services() {
+  // Edited in the staff area (D-011); falls back to the built-in copy if the API cannot be read.
+  const services = await loadCatalog("services", resolveApiBase(process.env));
   return (
     <>
       <PageHero
@@ -35,10 +30,8 @@ export default function Services() {
 
       <section className="section">
         <div className="container grid grid-3">
-          {services.map(({ icon, title, text }) => (
-            <IconCard key={title} icon={icon} title={title}>
-              {text}
-            </IconCard>
+          {services.map((item) => (
+            <ServiceCard key={item.slug} item={item} />
           ))}
         </div>
       </section>
@@ -47,7 +40,7 @@ export default function Services() {
         <div className="container">
           <SectionHead eyebrow="How we deliver" title="A clear path from idea to operation." />
           <ol className="steps steps--4">
-            {process.map(({ step, title, text }) => (
+            {deliverySteps.map(({ step, title, text }) => (
               <li className="step" key={title}>
                 <span className="step-number" aria-hidden="true">{step}</span>
                 <h3>{title}</h3>

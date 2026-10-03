@@ -14,8 +14,11 @@ const ENGINES = { chromium, firefox, webkit };
 export const BROWSER = process.env.E2E_BROWSER || "chromium";
 assert.ok(ENGINES[BROWSER], `unknown E2E_BROWSER ${BROWSER}`);
 
-/** Registers before/after hooks for one suite file; returns its base URL and a page factory. */
-export function startHarness(port) {
+/**
+ * Registers before/after hooks for one suite file; returns its base URL and a page factory.
+ * apiBase: the API the server itself reads (catalogue pages); defaults to an unreachable host.
+ */
+export function startHarness(port, { apiBase = API_BASE } = {}) {
   const base = `http://127.0.0.1:${port}`;
   let server;
   let browser;
@@ -26,7 +29,7 @@ export function startHarness(port) {
     server = spawn(`${root}node_modules/.bin/next`, ["start", "-p", String(port), "-H", "127.0.0.1"], {
       cwd: root,
       detached: true,
-      env: { ...process.env, API_BASE_URL: API_BASE, NODE_ENV: "production" },
+      env: { ...process.env, API_BASE_URL: apiBase, NODE_ENV: "production" },
       stdio: ["ignore", "ignore", "inherit"],
     });
     for (let attempt = 0; attempt < 60; attempt++) {

@@ -46,8 +46,9 @@ final class PublicApiTest extends DatabaseTestCase
     {
         $body = self::decode($this->app()->handle(self::request('GET', '/api/v1/products')));
 
-        self::assertSame(['paxofi-core-framework', 'paxofi-pay'], array_column($body['data'], 'slug'));
-        self::assertSame(['slug', 'name', 'summary', 'published_at'], array_keys($body['data'][0]));
+        self::assertSame(['paxofi-pay', 'paxofi-core-framework'], array_column($body['data'], 'slug'), 'in display order');
+        self::assertSame(['slug', 'name', 'label', 'icon', 'summary', 'points', 'sort_order', 'published_at'], array_keys($body['data'][0]));
+        self::assertSame(['Transaction certainty', 'Transparency and traceability', 'Recovery built in'], $body['data'][0]['points']);
         self::assertSame('2026-09-18T00:00:00Z', $body['data'][0]['published_at']);
         self::assertSame(2, $body['meta']['total']);
         self::assertTrue($body['meta']['published']);
@@ -55,12 +56,13 @@ final class PublicApiTest extends DatabaseTestCase
 
     public function testServicesPaginationAndSlugFilter(): void
     {
-        $page2 = self::decode($this->app()->handle(self::request('GET', '/api/v1/services?page=2&per_page=3')));
-        self::assertCount(1, $page2['data']);
-        self::assertSame(['page' => 2, 'per_page' => 3, 'total' => 4, 'total_pages' => 2], array_diff_key($page2['meta'], ['published' => 1]));
+        $page2 = self::decode($this->app()->handle(self::request('GET', '/api/v1/services?page=2&per_page=4')));
+        self::assertCount(2, $page2['data']);
+        self::assertSame(['page' => 2, 'per_page' => 4, 'total' => 6, 'total_pages' => 2], array_diff_key($page2['meta'], ['published' => 1]));
 
-        $one = self::decode($this->app()->handle(self::request('GET', '/api/v1/services?slug=digital-growth')));
-        self::assertSame(['digital-growth'], array_column($one['data'], 'slug'));
+        $one = self::decode($this->app()->handle(self::request('GET', '/api/v1/services?slug=digital-marketing-growth')));
+        self::assertSame(['digital-marketing-growth'], array_column($one['data'], 'slug'));
+        self::assertSame('megaphone', $one['data'][0]['icon']);
     }
 
     public function testCareersUseTitleAndDescription(): void

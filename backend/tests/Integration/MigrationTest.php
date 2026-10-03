@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -67,8 +67,8 @@ final class MigrationTest extends DatabaseTestCase
         self::applySqlFile($file);
 
         self::assertSame(['administrator', 'business_development'], self::$pdo->query('SELECT name FROM roles ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
-        self::assertSame(6, (int) self::scalar('SELECT COUNT(*) FROM role_permissions'));
-        self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.name = 'business_development'"));
+        self::assertSame(6, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE p.name IN ('enquiries.read', 'enquiries.update', 'users.manage', 'audit.read')"));
+        self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id WHERE r.name = 'business_development' AND p.name LIKE 'enquiries.%'"));
     }
 
     public function testTwoFactorMigrationCanBeImportedAgain(): void
@@ -97,7 +97,21 @@ final class MigrationTest extends DatabaseTestCase
         self::applySqlFile($seed);
 
         self::assertSame(2, (int) self::scalar('SELECT COUNT(*) FROM products'));
-        self::assertSame(4, (int) self::scalar('SELECT COUNT(*) FROM services'));
+        self::assertSame(6, (int) self::scalar('SELECT COUNT(*) FROM services'), '4 from 004, 2 more from 009');
+    }
+
+    public function testCatalogMigrationMatchesTheWebsiteAndNeverOverwritesEdits(): void
+    {
+        self::$pdo->exec("UPDATE services SET summary = 'Edited by staff.' WHERE slug = 'digital-transformation'");
+        $file = array_values(array_filter(self::migrationFiles(), static fn (string $f): bool => str_contains($f, 'editable_catalog')))[0];
+        self::applySqlFile($file);
+
+        self::assertSame('Edited by staff.', self::scalar("SELECT summary FROM services WHERE slug = 'digital-transformation'"), 'a re-import keeps edits');
+        self::assertSame(['shield-check', 'cog'], self::$pdo->query('SELECT icon FROM products ORDER BY sort_order')->fetchAll(PDO::FETCH_COLUMN));
+        self::assertSame('Software & Web Engineering', self::scalar('SELECT name FROM services ORDER BY sort_order LIMIT 1'));
+        self::assertSame(['Transaction certainty', 'Transparency and traceability', 'Recovery built in'], json_decode((string) self::scalar("SELECT points FROM products WHERE slug = 'paxofi-pay'"), true));
+        self::assertSame(['content.edit'], self::$pdo->query("SELECT p.name FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id JOIN roles r ON r.id = rp.role_id WHERE r.name = 'business_development' AND p.name LIKE 'content.%'")->fetchAll(PDO::FETCH_COLUMN));
+        self::$pdo->exec("UPDATE services SET summary = 'Modernise processes and systems with practical, measurable steps.' WHERE slug = 'digital-transformation'");
     }
 
     public function testFreshInstallOnServerDefaultsReachesTheSameSchema(): void

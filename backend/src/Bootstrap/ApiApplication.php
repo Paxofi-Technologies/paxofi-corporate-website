@@ -18,6 +18,7 @@ use Paxofi\Core\Http\Router;
 use Paxofi\Core\Observability\HealthRegistry;
 use Paxofi\CorporateWebsite\Application\Admin\AdminEnquiryService;
 use Paxofi\CorporateWebsite\Application\Admin\AuthService;
+use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogEditor;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
@@ -29,6 +30,7 @@ use Paxofi\CorporateWebsite\Application\Content\ContentService;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
@@ -49,6 +51,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditRecorder;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogEditorRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
@@ -104,6 +107,14 @@ final class ApiApplication implements HttpHandler
         ['PATCH', '/api/v1/admin/users/{id}'],
         ['POST', '/api/v1/admin/users/{id}/two-factor/reset'],
         ['GET', '/api/v1/admin/audit'],
+        ['GET', '/api/v1/admin/catalog/{type}'],
+        ['POST', '/api/v1/admin/catalog/{type}'],
+        ['GET', '/api/v1/admin/catalog/{type}/{id}'],
+        ['POST', '/api/v1/admin/catalog/{type}/{id}/draft'],
+        ['DELETE', '/api/v1/admin/catalog/{type}/{id}/draft'],
+        ['POST', '/api/v1/admin/catalog/{type}/{id}/publish'],
+        ['POST', '/api/v1/admin/catalog/{type}/{id}/visibility'],
+        ['POST', '/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore'],
     ];
 
     private readonly HttpHandler $pipeline;
@@ -196,6 +207,19 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/admin/users', static fn (HttpRequest $r): HttpResponse => $staff()->list($r));
         $router->post('/api/v1/admin/users', static fn (HttpRequest $r): HttpResponse => $staff()->create($r));
         $router->add('PATCH', '/api/v1/admin/users/{id}', static fn (HttpRequest $r): HttpResponse => $staff()->update($r));
+
+        $catalog = fn (): AdminCatalogController => new AdminCatalogController(
+            new CatalogEditor(new PdoCatalogEditorRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database)),
+            $this->adminGuard(),
+        );
+        $router->get('/api/v1/admin/catalog/{type}', static fn (HttpRequest $r): HttpResponse => $catalog()->list($r));
+        $router->post('/api/v1/admin/catalog/{type}', static fn (HttpRequest $r): HttpResponse => $catalog()->create($r));
+        $router->get('/api/v1/admin/catalog/{type}/{id}', static fn (HttpRequest $r): HttpResponse => $catalog()->show($r));
+        $router->post('/api/v1/admin/catalog/{type}/{id}/draft', static fn (HttpRequest $r): HttpResponse => $catalog()->saveDraft($r));
+        $router->add('DELETE', '/api/v1/admin/catalog/{type}/{id}/draft', static fn (HttpRequest $r): HttpResponse => $catalog()->discardDraft($r));
+        $router->post('/api/v1/admin/catalog/{type}/{id}/publish', static fn (HttpRequest $r): HttpResponse => $catalog()->publish($r));
+        $router->post('/api/v1/admin/catalog/{type}/{id}/visibility', static fn (HttpRequest $r): HttpResponse => $catalog()->visibility($r));
+        $router->post('/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore', static fn (HttpRequest $r): HttpResponse => $catalog()->restore($r));
 
         $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
 

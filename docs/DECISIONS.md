@@ -126,3 +126,26 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Audit:** `staff.sign_in.password_accepted`, `staff.sign_in.second_factor` (failure or denied), `staff.two_factor.enabled`, `.disabled`, `.reset`, `.recovery_codes_replaced`, `.recovery_code_used`.
 
 **Not chosen:** SMS and email codes (interceptable, and they need a paid sender), and WebAuthn/passkeys. Passkeys are stronger but a bigger build; reconsider after the VPS move.
+
+## D-011 — Products and services edited in the staff area (3 Oct 2026)
+
+**Decision (CTO, owner approved option 1 on 3 Oct 2026; slice P2.3):** staff edit the products and services shown on the website from `/admin` → **Content**. Other page text stays in code for now.
+
+- **Content model:** each item has a name, a label (products), an icon from a fixed list of 15, a summary (10–300 characters), up to 5 key points (products), a display order and shown/hidden. Everything is plain text: no markup is accepted or rendered.
+- **Workflow:**
+  - saving changes only the item's draft;
+  - **publishing** copies the draft to the live content and keeps it as a version;
+  - any earlier version can be restored as a draft;
+  - new items start hidden.
+- **Roles:**
+  - `content.edit`: Administrator and Business Development; save drafts, add hidden items, restore versions.
+  - `content.publish`: Administrator; publish, show or hide.
+  - Every change is audited (`catalog.*`).
+- **Website:** `/products`, `/services` and the home page's products read published items from the API at request time.
+  - On a 1.5-second timeout, an error or an unexpected response, the built-in V1 copy is shown and the reason is logged.
+  - The home page's four service *areas* remain page copy.
+- **Data:** migration 009 aligns the database with the live wording, touching only rows that still hold the original seed text, so a re-import never overwrites edits. It adds two services so the catalogue matches `/services`.
+
+**Not chosen:**
+- All page text editable (option 2): bigger, and long text can break layouts. Revisit with real editing needs.
+- A third-party CMS: an extra service to host and secure on shared hosting.

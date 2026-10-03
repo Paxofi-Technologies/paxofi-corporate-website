@@ -30,4 +30,12 @@ return [
  ['PATCH','/api/v1/admin/users/{id}','admin','update staff account','users.manage'],
  ['POST','/api/v1/admin/users/{id}/two-factor/reset','admin','reset another person\'s two-factor (lost phone)','users.manage'],
  ['GET','/api/v1/admin/audit','admin','audit log','audit.read'],
+ ['GET','/api/v1/admin/catalog/{type}','admin','list products or services with draft status','content.edit'],
+ ['POST','/api/v1/admin/catalog/{type}','admin','create a hidden product or service','content.edit'],
+ ['GET','/api/v1/admin/catalog/{type}/{id}','admin','item with live content, draft and history','content.edit'],
+ ['POST','/api/v1/admin/catalog/{type}/{id}/draft','admin','save draft changes','content.edit'],
+ ['DELETE','/api/v1/admin/catalog/{type}/{id}/draft','admin','discard the draft','content.edit'],
+ ['POST','/api/v1/admin/catalog/{type}/{id}/publish','admin','put the draft live','content.publish'],
+ ['POST','/api/v1/admin/catalog/{type}/{id}/visibility','admin','show or hide on the website','content.publish'],
+ ['POST','/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore','admin','copy an earlier version into the draft','content.edit'],
 ];

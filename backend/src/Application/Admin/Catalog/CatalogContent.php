@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Paxofi\CorporateWebsite\Application\Admin\Catalog;
+
+use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
+
+/**
+ * The editable content of one product or service, validated. Plain text only:
+ * the website escapes it, and no markup is accepted.
+ */
+final readonly class CatalogContent
+{
+    /** Icons the website can draw (frontend/lib/catalog.ts keeps the same list). */
+    public const ICONS = ['shield-check', 'cog', 'code', 'network', 'rocket', 'workflow', 'cloud', 'megaphone', 'layers', 'globe', 'lightbulb', 'briefcase', 'smartphone', 'database', 'lock'];
+    public const MAX_POINTS = 5;
+
+    /** @param list<string> $points */
+    public function __construct(
+        public string $name,
+        public ?string $label,
+        public string $icon,
+        public string $summary,
+        public array $points,
+        public int $sortOrder,
+    ) {
+    }
+
+    /** @param array<string, mixed> $input */
+    public static function fromInput(array $input): self
+    {
+        $errors = [];
+        $name = self::text($input, 'name', 2, 80, $errors);
+        $label = self::text($input, 'label', 0, 40, $errors);
+        $summary = self::text($input, 'summary', 10, 300, $errors);
+
+        $icon = is_string($input['icon'] ?? null) ? $input['icon'] : '';
+        if (!in_array($icon, self::ICONS, true)) {
+            $errors['icon'] = 'Choose one of the icons.';
+        }
+
+        $points = [];
+        $raw = $input['points'] ?? [];
+        if (!is_array($raw) || count($raw) > self::MAX_POINTS) {
+            $errors['points'] = 'Use at most ' . self::MAX_POINTS . ' points.';
+        } else {
+            foreach ($raw as $point) {
+                $point = is_string($point) ? self::clean($point) : '';
+                if ($point === '') {
+                    continue;
+                }
+                if (mb_strlen($point) > 80) {
+                    $errors['points'] = 'Keep each point to 80 characters or fewer.';
+                }
+                $points[] = $point;
+            }
+        }
+
+        $order = $input['sort_order'] ?? 100;
+        if (!is_int($order) && !(is_string($order) && ctype_digit($order))) {
+            $errors['sort_order'] = 'Enter a whole number from 0 to 999.';
+            $order = 100;
+        }
+        $order = (int) $order;
+        if ($order < 0 || $order > 999) {
+            $errors['sort_order'] = 'Enter a whole number from 0 to 999.';
+        }
+
+        if ($errors !== []) {
+            throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
+        }
+
+        return new self($name, $label === '' ? null : $label, $icon, $summary, $points, $order);
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function fromStored(array $data): self
+    {
+        return new self(
+            (string) ($data['name'] ?? ''),
+            isset($data['label']) && $data['label'] !== '' ? (string) $data['label'] : null,
+            (string) ($data['icon'] ?? 'layers'),
+            (string) ($data['summary'] ?? ''),
+            array_values(array_filter(is_array($data['points'] ?? null) ? $data['points'] : [], 'is_string')),
+            (int) ($data['sort_order'] ?? 100),
+        );
+    }
+
+    /** @return array{name: string, label: ?string, icon: string, summary: string, points: list<string>, sort_order: int} */
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'label' => $this->label,
+            'icon' => $this->icon,
+            'summary' => $this->summary,
+            'points' => $this->points,
+            'sort_order' => $this->sortOrder,
+        ];
+    }
+
+    /** @param array<string, string> $errors */
+    private static function text(array $input, string $field, int $min, int $max, array &$errors): string
+    {
+        $value = is_string($input[$field] ?? null) ? self::clean($input[$field]) : '';
+        $length = mb_strlen($value);
+        if ($length < $min || $length > $max) {
+            $errors[$field] = $min === 0 ? "Use at most {$max} characters." : "Enter {$min} to {$max} characters.";
+        }
+
+        return $value;
+    }
+
+    /** Single line, trimmed, control characters removed. */
+    private static function clean(string $value): string
+    {
+        $value = mb_scrub($value, 'UTF-8');
+
+        return trim(preg_replace('/\s+/u', ' ', preg_replace('/[\p{Cc}\p{Cf}]/u', ' ', $value) ?? '') ?? '');
+    }
+}

@@ -109,6 +109,15 @@ Staff sign in at `https://corporate.paxofi.com/admin` (D-009). Roles: **Administ
     - *Only administrator, no phone and no recovery codes:* engineering sends one SQL statement for phpMyAdmin (`UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = NULL WHERE email = '…';`); the administrator then sets two-factor up again at the next sign-in. Record it as an incident.
     - *`MFA_ENCRYPTION_KEY`:* set once, keep a copy, never rotate casually: changing it breaks every authenticator (recovery codes still work). Never remove it to "skip" two-factor: accounts that have two-factor on still need their code.
 
+## RB-12 Website content (products and services)
+
+Edited by staff at `/admin` → **Content** (D-011). Business Development saves drafts; an administrator publishes, hides or shows items. Every published version is kept: to undo a change, open the item → **Earlier versions** → **Restore as draft** → **Publish**.
+
+- **A change does not appear on the website:** see the guide's *If something goes wrong* (the website falls back to built-in wording when it cannot reach the API; `stderr.log` says so).
+- **Wrong wording went live:** restore the previous version as above, or **Hide from website** while you fix it.
+- **Who changed what:** **Audit log**, actions `catalog.*`.
+- Page text other than products and services (headings, About, Careers, Privacy, Terms) still changes through a code release.
+
 ## Escalation
 
 | Severity | Examples | Who acts | Target response |

@@ -1,5 +1,7 @@
-import { Cog, ShieldCheck } from "lucide-react";
+import { ProductCard } from "@/components/CatalogCards";
 import { CtaBand, PageHero } from "@/components/Sections";
+import { loadCatalog } from "@/lib/catalog";
+import { resolveApiBase } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site";
 
 export const metadata = pageMetadata(
@@ -8,24 +10,10 @@ export const metadata = pageMetadata(
   "/products",
 );
 
-const products = [
-  {
-    icon: ShieldCheck,
-    label: "Paxofi Product",
-    name: "Paxofi Pay",
-    summary: "Digital payments infrastructure designed around reliability, transaction certainty, transparency, recovery and trust.",
-    points: ["Transaction certainty", "Transparency and traceability", "Recovery built in"],
-  },
-  {
-    icon: Cog,
-    label: "Paxofi Technology",
-    name: "Paxofi Core Framework",
-    summary: "An independent PHP application framework for maintainable internal, client, SaaS and API systems.",
-    points: ["Layered, testable architecture", "Secure HTTP and data foundations", "Built for long-lived systems"],
-  },
-];
+export default async function Products() {
+  // Edited in the staff area (D-011); falls back to the built-in copy if the API cannot be read.
+  const products = await loadCatalog("products", resolveApiBase(process.env));
 
-export default function Products() {
   return (
     <>
       <PageHero
@@ -36,20 +24,8 @@ export default function Products() {
 
       <section className="section">
         <div className="container grid grid-2">
-          {products.map(({ icon: Icon, label, name, summary, points }) => (
-            <article className="product-card product-card--large" key={name}>
-              <span className="product-icon" aria-hidden="true">
-                <Icon size={28} strokeWidth={1.75} />
-              </span>
-              <span className="product-label">{label}</span>
-              <h2>{name}</h2>
-              <p>{summary}</p>
-              <ul className="check-list">
-                {points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </article>
+          {products.map((item) => (
+            <ProductCard key={item.slug} item={item} />
           ))}
         </div>
       </section>
