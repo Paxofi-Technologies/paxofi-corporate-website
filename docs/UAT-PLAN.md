@@ -107,3 +107,17 @@ Run after deploying the release that includes two-factor (from P2.2) and complet
 ### Results — release 20261003-f6c67fe (3 Oct 2026)
 
 **Phase 2.2 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder). T1–T7 passed on the live site after guide Step 8 (`MFA_ENCRYPTION_KEY` set; administrator authenticator set up and recovery codes saved).
+
+## Phase 2.3 — editing products and services (D-011)
+
+Run after deploying the release that includes **Content** in the staff area. About 15 minutes. Use a test wording you can recognise, and restore the original at the end.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| C1 | Nothing changed by the upgrade | Open /products and /services | Same products and services and wording as before the release (6 services) | |
+| C2 | Draft stays private | **Content** → Paxofi Pay → change the summary → **Save draft**; open /products in a private window | The preview shows the new wording; the website still shows the old wording | |
+| C3 | Publish | Back in the editor → **Publish**; reload /products | The new wording is on the website and on the home page | |
+| C4 | Undo | **Earlier versions** → restore the version before your change → **Publish** | The original wording is back on the website | |
+| C5 | Hide and show | **Hide from website** on a service; reload /services; then **Show on website** | It disappears, then comes back in the same place | |
+| C6 | Business Development | Sign in as a Business Development user → **Content** → change a summary → **Save draft** | There is no **Publish** button; "An administrator will publish it" | |
+| C7 | Audit | **Audit log** | Shows the draft, publish, restore and hide/show actions with names and times | |

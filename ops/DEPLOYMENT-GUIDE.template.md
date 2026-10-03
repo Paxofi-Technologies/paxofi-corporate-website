@@ -67,7 +67,7 @@ cPanel → **phpMyAdmin** → click `paxoalhu_corporate` on the left → **Expor
 1. phpMyAdmin → click `paxoalhu_corporate` → **Import**.
 2. **Choose file** → `database-upgrade-{{VERSION}}.sql`. Leave the other options at their defaults (character set *utf-8*, *Enable foreign key checks* ticked) → **Import**.
 3. You should see a green *"Import has been successfully finished"* message.
-4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **4**, `roles` **2** (`administrator`, `business_development`), there is a `login_attempts` table, and there is a `recovery_codes` table, and `schema_migrations` lists the migrations up to the latest one (`008_staff_two_factor` or later).
+4. Check: click the database name → the **Structure** list shows every table as **InnoDB** with collation **utf8mb4_unicode_ci**. `products` has **2** rows, `services` **6**, `roles` **2** (`administrator`, `business_development`), there is a `login_attempts` table, and there are `recovery_codes` and `catalog_revisions` tables, and `schema_migrations` lists the migrations up to the latest one (`009_editable_catalog` or later).
 
 The import is safe to run again if it is interrupted.
 
@@ -173,6 +173,17 @@ Lost phone:
 - **Business Development:** an administrator opens *Users* → **Edit** → **Reset two-factor**. The person signs in with their password and sets it up again if they wish.
 - **Administrator:** sign in with one of your recovery codes, then ask another administrator to reset your two-factor and set it up again. With only one administrator and no recovery codes left, see RUNBOOKS RB-11.
 
+## Step 9 — Editing products and services (no server change)
+
+From this release, the products and services on the website are edited in the staff area under **Content** (decision D-011). There is nothing to set up. The website pages look the same as before, because the database upgrade copies the current wording in.
+
+1. {{SITE_URL}}/admin → **Content** → **Products** or **Services** → click an item.
+2. Change the wording. The **Preview** shows how the card will look.
+3. **Save draft** keeps the change without touching the website. Business Development staff can only save drafts.
+4. An administrator presses **Publish**. The website shows the new wording on the next page load.
+5. **Hide from website** / **Show on website** controls whether visitors see the item. New items start hidden.
+6. **Earlier versions** → **Restore as draft** brings back any previous wording; publish it to put it live again.
+
 ## If something goes wrong
 
 | Symptom | Fix |
@@ -193,6 +204,7 @@ Lost phone:
 | Two-factor page says *not available yet* | `MFA_ENCRYPTION_KEY` is missing from the API `.env`, or shorter than 32 characters (Step 8). |
 | *That code is not valid* although the app shows it | The phone's clock is wrong: turn on automatic date and time on the phone. Each code also works only once, so wait for the next one. |
 | Everyone's codes stopped working after a change to `.env` | `MFA_ENCRYPTION_KEY` was changed or removed. Put the original key back. If it is lost: sign in with recovery codes, and administrators reset each other's two-factor (RB-11). |
+| Published changes do not appear on the website | The website server reads products and services from the API. If it cannot reach it within 1.5 seconds, it shows the built-in wording, and `paxofi-corporate-website/stderr.log` has a line starting `catalog: showing built-in`. Check that `API_BASE_URL` on the Node app is the full `https://api…/api/v1` address and that `{{API_URL}}/products` opens in a browser, then restart the app. |
 | *Too many attempts* on sign-in | Wait 15 minutes. An administrator cannot lift the block early; if it keeps happening, check the *Audit log* for `staff.sign_in` failures. |
 | Database import shows an error | Stop; restore the Step 1 export (phpMyAdmin → Import) and send the error message to engineering. |
 

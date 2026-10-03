@@ -54,7 +54,7 @@ Main navigation: About, Services, Products, Careers, and the **Talk to us** butt
 
 ## 5. Content model (CW-PD-005)
 
-Version 1 page copy lives in the frontend code (`frontend/app/**/page.tsx`), reviewed through pull requests. The API also exposes a published catalogue for future use: `products`, `services`, `content_items` + `content_revisions`, `career_opportunities`, each with `slug`, `lifecycle_state` (draft/published) and `published_at`, seeded by migration 004. Changes to either go through Git and CI. An editorial CMS is Phase 2 (D-005).
+Page copy lives in the frontend code (`frontend/app/**/page.tsx`), reviewed through pull requests. **Products and services** are edited in the staff area (Phase 2.3, D-011): stored in `products` / `services` (name, label, icon, summary, up to 5 points, display order, shown/hidden) with drafts and every published version in `catalog_revisions`; the website reads them from the API at request time and falls back to the built-in V1 copy if the API cannot be read. `content_items` + `content_revisions` and `career_opportunities` remain API-only.
 
 ## 6. Careers and enquiry requirements (CW-PD-006)
 

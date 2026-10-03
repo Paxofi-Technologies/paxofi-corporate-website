@@ -162,24 +162,26 @@ export function parseCatalog(payload: unknown): CatalogItem[] | null {
 }
 
 /** Published products or services from the API, or the built-in copy if the API cannot be read. */
-export async function loadCatalog(
-  type: CatalogType,
-  apiBase: string | undefined,
-  fetchImpl: typeof fetch = fetch,
-): Promise<CatalogItem[]> {
+export async function loadCatalog(type: CatalogType, apiBase: string | undefined, fetchImpl: typeof fetch = fetch): Promise<CatalogItem[]> {
   const base = (apiBase ?? "").trim().replace(/\/+$/, "");
-  if (!/^https?:\/\//.test(base)) return FALLBACK_CATALOG[type];
+  if (!/^https?:\/\//.test(base)) return fallback(type, "API_BASE_URL is not an absolute URL");
   try {
     const response = await fetchImpl(`${base}/${type}?per_page=50`, {
       headers: { Accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!response.ok) return FALLBACK_CATALOG[type];
-    return parseCatalog(await response.json()) ?? FALLBACK_CATALOG[type];
-  } catch {
-    return FALLBACK_CATALOG[type];
+    if (!response.ok) return fallback(type, `HTTP ${response.status}`);
+    return parseCatalog(await response.json()) ?? fallback(type, "unexpected response");
+  } catch (error) {
+    return fallback(type, error instanceof Error ? error.message : "request failed");
   }
+}
+
+/** Built-in copy, with one line in the server log (cPanel: stderr.log) saying why. */
+function fallback(type: CatalogType, reason: string): CatalogItem[] {
+  if (process.env.NODE_ENV === "production") console.warn(`catalog: showing built-in ${type} (${reason})`);
+  return FALLBACK_CATALOG[type];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
