@@ -8,6 +8,7 @@ import { assertAccessible, startHarness } from "./harness.mjs";
 
 const API_PORT = Number(process.env.E2E_PORT || 3123) + 3;
 const mode = { value: "ok" };
+const pageviews = [];
 
 const IMAGE_ID = "c0ffee00-0000-4000-8000-000000000002";
 const DOC_ID = "c0ffee00-0000-4000-8000-000000000001";
@@ -35,6 +36,15 @@ before(async () => {
       return;
     }
     const path = new URL(request.url, "http://localhost").pathname;
+    if (path === "/api/v1/analytics/pageview" && request.method === "POST") {
+      let body = "";
+      request.on("data", (chunk) => (body += chunk));
+      request.on("end", () => {
+        pageviews.push({ body: JSON.parse(body), contentType: request.headers["content-type"], cookie: request.headers.cookie ?? null });
+        response.writeHead(204).end();
+      });
+      return;
+    }
     if (path.startsWith("/api/v1/media/")) {
       // As the API serves media: embeddable by the website, which requires CORP (COEP require-corp).
       response.writeHead(200, { "content-type": path.endsWith(".png") ? "image/png" : "application/pdf", "cross-origin-resource-policy": "cross-origin" }).end(PNG);
@@ -95,5 +105,26 @@ describe("catalogue pages", () => {
     assert.equal(await page.locator(".icon-card h3").count(), 6);
     await page.context().close();
     mode.value = "ok";
+  });
+});
+
+describe("visit counting (D-014)", () => {
+  test("each page view is sent once, without cookies; the source only on the first page", async () => {
+    mode.value = "ok";
+    pageviews.length = 0;
+    const page = await newPage();
+    await page.goto(`${BASE}/products`, { referer: "https://www.google.com/" });
+    await page.waitForFunction(() => document.readyState === "complete");
+    await page.getByRole("navigation", { name: /main/i }).getByRole("link", { name: "Services" }).click();
+    await page.waitForURL(`${BASE}/services`);
+    await page.waitForTimeout(500);
+
+    assert.deepEqual(pageviews.map((v) => [v.body.path, v.body.entry]), [["/products", true], ["/services", false]]);
+    assert.match(pageviews[0].body.referrer, /google\.com/, "the first page says where the visit came from");
+    assert.equal(pageviews[1].body.referrer, "", "later pages of the visit carry no referrer");
+    assert.ok(pageviews.every((v) => v.cookie === null && /^text\/plain/.test(v.contentType ?? "")), "a simple request with no cookies");
+    assert.ok(pageviews.every((v) => typeof v.body.width === "number"));
+    assert.deepEqual(await page.context().cookies(), [], "nothing is stored in the browser");
+    await page.context().close();
   });
 });

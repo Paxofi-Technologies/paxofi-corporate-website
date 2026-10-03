@@ -1610,3 +1610,134 @@ textarea:focus-visible {
   font-weight: 600;
   text-align: center;
 }
+
+/* Analytics (D-014) */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.stat-tile {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.stat-tile dt {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.stat-tile dd.admin-sub {
+  margin: 2px 0 0;
+}
+.stat-tile dd:not(.admin-sub) {
+  margin: 4px 0 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.chart {
+  position: relative;
+  margin-top: 12px;
+}
+.chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.chart-axis {
+  fill: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-bar {
+  fill: var(--paxofi-blue);
+}
+.chart-bar--active {
+  fill: var(--blue-strong);
+}
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  color: var(--text);
+  pointer-events: none;
+}
+.chart-tooltip strong {
+  color: var(--ink);
+}
+.chart-table {
+  margin-top: 12px;
+}
+.chart-table summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--blue-strong);
+}
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.analytics-grid h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.rank-table th,
+.rank-table td {
+  padding: 6px 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rank-table thead th {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.rank-table th[scope="row"] {
+  position: relative;
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+  width: 100%;
+  padding-right: 12px;
+}
+.rank-table td + td,
+.rank-table th + th {
+  padding-left: 16px;
+}
+.rank-bar {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  background: #e6f0ff;
+  border-radius: 4px;
+}
+.rank-label {
+  position: relative;
+  padding-left: 8px;
+  overflow-wrap: anywhere;
+}

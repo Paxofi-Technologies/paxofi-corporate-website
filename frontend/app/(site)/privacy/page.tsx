@@ -14,7 +14,7 @@ export default function Privacy() {
       <PageHero
         eyebrow="Privacy"
         title="Privacy at Paxofi."
-        intro="We collect only the information needed to answer your enquiries and keep this website secure. This website does not use analytics, advertising or tracking cookies."
+        intro="We collect only the information needed to answer your enquiries, keep this website secure and count visits without identifying anyone. This website uses no cookies for visitors, no advertising and no third-party tracking."
       />
       <section className="section">
         <div className="container prose">
@@ -41,9 +41,27 @@ export default function Privacy() {
 
           <h2>Cookies and tracking</h2>
           <p>
-            This website sets no cookies for visitors and uses no analytics, advertising or third-party tracking. Fonts
-            and images are served from our own servers. Paxofi staff who sign in to the staff area receive one strictly
-            necessary session cookie, which ends when they sign out or after 8 hours.
+            This website sets no cookies for visitors and uses no advertising or third-party tracking. Fonts and images
+            are served from our own servers. Paxofi staff who sign in to the staff area receive one strictly necessary
+            session cookie, which ends when they sign out or after 8 hours.
+          </p>
+
+          <h2>Counting visits</h2>
+          <p>
+            To understand which pages are useful, our own server counts page views. Nothing is stored on your device and
+            no other company is involved. For each page view we use only:
+          </p>
+          <ul>
+            <li>which page of this website you opened;</li>
+            <li>the website you came from, on the first page of your visit (its domain only, for example google.com);</li>
+            <li>whether your screen is a phone, tablet or desktop size.</li>
+          </ul>
+          <p>
+            To count how many different people visit each day, your IP address and browser details are combined with a
+            random code that changes every day and turned into a one-way code that cannot be reversed. That code is
+            deleted at the end of the day, so we cannot recognise you on another day or link a visit to you. We keep
+            only daily totals, for 25 months. If your browser sends a Do Not Track or Global Privacy Control signal,
+            your visits are not counted at all.
           </p>
 
           <h2>Job applications</h2>

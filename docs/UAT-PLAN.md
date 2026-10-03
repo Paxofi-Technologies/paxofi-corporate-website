@@ -166,3 +166,18 @@ Record sign-off ("Phase 2.5 UAT passed") in Asana.
 ### Results — release 20261003-f48adc7 (3 Oct 2026)
 
 **Phase 2.5 accepted**, signed off by Samuel Kehinde Adeniji (owner and founder): "Everything has been setup properly and all running fine", then "ssl now working". Release deployed to live (Steps 1–5) and the staging copy created (Step 11). Screenshots confirm: the staging banner on every page, the staging staff area with its own administrator and two-factor requirement, and HTTPS on `staging.corporate.paxofi.com`. The first check found staging on `http://` without staging mode; both were fixed before sign-off (SITE_ENVIRONMENT set, certificate installed).
+
+## Phase 2.6 — visitor analytics (D-014)
+
+Run after deploying the release with **Analytics**. About 10 minutes. Use a normal browser window with Do Not Track off.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| A1 | Visits are counted | Open the live website and click through Home → Products → Contact; then staff area → **Analytics** | Today's page views have gone up by about 3; the pages appear under **Pages** | |
+| A2 | No cookies | On the live site: browser address bar → site information → Cookies | No cookies for corporate.paxofi.com (unless signed in to the staff area) | |
+| A3 | Sources | Search Google for "Paxofi Technologies", open the site from the results; check **Analytics** a minute later | `google.com` appears under *Where visitors came from* | |
+| A4 | Periods and table | Switch between 7, 30 and 90 days; open **Show as a table** | The chart and figures change; the table lists every day | |
+| A5 | Privacy page | Open /privacy | The *Counting visits* section explains what is counted | |
+| A6 | Business Development | Sign in as Business Development | **Analytics** is visible | |
+
+Record sign-off ("Phase 2.6 UAT passed") in Asana.

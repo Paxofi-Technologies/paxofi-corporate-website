@@ -161,6 +161,7 @@ jobs:
           test -f database/008_staff_two_factor.sql
           test -f database/009_editable_catalog.sql
           test -f database/010_media_library.sql
+          test -f database/011_cookieless_analytics.sql
           test -f backend/composer.lock
           if grep -RInE '(^|/)(\.env|.*\.pem|.*\.key)$' . --exclude-dir=.git --exclude='*.md' --exclude='.gitignore'; then
             echo 'Potential secret-bearing file detected.'

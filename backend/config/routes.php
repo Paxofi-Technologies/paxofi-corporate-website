@@ -11,6 +11,7 @@ return [
  ['GET','/api/v1/careers','public','published careers'],
  ['POST','/api/v1/forms/{form_key}/submit','public+rate-limit','form submission'],
  ['GET','/api/v1/media/{id}/{filename}','public','media library file (images shown, documents downloaded)'],
+ ['POST','/api/v1/analytics/pageview','public','cookieless page view (always 204; bots and Do Not Track ignored)'],
  ['GET','/api/v1/admin/setup','admin-entry','first administrator setup available?'],
  ['POST','/api/v1/admin/setup','admin-entry','create the first administrator (one-time setup code)'],
  ['POST','/api/v1/admin/session','admin-entry','staff sign-in (throttled)'],
@@ -43,4 +44,5 @@ return [
  ['POST','/api/v1/admin/media','admin','upload an image or document (raw body, up to 10 MB)','content.edit'],
  ['PATCH','/api/v1/admin/media/{id}','admin','change an image description or document title','content.edit'],
  ['DELETE','/api/v1/admin/media/{id}','admin','delete a file no item uses','content.publish'],
+ ['GET','/api/v1/admin/analytics','admin','visitor analytics for 7, 30 or 90 days','analytics.read'],
 ];

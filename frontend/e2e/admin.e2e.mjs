@@ -18,7 +18,7 @@ const ADMIN = {
   status: "active",
   role: "administrator",
   role_label: "Administrator",
-  permissions: ["audit.read", "content.edit", "content.publish", "enquiries.read", "enquiries.update", "users.manage"],
+  permissions: ["analytics.read", "audit.read", "content.edit", "content.publish", "enquiries.read", "enquiries.update", "users.manage"],
   last_login_at: "2026-10-02 09:00:00",
 };
 const BD = {
@@ -191,6 +191,18 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
         entry.item.visible = body.visible;
       }
       return reply(route, 200, detail(id));
+    }
+    if (path === "/analytics" && method === "GET") {
+      const days = Number(url.searchParams.get("days") ?? 30);
+      const daily = Array.from({ length: days }, (_, i) => ({ day: new Date(Date.UTC(2026, 9, 3 - (days - 1 - i))).toISOString().slice(0, 10), views: (i * 7) % 23, visitors: (i * 3) % 11, enquiries: i % 5 === 0 ? 1 : 0 }));
+      return reply(route, 200, {
+        days, from: daily[0].day, to: daily[days - 1].day,
+        totals: { views: daily.reduce((a, d) => a + d.views, 0), visitors: daily.reduce((a, d) => a + d.visitors, 0), enquiries: daily.reduce((a, d) => a + d.enquiries, 0) },
+        daily,
+        pages: [{ path: "/", views: 120, visitors: 80 }, { path: "/products", views: 64, visitors: 40 }, { path: "(other)", views: 3, visitors: 3 }],
+        sources: [{ source: "(direct)", views: 70 }, { source: "google.com", views: 41 }],
+        devices: [{ device: "phone", views: 110 }, { device: "desktop", views: 77 }],
+      });
     }
     if (path === "/media" && method === "GET") {
       return reply(route, 200, state.media, { uploads: true, images: true, image_max_bytes: 5242880, document_max_bytes: 10485760, server_max_bytes: 8388608 });
@@ -658,10 +670,41 @@ describe("staff area", () => {
     await page.context().close();
   });
 
+  test("staff see visitor analytics with a chart, tables and a period switch", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/analytics`);
+    await page.getByRole("heading", { name: "Analytics", level: 1 }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "Analytics" }).getAttribute("aria-current"), "page");
+    await page.getByRole("img", { name: /Page views per day, 30 days/ }).waitFor();
+    await page.getByRole("cell", { name: "Home" }).or(page.getByRole("rowheader", { name: "Home" })).first().waitFor();
+    await page.getByText("google.com").waitFor();
+    await assertAccessible(page, "on analytics");
+
+    await page.locator(".chart svg rect").nth(29).hover();
+    await page.locator(".chart-tooltip").getByText(/page views/).waitFor();
+
+    await page.getByRole("button", { name: "Last 7 days" }).click();
+    await page.getByRole("img", { name: /Page views per day, 7 days/ }).waitFor();
+    assert.ok(api.calls.some((c) => c.path === "/analytics"), "report loaded from the API");
+    await page.getByText("Show as a table").click();
+    assert.equal(await page.locator(".chart-table tbody tr").count(), 7);
+    await page.context().close();
+  });
+
+  test("Business Development without analytics.read does not see Analytics", async () => {
+    const page = await newPage();
+    await fakeAdminApi(page, { user: { ...BD, permissions: ["content.edit", "enquiries.read"] }, signedIn: true });
+    await page.goto(`${BASE}/admin/enquiries`);
+    await page.locator("h1").waitFor();
+    assert.equal(await page.getByRole("link", { name: "Analytics" }).count(), 0);
+    await page.context().close();
+  });
+
   test("on a phone the staff area fits the screen", async () => {
     const page = await newPage({ viewport: { width: 360, height: 740 } });
     await fakeAdminApi(page, { signedIn: true });
-    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01", "/admin/media"]) {
+    for (const path of ["/admin/enquiries", "/admin/enquiries/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "/admin/users", "/admin/account", "/admin/content", "/admin/content/products/7b0f3a0e-5c1d-4f6a-9b8e-1a2c3d4e5f01", "/admin/media", "/admin/analytics"]) {
       await page.goto(BASE + path);
       await page.locator("h1").waitFor();
       await page.waitForLoadState("networkidle");
