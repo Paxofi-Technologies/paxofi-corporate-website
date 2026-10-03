@@ -166,6 +166,7 @@ From this release, staff can protect their sign-in with a 6-digit code from an a
     - install an authenticator app if you don't have one (Google Authenticator, Microsoft Authenticator or 1Password);
     - **Set up two-factor sign-in** → scan the QR code with the app (or type the set-up key) → enter the 6-digit code the app shows → **Turn on two-factor sign-in**;
     - **save the 10 recovery codes** (copy them into your password manager or download the file). Each works once if you lose your phone. They are not shown again.
+
 5. Sign out and sign in again: after your password, enter the current code from the app.
 6. Every other administrator does step 4 at their next sign-in. Business Development staff can turn it on at *My account* → **Set up two-factor sign-in** (recommended).
 
@@ -199,6 +200,7 @@ From this release, staff can upload pictures and documents under **Media** and c
 3. **Check the upload size limit:** sign in at {{SITE_URL}}/admin → **Media**.
     - If the page says *The server currently accepts files up to … MB*, PHP's limit is below 10 MB. This release sets it to 16 MB itself (file `backend/public/.user.ini`); wait 5 minutes and reload.
     - If the message stays: cPanel → **MultiPHP INI Editor** → **Basic Mode** → choose the API domain (`api.paxofi.com`) → set `post_max_size` to `16M` → **Apply**.
+
 4. **Test:** upload a picture (with a short description) and a PDF. Both appear in the list. **Open** shows the picture; the PDF downloads.
 5. **Use them:** **Content** → an item → **Picture** and **Document to download** → **Save draft** → **Publish**. The card on the website shows the picture and a download link.
 
@@ -225,6 +227,7 @@ The staging copy is a private second website where each new release is installed
     - `api-staging.paxofi.com`, document root `/staging/paxofi-api-runtime/backend/public` (untick *Share document root*);
     - `staging.corporate.paxofi.com`, document root `/staging.corporate.paxofi.com` (its own folder, like the live site).
     - Then **SSL/TLS Status** → select both → **Run AutoSSL**, and turn on **Force HTTPS Redirect** for both under **Domains**. If a new address does not open after 30 minutes, the domain's DNS is managed elsewhere: add the two names there (same IP address as `corporate.paxofi.com`).
+
 3. **Database:** cPanel → **MySQL Databases** → create database `corporate_staging` (shown as `paxoalhu_corporate_staging`), create a new user with a new password, and **Add User To Database** with **ALL PRIVILEGES**. Then phpMyAdmin → click the new database → **Import** → `database-install-{{VERSION}}.sql` → **Import**. Use the *install* file only here, and only once.
 4. **API:** upload and extract `paxofi-api-runtime-{{VERSION}}.zip` into `/home/paxoalhu/staging/` (you get `staging/paxofi-api-runtime/`). In `backend/`, copy `.env.example` to `.env`, **Edit** it and set:
 
@@ -238,11 +241,13 @@ The staging copy is a private second website where each new release is installed
         MEDIA_STORAGE_PATH=/home/paxoalhu/staging/paxofi-media
 
     **Change Permissions** → `600`. cPanel → **MultiPHP Manager** → tick `api-staging.paxofi.com` → **PHP 8.4** → **Apply**. Check `https://api-staging.paxofi.com/api/v1/readiness` shows `"database":true`.
+
 5. **Website:** upload and extract `paxofi-corporate-website-{{VERSION}}.zip` into `/home/paxoalhu/staging/`. cPanel → **Setup Node.js App** → **Create Application**:
     - Node.js version **22**, Application mode **Production**;
     - Application root `staging/paxofi-corporate-website`, Application URL `staging.corporate.paxofi.com`, startup file `app.js`;
     - **Environment variables:** `API_BASE_URL` = `https://api-staging.paxofi.com/api/v1`, `SITE_ENVIRONMENT` = `staging`, `STAGING_PASSWORD` = a password of 12 or more characters (keep it in your password manager; share it only with staff who test);
     - **Create**, then **Start App**. Do not click *Run NPM Install*.
+
 6. **Check it is private:** open `https://staging.corporate.paxofi.com` in a private window. The browser asks for a user name and password: enter any user name (for example `paxofi`) and the staging password. A yellow line at the top says *Staging site for testing*. Without the password nothing is shown.
 7. **Staff account on staging:** open `https://staging.corporate.paxofi.com/admin/setup` and create an administrator with the staging `ADMIN_SETUP_TOKEN`, as in Step 7. Then delete the `ADMIN_SETUP_TOKEN` line from the staging `.env`. Staging accounts are separate from live accounts.
 
