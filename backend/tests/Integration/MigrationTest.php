@@ -155,6 +155,6 @@ final class MigrationTest extends DatabaseTestCase
         }
 
         $foreignKeys = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()')->fetchColumn();
-        self::assertSame(9, $foreignKeys, 'foreign keys: 8 declared in 001, plus recovery_codes.user_id (008)');
+        self::assertSame(14, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010)');
     }
 }

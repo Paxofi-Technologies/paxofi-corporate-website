@@ -13,6 +13,8 @@ use Paxofi\CorporateWebsite\Application\Exception\Conflict;
 use Paxofi\CorporateWebsite\Application\Exception\Forbidden;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
+use Paxofi\CorporateWebsite\Application\Media\MediaKind;
+use Paxofi\CorporateWebsite\Application\Media\MediaRepository;
 use Paxofi\CorporateWebsite\Application\RequestContext;
 
 /**
@@ -22,6 +24,10 @@ use Paxofi\CorporateWebsite\Application\RequestContext;
  * visible) and at most one draft. Saving changes only the draft; publishing
  * copies it to the live content and keeps it as a revision, so any earlier
  * version can be restored as a new draft. New items start hidden.
+ *
+ * An item may show a picture and offer a document from the media library
+ * (D-012); both are part of the content, so they follow the same draft and
+ * publish steps.
  */
 final class CatalogEditor
 {
@@ -29,6 +35,7 @@ final class CatalogEditor
         private readonly CatalogEditorRepository $items,
         private readonly AuditRecorder $audit,
         private readonly TransactionManager $transactions,
+        private readonly MediaRepository $media,
     ) {
     }
 
@@ -64,7 +71,7 @@ final class CatalogEditor
     /** Creates a hidden item; it appears on the website once shown. */
     public function create(CatalogKind $kind, array $input, AuthenticatedStaff $staff, RequestContext $context): array
     {
-        $content = CatalogContent::fromInput($input);
+        $content = $this->checkMedia(CatalogContent::fromInput($input));
         $slug = $this->uniqueSlug($kind, $content->name);
         $id = (string) $this->transactions->transaction(function () use ($kind, $slug, $content, $staff, $context): string {
             $id = $this->items->insert($kind, $slug, $content);
@@ -80,7 +87,7 @@ final class CatalogEditor
     public function saveDraft(CatalogKind $kind, string $id, array $input, AuthenticatedStaff $staff, RequestContext $context): array
     {
         $this->requireItem($kind, $id);
-        $content = CatalogContent::fromInput($input);
+        $content = $this->checkMedia(CatalogContent::fromInput($input));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->saveDraft($kind, $id, $content, $staff->user->id);
             $this->record('catalog.draft_saved', $kind, $id, $staff, $context);
@@ -109,7 +116,7 @@ final class CatalogEditor
         $this->requirePublisher($staff);
         $this->requireItem($kind, $id);
         $draft = $this->items->draft($kind, $id) ?? throw new Conflict('There are no draft changes to publish.');
-        $content = CatalogContent::fromStored($draft['data']);
+        $content = $this->withoutDeletedMedia(CatalogContent::fromStored($draft['data']));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->updateLive($kind, $id, $content);
             $this->items->markDraftPublished($kind, $id, $staff->user->id);
@@ -140,13 +147,44 @@ final class CatalogEditor
     {
         $this->requireItem($kind, $id);
         $revision = $this->items->revision($kind, $id, $revisionId) ?? throw new ResourceNotFound('Version not found.');
-        $content = CatalogContent::fromStored($revision['data']);
+        $content = $this->withoutDeletedMedia(CatalogContent::fromStored($revision['data']));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->saveDraft($kind, $id, $content, $staff->user->id);
             $this->record('catalog.restored', $kind, $id, $staff, $context);
         });
 
         return $this->get($kind, $id);
+    }
+
+    /** The chosen picture and document must exist in the media library, as an image and a document. */
+    private function checkMedia(CatalogContent $content): CatalogContent
+    {
+        $errors = [];
+        if ($content->imageId !== null && !$this->isMedia($content->imageId, MediaKind::Image)) {
+            $errors['image_id'] = 'That image is no longer in the media library. Choose another.';
+        }
+        if ($content->documentId !== null && !$this->isMedia($content->documentId, MediaKind::Document)) {
+            $errors['document_id'] = 'That document is no longer in the media library. Choose another.';
+        }
+        if ($errors !== []) {
+            throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
+        }
+
+        return $content;
+    }
+
+    /** An older version may name a file deleted since; it is left out rather than blocking the restore. */
+    private function withoutDeletedMedia(CatalogContent $content): CatalogContent
+    {
+        return $content->withMedia(
+            $content->imageId !== null && $this->isMedia($content->imageId, MediaKind::Image) ? $content->imageId : null,
+            $content->documentId !== null && $this->isMedia($content->documentId, MediaKind::Document) ? $content->documentId : null,
+        );
+    }
+
+    private function isMedia(string $id, MediaKind $kind): bool
+    {
+        return ($this->media->find($id)['kind'] ?? null) === $kind->value;
     }
 
     /** @return array<string, mixed> */

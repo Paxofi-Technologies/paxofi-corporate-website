@@ -6,6 +6,7 @@ namespace Paxofi\CorporateWebsite\Http;
 
 use Paxofi\Core\Contracts\HttpRequest;
 use Paxofi\Core\Http\Request;
+use Paxofi\CorporateWebsite\Application\Media\MediaRules;
 
 /** Builds an immutable PCF request from PHP superglobals (SAPI boundary). */
 final class RequestFactory
@@ -51,14 +52,31 @@ final class RequestFactory
         );
     }
 
-    public static function readBody(): string
+    /** The media upload route (D-012) is the only one whose body is a file. */
+    public const UPLOAD_PATH = '/api/v1/admin/media';
+
+    /**
+     * How much of the request body to read: 64 KB, or the largest media file
+     * on the upload route.
+     *
+     * @param array<string, mixed> $server
+     */
+    public static function bodyLimit(array $server): int
+    {
+        $path = is_string($server['REQUEST_URI'] ?? null) ? (string) parse_url($server['REQUEST_URI'], PHP_URL_PATH) : '';
+        $isUpload = ($server['REQUEST_METHOD'] ?? '') === 'POST' && rtrim($path, '/') === self::UPLOAD_PATH;
+
+        return $isUpload ? MediaRules::UPLOAD_MAX_BYTES : self::MAX_BODY_BYTES;
+    }
+
+    public static function readBody(int $limit = self::MAX_BODY_BYTES): string
     {
         $stream = fopen('php://input', 'rb');
         if ($stream === false) {
             return '';
         }
         // Read one byte past the limit so oversized bodies are detectable downstream.
-        $body = stream_get_contents($stream, self::MAX_BODY_BYTES + 1);
+        $body = stream_get_contents($stream, $limit + 1);
         fclose($stream);
 
         return $body === false ? '' : $body;

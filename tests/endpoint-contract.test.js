@@ -17,6 +17,7 @@ const routes = [
   ["GET", "/api/v1/services", "public"],
   ["GET", "/api/v1/careers", "public"],
   ["POST", "/api/v1/forms/{form_key}/submit", "public+rate-limit"],
+  ["GET", "/api/v1/media/{id}/{filename}", "public"],
   ["GET", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/setup", "admin-entry"],
   ["POST", "/api/v1/admin/session", "admin-entry"],
@@ -45,6 +46,10 @@ const routes = [
   ["POST", "/api/v1/admin/catalog/{type}/{id}/publish", "admin"],
   ["POST", "/api/v1/admin/catalog/{type}/{id}/visibility", "admin"],
   ["POST", "/api/v1/admin/catalog/{type}/{id}/revisions/{revision}/restore", "admin"],
+  ["GET", "/api/v1/admin/media", "admin"],
+  ["POST", "/api/v1/admin/media", "admin"],
+  ["PATCH", "/api/v1/admin/media/{id}", "admin"],
+  ["DELETE", "/api/v1/admin/media/{id}", "admin"],
 ];
 
 test("endpoint RTM has unique method/route entries", () => {
@@ -86,9 +91,15 @@ test("every admin controller action goes through AdminGuard", () => {
   }
 });
 
-test("admin areas not built yet (CMS, media) are not exposed", () => {
+test("admin areas not built yet (page text CMS) are not exposed", () => {
   const sources = read("backend", "config", "routes.php") + read("backend", "src", "Bootstrap", "ApiApplication.php");
-  for (const route of ["/api/v1/admin/content", "/api/v1/admin/media"]) assert.ok(!sources.includes(route), route);
+  for (const route of ["/api/v1/admin/content"]) assert.ok(!sources.includes(route), route);
+});
+
+test("media uploads read large bodies on the upload route only (D-012)", () => {
+  const factory = read("backend", "src", "Http", "RequestFactory.php");
+  assert.match(factory, /UPLOAD_PATH = '\/api\/v1\/admin\/media'/);
+  assert.match(read("backend", "public", "index.php"), /readBody\(RequestFactory::bodyLimit\(\$_SERVER\)\)/);
 });
 
 test("the RTM documents every route", () => {
