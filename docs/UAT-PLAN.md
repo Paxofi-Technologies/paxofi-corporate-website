@@ -121,3 +121,7 @@ Run after deploying the release that includes **Content** in the staff area. Abo
 | C5 | Hide and show | **Hide from website** on a service; reload /services; then **Show on website** | It disappears, then comes back in the same place | |
 | C6 | Business Development | Sign in as a Business Development user → **Content** → change a summary → **Save draft** | There is no **Publish** button; "An administrator will publish it" | |
 | C7 | Audit | **Audit log** | Shows the draft, publish, restore and hide/show actions with names and times | |
+
+### Results — release 20261003-ec0b070 (3 Oct 2026)
+
+**Phase 2.3 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder): "I have deployed and everything works perfectly fine". Guide Steps 1–5 applied (database upgrade with migration 009); no new server settings.
