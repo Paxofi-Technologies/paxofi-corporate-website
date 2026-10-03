@@ -149,3 +149,24 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 **Not chosen:**
 - All page text editable (option 2): bigger, and long text can break layouts. Revisit with real editing needs.
 - A third-party CMS: an extra service to host and secure on shared hosting.
+
+## D-012 — Media library: images and documents (3 Oct 2026)
+
+**Decision (CTO, owner approved on 3 Oct 2026 and asked for PDFs and other documents too; slice P2.4):** staff upload pictures and documents at `/admin` → **Media**. A product or service can show one picture and offer one document (for example a brochure).
+
+- **Accepted files**, judged from the content, not the name:
+  - images: JPEG, PNG, WebP, up to 5 MB;
+  - documents: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), plain text and CSV, up to 10 MB.
+  - Refused with a clear message: SVG (can carry script), GIF, HEIC, older Office formats and any Office file with macros, programs and archives.
+- **Images are re-encoded on upload:** camera rotation applied, all metadata removed (camera, location, comments), longest side at most 2400 px. Each picture needs a description for screen readers.
+- **Documents are stored as uploaded** after the type check, and are always downloaded, never opened as a page on the API's address.
+- **Public by link:** every file has a fixed address (`/api/v1/media/{id}/{name}`), cached for a year. The library is for public material only; nothing confidential is uploaded.
+- **Storage:** files live in one folder outside the website and API release folders (`MEDIA_STORAGE_PATH`, guide Step 10), named by id, so releases never remove them. The database keeps the type, size, description or title, a SHA-256 and who uploaded it (`media_assets`, migration 010).
+- **Roles:** `content.edit` (Administrator, Business Development) uploads and edits descriptions and titles; `content.publish` (Administrator) deletes. A file used by a product or service (live or in a draft) cannot be deleted. Every change is audited (`media.*`).
+- **Website:** the picture and download link are part of the item's content, so they follow the D-011 draft and publish steps. The page policy allows images from the API's address (CSP `img-src`); media responses allow embedding (`Cross-Origin-Resource-Policy: cross-origin`).
+- **Retention:** files stay until staff delete them; they hold no visitor data, so D-008 does not apply.
+
+**Not chosen:**
+- Uploading through cPanel only: no link to products and services, and no checks.
+- An external file host or CDN: another account and service to secure; revisit with the VPS move if traffic grows.
+- Showing PDFs in the browser: inline documents on the API's address are a larger attack surface than downloads.

@@ -26,6 +26,8 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | | request_id | VARCHAR(64) NULL | – | request | support | OK |
 | | created_at | TIMESTAMP, UTC | – | default | retention | Deleted after 24 months (D-008) |
 | products / services | id, slug (UNIQUE), name, summary, lifecycle_state, published_at, created_at, updated_at; from 009: label VARCHAR(60), icon VARCHAR(40), points JSON, sort_order INT | see 001/009 | – | migrations 004/009 (seed); staff area (D-011) | `/api/v1/products`, `/services` (published only, by sort_order) | OK; small tables, ordering in memory; shown = lifecycle_state 'published' |
+| products / services (010) | image_id, document_id | CHAR(36) NULL, FK → media_assets ON DELETE SET NULL | – | staff area (D-012) | public API resolves them to the picture and download | OK; files in use cannot be deleted |
+| media_assets (001, 010) | id, kind (`image`/`document`), filename (safe download name), media_type (checked MIME), storage_reference (= id), lifecycle_state, size_bytes, width/height (images), alt_text (images), title (documents), sha256, uploaded_by FK → users ON DELETE SET NULL, created_at, updated_at; index (kind, created_at) | 001/010 | uploader id only | staff area (D-012) | `/api/v1/media/{id}/{filename}`, staff area | OK; file bytes live in `MEDIA_STORAGE_PATH`, not in the database; no visitor data |
 | catalog_revisions (009) | id, item_type (product/service), item_id, state (draft/published/created), data JSON, author_id, created_at; index (item_type, item_id, created_at) | 009 | – | staff area | staff area history | OK; at most one draft per item; no FK so history survives |
 | content_items | id, slug (UNIQUE), title, content_type, lifecycle_state, published_at, timestamps | see 001 | – | migration 004 | `/api/v1/content` | OK |
 | content_revisions | id, content_item_id FK, revision_no (UNIQUE per item), author_id FK NULL, content_json JSON, created_at | see 001/006 | – | migration 004 | latest revision per item | OK; JSON type restored in 006 |
@@ -54,7 +56,6 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 
 | Table | Purpose | Decision |
 |---|---|---|
-| media_assets | Uploaded media | Phase 2 (D-005) |
 | career_applications | Job applications | Not used: careers site (D-001); drop in a later migration if never needed |
 
 ## Findings
@@ -62,4 +63,4 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 1. Personal data is stored in `enquiries` and, from Phase 2.1, in the staff tables (`users`, `sessions`, `login_attempts`); retention is automated for all of them (D-008, `bin/purge-retention.php`).
 2. All text columns are utf8mb4; integration tests round-trip non-Latin text and emoji (`MigrationTest`).
 3. Every query path used by v1 is indexed (published listings, rate limit by email and by IP, audit by action).
-4. Phase 2.1 delivered `users.password_hash`, hashed session tokens and sign-in throttling (007); Phase 2.2 the TOTP second factor with encrypted secrets and hashed recovery codes (008). Still to design: the `content_items` editorial workflow (P2.3).
+4. Phase 2.1 delivered `users.password_hash`, hashed session tokens and sign-in throttling (007); Phase 2.2 the TOTP second factor with encrypted secrets and hashed recovery codes (008). Phase 2.3 added drafts and versions for products and services (`catalog_revisions`, 009); Phase 2.4 the media library (`media_assets` extended, 010). Still to design: editing other page text with `content_items`.

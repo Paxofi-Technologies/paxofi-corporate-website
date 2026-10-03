@@ -118,6 +118,17 @@ Edited by staff at `/admin` → **Content** (D-011). Business Development saves 
 - **Who changed what:** **Audit log**, actions `catalog.*`.
 - Page text other than products and services (headings, About, Careers, Privacy, Terms) still changes through a code release.
 
+## RB-13 Media library (pictures and documents)
+
+Staff upload files at `/admin` → **Media** (D-012). Files are in `/home/paxoalhu/paxofi-media` (setting `MEDIA_STORAGE_PATH`), named by id; the database table `media_assets` holds their names and details.
+
+- **Uploads refused or "not set up":** guide Step 10 and its *If something goes wrong* rows (folder, `.env` line, PHP `post_max_size`, PHP `gd`).
+- **A file must come off the website now** (wrong or confidential file): remove it from the product or service and **Publish**, then **Delete** it in **Media** (administrator). The link stops working at once, but browsers and anyone who downloaded it may still have a copy.
+- **A file is missing (404) after a server problem:** restore it from the `paxofi-media` backup into the same folder with the same name (the id).
+- **Backups:** include `paxofi-media` with every database backup (compress and download in File Manager). The database alone is not enough.
+- **Moving server (VPS):** copy `paxofi-media` as it is and set `MEDIA_STORAGE_PATH` to its new path.
+- **Who uploaded or deleted what:** **Audit log**, actions `media.*`.
+
 ## Escalation
 
 | Severity | Examples | Who acts | Target response |

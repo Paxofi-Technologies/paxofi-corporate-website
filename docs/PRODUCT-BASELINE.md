@@ -54,7 +54,7 @@ Main navigation: About, Services, Products, Careers, and the **Talk to us** butt
 
 ## 5. Content model (CW-PD-005)
 
-Page copy lives in the frontend code (`frontend/app/**/page.tsx`), reviewed through pull requests. **Products and services** are edited in the staff area (Phase 2.3, D-011): stored in `products` / `services` (name, label, icon, summary, up to 5 points, display order, shown/hidden) with drafts and every published version in `catalog_revisions`; the website reads them from the API at request time and falls back to the built-in V1 copy if the API cannot be read. `content_items` + `content_revisions` and `career_opportunities` remain API-only.
+Page copy lives in the frontend code (`frontend/app/**/page.tsx`), reviewed through pull requests. **Products and services** are edited in the staff area (Phase 2.3, D-011): stored in `products` / `services` (name, label, icon, summary, up to 5 points, display order, shown/hidden) with drafts and every published version in `catalog_revisions`; the website reads them from the API at request time and falls back to the built-in V1 copy if the API cannot be read. From Phase 2.4 (D-012) each item can show a picture and offer a document from the staff **Media** library (`media_assets`; files in `MEDIA_STORAGE_PATH`). `content_items` + `content_revisions` and `career_opportunities` remain API-only.
 
 ## 6. Careers and enquiry requirements (CW-PD-006)
 
