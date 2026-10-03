@@ -18,6 +18,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
     {
         self::$pdo->exec('DELETE FROM enquiries');
         self::$pdo->exec('DELETE FROM audit_events');
+        self::$pdo->exec('DELETE FROM login_attempts');
         $this->now = new DateTimeImmutable('2026-10-02 12:00:00', new DateTimeZone('UTC'));
     }
 
@@ -31,12 +32,32 @@ final class RetentionPurgeTest extends DatabaseTestCase
 
         $result = (new RetentionPurge(self::$pdo, new RetentionPolicy()))->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1], $result);
+        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0], $result);
         self::assertSame(['203.0.113.7', 'test-agent'], $this->network($fresh));
         self::assertSame([null, null], $this->network($ninetyOneDays));
         self::assertSame('0', (string) self::scalar('SELECT COUNT(*) FROM enquiries WHERE id = ?', [$expired]));
         self::assertSame('Ada', self::scalar('SELECT name FROM enquiries WHERE id = ?', [$ninetyOneDays]), 'enquiry content is kept');
         self::assertSame('1', (string) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'data_retention.purged'"));
+    }
+
+    public function testDeletesOldSignInAttemptsAndEndedSessions(): void
+    {
+        self::$pdo->exec("INSERT INTO users (id, email, status) VALUES ('00000000-0000-4000-8000-0000000000aa', 'retention@example.com', 'active')");
+        $at = fn (string $age): string => $this->now->modify($age)->format('Y-m-d H:i:s');
+        self::$pdo->prepare("INSERT INTO login_attempts (id, email, succeeded, created_at) VALUES (UUID(), 'a@example.com', 0, ?), (UUID(), 'a@example.com', 0, ?)")
+            ->execute([$at('-91 days'), $at('-1 day')]);
+        self::$pdo->prepare("INSERT INTO sessions (id, user_id, expires_at, last_seen_at, created_at) VALUES
+            (REPEAT('a', 64), '00000000-0000-4000-8000-0000000000aa', ?, ?, ?),
+            (REPEAT('b', 64), '00000000-0000-4000-8000-0000000000aa', ?, ?, ?)")
+            ->execute([$at('-40 days'), $at('-40 days'), $at('-41 days'), $at('+1 hour'), $at('-1 minute'), $at('-1 hour')]);
+
+        $result = (new RetentionPurge(self::$pdo, new RetentionPolicy()))->run($this->now);
+
+        self::assertSame(1, $result['login_attempts_deleted']);
+        self::assertSame(1, $result['sessions_deleted']);
+        self::assertSame(str_repeat('b', 64), self::scalar('SELECT id FROM sessions'));
+        self::$pdo->exec('DELETE FROM sessions');
+        self::$pdo->exec("DELETE FROM users WHERE id = '00000000-0000-4000-8000-0000000000aa'");
     }
 
     public function testSecondRunChangesNothing(): void
@@ -45,7 +66,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
         $purge = new RetentionPurge(self::$pdo, new RetentionPolicy());
         $purge->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0], $purge->run($this->now));
+        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0], $purge->run($this->now));
         self::assertSame('1', (string) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'data_retention.purged'"), 'no audit noise');
     }
 

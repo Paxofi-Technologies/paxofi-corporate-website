@@ -16,6 +16,7 @@ final readonly class Settings
         public array $corsAllowedOrigins,
         public int $contactRateLimitMax,
         public int $contactRateLimitWindowMinutes,
+        public ?string $adminSetupToken = null,
     ) {
     }
 
@@ -33,6 +34,8 @@ final readonly class Settings
             corsAllowedOrigins: $origins,
             contactRateLimitMax: max(1, $environment->integer('CONTACT_RATE_LIMIT_MAX', 5) ?? 5),
             contactRateLimitWindowMinutes: max(1, $environment->integer('CONTACT_RATE_LIMIT_WINDOW_MINUTES', 10) ?? 10),
+            // One-time code for creating the first administrator (D-009); ignored when shorter than 32 characters.
+            adminSetupToken: ($token = trim($environment->get('ADMIN_SETUP_TOKEN', '') ?? '')) === '' ? null : $token,
         );
     }
 }

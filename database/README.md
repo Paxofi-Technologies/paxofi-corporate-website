@@ -21,6 +21,7 @@ Migration register (apply in filename order):
 | `004_seed_published_catalog.sql` | Seeds the published V1 products and services (idempotent) |
 | `005_audit_event_action_index.sql` | Action/time index for audit review queries |
 | `006_innodb_utf8mb4_and_foreign_keys.sql` | Converts all tables to InnoDB + utf8mb4 and (re)creates the 001 foreign keys (production was built MyISAM + latin1) |
+| `007_staff_sign_in_and_roles.sql` | Phase 2 (D-009): user name/password columns, session activity, `login_attempts`, enquiry date index, roles `administrator` / `business_development` and their permissions |
 
 ## Applying migrations
 
