@@ -66,7 +66,7 @@ const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
 /** True when a chosen file will be treated as an image (it then needs a description). */
 export function isImageFile(name: string, type = ""): boolean {
-  return type.startsWith("image/") || IMAGE_EXTENSIONS.test(name);
+  return /^image\/(jpeg|png|webp)$/.test(type) || IMAGE_EXTENSIONS.test(name);
 }
 
 /** Absolute URL of a media file on the API host. */

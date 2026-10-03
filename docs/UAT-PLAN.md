@@ -137,7 +137,7 @@ Run after deploying the release with **Media** and completing guide Step 10. Abo
 | M3 | Description is required | Choose a picture, leave the description empty → **Upload** | "Describe the picture in a few words." Nothing is uploaded | |
 | M4 | Upload documents | Upload the PDF (title empty), then the Word file with a title | Both listed; the PDF's title is its file name; **Open** downloads the file | |
 | M5 | Unsuitable files refused | Try an `.exe`, `.zip` or `.svg` file | A clear message saying which files are accepted | |
-| M6 | Picture and brochure on the website | **Content** → Paxofi Pay → choose the picture and the PDF → **Publish**; open /products and the home page | The card shows the picture; /products shows "PDF, … MB" download link that downloads the file | |
+| M6 | Picture and brochure on the website | **Content** → Paxofi Pay → choose the picture and the PDF → **Publish**; open /products | The Paxofi Pay card shows the picture and a "Paxofi Pay brochure (PDF, … KB)" link that downloads the file. The home page keeps its compact cards with icons. | |
 | M7 | Files in use are protected | **Media** → the picture | **Delete** is unavailable and says it is used by Paxofi Pay | |
 | M8 | Business Development | Sign in as Business Development → **Media** | Can upload; no **Delete** button | |
 | M9 | Clean up and audit | Remove the test picture and PDF from Paxofi Pay → **Publish** → **Delete** them in **Media**; **Audit log** | They are gone from the website; the audit log shows `media.uploaded`, `media.deleted` with names and times | |
