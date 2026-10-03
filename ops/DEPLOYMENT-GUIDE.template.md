@@ -157,16 +157,14 @@ From this release, staff can protect their sign-in with a 6-digit code from an a
 2. **Keep a copy of the key** in your password manager. If it is lost or changed, everyone's authenticator stops working: staff then sign in with a recovery code and set up their authenticator again.
 3. File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/` → right-click `.env` → **Edit** → add one line at the end → **Save Changes**:
 
-```text
-MFA_ENCRYPTION_KEY=paste-the-key-here
-```
+        MFA_ENCRYPTION_KEY=paste-the-key-here
 
-   When you deploy a later release, the `.env` is copied over in Step 3.4, so the key stays. Unlike the setup code, **do not delete this line**.
+    When you deploy a later release, the `.env` is copied over in Step 3.4, so the key stays. Unlike the setup code, **do not delete this line**.
 
 4. **Set up your own two-factor:** sign in at {{SITE_URL}}/admin. As an administrator you are taken straight to **Two-factor sign-in**:
-   - install an authenticator app if you don't have one (Google Authenticator, Microsoft Authenticator or 1Password);
-   - **Set up two-factor sign-in** → scan the QR code with the app (or type the set-up key) → enter the 6-digit code the app shows → **Turn on two-factor sign-in**;
-   - **save the 10 recovery codes** (copy them into your password manager or download the file). Each works once if you lose your phone. They are not shown again.
+    - install an authenticator app if you don't have one (Google Authenticator, Microsoft Authenticator or 1Password);
+    - **Set up two-factor sign-in** → scan the QR code with the app (or type the set-up key) → enter the 6-digit code the app shows → **Turn on two-factor sign-in**;
+    - **save the 10 recovery codes** (copy them into your password manager or download the file). Each works once if you lose your phone. They are not shown again.
 5. Sign out and sign in again: after your password, enter the current code from the app.
 6. Every other administrator does step 4 at their next sign-in. Business Development staff can turn it on at *My account* → **Set up two-factor sign-in** (recommended).
 
