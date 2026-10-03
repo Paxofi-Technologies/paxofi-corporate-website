@@ -143,3 +143,7 @@ Run after deploying the release with **Media** and completing guide Step 10. Abo
 | M9 | Clean up and audit | Remove the test picture and PDF from Paxofi Pay → **Publish** → **Delete** them in **Media**; **Audit log** | They are gone from the website; the audit log shows `media.uploaded`, `media.deleted` with names and times | |
 
 Record sign-off ("Phase 2.4 UAT passed for release X") in Asana.
+
+### Results — release 20261003-a95b522 (3 Oct 2026)
+
+**Phase 2.4 UAT passed**, signed off by Samuel Kehinde Adeniji (owner and founder): "deployed and everything runs fine". Guide Steps 1–5 and Step 10 (media folder and `MEDIA_STORAGE_PATH`) applied.
