@@ -19,9 +19,12 @@ use Paxofi\Core\Observability\HealthRegistry;
 use Paxofi\CorporateWebsite\Application\Admin\AdminEnquiryService;
 use Paxofi\CorporateWebsite\Application\Admin\AuthService;
 use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogEditor;
+use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopyEditor;
+use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopySchema;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
+use Paxofi\CorporateWebsite\Application\Analytics\Analytics;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -31,19 +34,23 @@ use Paxofi\CorporateWebsite\Application\Media\ImageProcessor;
 use Paxofi\CorporateWebsite\Application\Media\MediaLibrary;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPagesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
+use Paxofi\CorporateWebsite\Http\Controllers\AnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
 use Paxofi\CorporateWebsite\Http\Controllers\HealthController;
 use Paxofi\CorporateWebsite\Http\Controllers\MediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\NavigationController;
+use Paxofi\CorporateWebsite\Http\Controllers\PageCopyController;
 use Paxofi\CorporateWebsite\Http\Controllers\ReadinessController;
 use Paxofi\CorporateWebsite\Http\Middleware\CorsMiddleware;
 use Paxofi\CorporateWebsite\Http\Middleware\ErrorHandlingMiddleware;
@@ -53,6 +60,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
 use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
@@ -63,6 +71,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoLoginAttempts;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoMediaRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPageCopyRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoSessionStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoStaffRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoTwoFactorStore;
@@ -92,6 +101,8 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/careers'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
+        ['POST', '/api/v1/analytics/pageview'],
+        ['GET', '/api/v1/pages/{page}'],
     ];
 
     /** Staff routes (decision D-009); each checks the session and permission itself. */
@@ -128,6 +139,13 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/media'],
         ['PATCH', '/api/v1/admin/media/{id}'],
         ['DELETE', '/api/v1/admin/media/{id}'],
+        ['GET', '/api/v1/admin/analytics'],
+        ['GET', '/api/v1/admin/pages'],
+        ['GET', '/api/v1/admin/pages/{page}'],
+        ['POST', '/api/v1/admin/pages/{page}/draft'],
+        ['DELETE', '/api/v1/admin/pages/{page}/draft'],
+        ['POST', '/api/v1/admin/pages/{page}/publish'],
+        ['POST', '/api/v1/admin/pages/{page}/revisions/{revision}/restore'],
     ];
 
     private readonly HttpHandler $pipeline;
@@ -183,6 +201,8 @@ final class ApiApplication implements HttpHandler
 
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
+        $router->get('/api/v1/pages/{page}', $this->lazy(fn (): Controller => new PageCopyController($this->pageCopyEditor())));
+        $router->post('/api/v1/analytics/pageview', $this->lazy(fn (): Controller => new AnalyticsController($this->analytics())));
 
         $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
         $router->get('/api/v1/admin/setup', static fn (HttpRequest $r): HttpResponse => $session()->setupStatus($r));
@@ -247,6 +267,16 @@ final class ApiApplication implements HttpHandler
         $router->add('PATCH', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->update($r));
         $router->add('DELETE', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->delete($r));
 
+        $pages = fn (): AdminPagesController => new AdminPagesController($this->pageCopyEditor(), $this->adminGuard());
+        $router->get('/api/v1/admin/pages', static fn (HttpRequest $r): HttpResponse => $pages()->list($r));
+        $router->get('/api/v1/admin/pages/{page}', static fn (HttpRequest $r): HttpResponse => $pages()->show($r));
+        $router->post('/api/v1/admin/pages/{page}/draft', static fn (HttpRequest $r): HttpResponse => $pages()->saveDraft($r));
+        $router->add('DELETE', '/api/v1/admin/pages/{page}/draft', static fn (HttpRequest $r): HttpResponse => $pages()->discardDraft($r));
+        $router->post('/api/v1/admin/pages/{page}/publish', static fn (HttpRequest $r): HttpResponse => $pages()->publish($r));
+        $router->post('/api/v1/admin/pages/{page}/revisions/{revision}/restore', static fn (HttpRequest $r): HttpResponse => $pages()->restore($r));
+
+        $router->get('/api/v1/admin/analytics', fn (HttpRequest $r): HttpResponse => (new AdminAnalyticsController($this->analytics(), $this->adminGuard()))->report($r));
+
         $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
 
         return $router;
@@ -290,6 +320,27 @@ final class ApiApplication implements HttpHandler
             new LazyTransactionManager($this->database),
             $this->clock,
         );
+    }
+
+    private function pageCopyEditor(): PageCopyEditor
+    {
+        return new PageCopyEditor(
+            PageCopySchema::default(),
+            new PdoPageCopyRepository($this->database),
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+        );
+    }
+
+    private function analytics(): Analytics
+    {
+        // The website's own hosts: a visit from them is not counted as coming from another site.
+        $hosts = array_values(array_filter(array_map(
+            static fn (string $origin): string => strtolower((string) parse_url($origin, PHP_URL_HOST)),
+            $this->settings->corsAllowedOrigins,
+        )));
+
+        return new Analytics(new PdoAnalyticsStore($this->database), $hosts, $this->clock);
     }
 
     private function mediaLibrary(): MediaLibrary

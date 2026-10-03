@@ -15,4 +15,6 @@ final class Permission
     public const CONTENT_EDIT = 'content.edit';
     /** Put drafts live, show or hide products and services (D-011). */
     public const CONTENT_PUBLISH = 'content.publish';
+    /** See the visitor analytics (D-014). */
+    public const ANALYTICS_READ = 'analytics.read';
 }

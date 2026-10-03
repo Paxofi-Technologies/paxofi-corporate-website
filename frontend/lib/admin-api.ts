@@ -41,6 +41,19 @@ export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: strin
   { value: "services", label: "Services", singular: "service" },
 ];
 
+/** Page text edited in the staff area (D-015). Fields come from page-copy.json via the API. */
+export type PageTextSummary = { page: string; label: string; path: string; published_at: string | null; has_draft: boolean };
+export type PageTextField = { key: string; group: string; label: string; kind: "line" | "text"; max: number; default: string };
+export type PageTextDetail = {
+  page: string;
+  label: string;
+  path: string;
+  fields: PageTextField[];
+  live: { fields: Record<string, string>; published_at: string } | null;
+  draft: { fields: Record<string, string>; saved_at: string; author_name: string | null } | null;
+  revisions: { id: string; created_at: string; author_name: string | null }[];
+};
+
 /** A file in the media library (D-012). path is on the API host: /api/v1/media/{id}/{filename}. */
 export type MediaItem = {
   id: string;
@@ -118,6 +131,18 @@ export async function uploadMedia(
   }
   return (isRecord(payload) ? payload.data : null) as MediaItem;
 }
+
+/** Visitor analytics (D-014). */
+export type AnalyticsReport = {
+  days: number;
+  from: string;
+  to: string;
+  totals: { views: number; visitors: number; enquiries: number };
+  daily: { day: string; views: number; visitors: number; enquiries: number }[];
+  pages: { path: string; views: number; visitors: number }[];
+  sources: { source: string; views: number }[];
+  devices: { device: string; views: number }[];
+};
 
 export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
 

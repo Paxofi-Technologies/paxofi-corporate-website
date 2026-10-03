@@ -211,6 +211,14 @@ Good to know:
 - Only administrators delete files, and only when no product or service uses them.
 - **Back up** the `paxofi-media` folder with the database (Step 1): File Manager → right-click `paxofi-media` → **Compress** → download the ZIP.
 
+## Step 10a — Visitor analytics (no server change)
+
+From this release the website counts its own visits, without cookies (decision D-014). There is nothing to set up: the database upgrade adds the tables. Staff open **Analytics** in the staff area. The figures start from the day of deployment. The daily clean-up (Step 6) removes analytics data older than 25 months.
+
+## Step 10b — Page text editing (no server change)
+
+From this release staff can change the wording of the Home, About, Services, Products, Careers and Contact pages under **Content → Page text** (decision D-015). There is nothing to set up: the database upgrade adds the table. Until someone publishes a change, every page keeps its current wording. Try it on staging first.
+
 ## Step 11 — One time: create the staging copy (about 45 minutes)
 
 The staging copy is a private second website where each new release is installed and checked **before** it goes live (decision D-013). It uses the same release files as the live site, its own database, folders and media, and a password, so nothing done there touches the live website.
