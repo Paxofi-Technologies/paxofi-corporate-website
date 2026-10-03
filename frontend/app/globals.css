@@ -1598,3 +1598,15 @@ textarea:focus-visible {
   border-radius: 8px;
   background: var(--light-gray);
 }
+
+/* Staging copy marker (D-013) */
+.staging-banner {
+  margin: 0;
+  padding: 8px 16px;
+  background: #fff3d6;
+  color: #5c3b00;
+  border-bottom: 1px solid #f0d08a;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AdminApiError, adminRequest, adminUrl, safeNextPath, statusLabel, toError } from "../lib/admin-api.ts";
+import { AdminApiError, adminRequest, adminUrl, safeNextPath, statusLabel, toError, isImageFile, formatBytes } from "../lib/admin-api.ts";
 
 test("builds admin URLs from the configured API base", () => {
   assert.equal(adminUrl("https://api.paxofi.com/api/v1/", "/session"), "https://api.paxofi.com/api/v1/admin/session");
@@ -47,4 +47,13 @@ test("only admin paths are accepted as the next page after sign-in", () => {
 test("labels enquiry statuses", () => {
   assert.equal(statusLabel("in_progress"), "In progress");
   assert.equal(statusLabel("weird"), "weird");
+});
+
+test("media uploads: which files ask for a description, and sizes (D-012)", () => {
+  assert.equal(isImageFile("photo.JPG"), true);
+  assert.equal(isImageFile("scan", "image/webp"), true);
+  assert.equal(isImageFile("logo.svg", "image/svg+xml"), false, "SVG is refused by the API, so no description is asked for");
+  assert.equal(isImageFile("brochure.pdf", "application/pdf"), false);
+  assert.equal(formatBytes(1258291), "1.2 MB");
+  assert.equal(formatBytes(300), "1 KB");
 });

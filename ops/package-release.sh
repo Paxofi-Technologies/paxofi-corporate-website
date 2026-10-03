@@ -5,6 +5,7 @@
 #   paxofi-api-runtime-<version>.zip        API with vendor/ (PCF included): no Composer on cPanel
 #   paxofi-corporate-website-<version>.zip  prebuilt Next.js app: no npm install/build on cPanel
 #   database-upgrade-<version>.sql          phpMyAdmin import: migrations + migration history
+#   database-install-<version>.sql          phpMyAdmin import into a NEW, EMPTY database (staging, D-013)
 #   DEPLOYMENT-GUIDE.md                     step-by-step upload guide
 #   SHA256SUMS
 #
@@ -124,6 +125,34 @@ SQL="$OUT_DIR/database-upgrade-$VERSION.sql"
     echo
     echo "-- End of upgrade $VERSION."
 } > "$SQL"
+
+step "phpMyAdmin install script for a new, empty database (staging copy, D-013)"
+INSTALL="$OUT_DIR/database-install-$VERSION.sql"
+{
+    echo "-- Paxofi Corporate Website — database install $VERSION ($COMMIT)"
+    echo "-- ONLY for a new, EMPTY database (the staging copy). Import it once, in"
+    echo "-- phpMyAdmin with that database selected. For the live database use"
+    echo "-- database-upgrade-$VERSION.sql instead."
+    echo
+    echo "SET SESSION default_storage_engine = InnoDB;"
+    echo "CREATE TABLE IF NOT EXISTS schema_migrations ("
+    echo "    version VARCHAR(191) NOT NULL PRIMARY KEY,"
+    echo "    checksum CHAR(64) NOT NULL,"
+    echo "    baseline TINYINT(1) NOT NULL DEFAULT 0,"
+    echo "    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+    echo ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+    for file in "$WORK"/src/database/[0-9][0-9][0-9]_*.sql; do
+        version="$(basename "$file" .sql)"
+        checksum="$(sha256sum "$file" | cut -d' ' -f1)"
+        echo
+        echo "-- ---------------------------------------------------------------- $version"
+        cat "$file"
+        echo
+        echo "INSERT INTO schema_migrations (version, checksum, baseline) VALUES ('$version', '$checksum', 0);"
+    done
+    echo
+    echo "-- End of install $VERSION. Later releases: import their database-upgrade file."
+} > "$INSTALL"
 
 step "Guide and checksums"
 sed -e "s|{{VERSION}}|$VERSION|g" -e "s|{{SITE_URL}}|$SITE_URL|g" -e "s|{{API_URL}}|$API_URL|g" \

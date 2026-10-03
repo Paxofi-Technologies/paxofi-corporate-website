@@ -17,8 +17,9 @@ assert.ok(ENGINES[BROWSER], `unknown E2E_BROWSER ${BROWSER}`);
 /**
  * Registers before/after hooks for one suite file; returns its base URL and a page factory.
  * apiBase: the API the server itself reads (catalogue pages); defaults to an unreachable host.
+ * env: extra settings for the website server (e.g. staging mode, D-013).
  */
-export function startHarness(port, { apiBase = API_BASE } = {}) {
+export function startHarness(port, { apiBase = API_BASE, env = {} } = {}) {
   const base = `http://127.0.0.1:${port}`;
   let server;
   let browser;
@@ -29,12 +30,13 @@ export function startHarness(port, { apiBase = API_BASE } = {}) {
     server = spawn(`${root}node_modules/.bin/next`, ["start", "-p", String(port), "-H", "127.0.0.1"], {
       cwd: root,
       detached: true,
-      env: { ...process.env, API_BASE_URL: apiBase, NODE_ENV: "production" },
+      env: { ...process.env, API_BASE_URL: apiBase, NODE_ENV: "production", ...env },
       stdio: ["ignore", "ignore", "inherit"],
     });
     for (let attempt = 0; attempt < 60; attempt++) {
       try {
-        if ((await fetch(base)).ok) break;
+        // Any HTTP answer means the server is up (staging answers 401 without a password).
+        if ((await fetch(base)).status < 500) break;
       } catch {
         // server not listening yet
       }
