@@ -14,7 +14,11 @@ use RuntimeException;
  * pages agree on every field, its length limit and its built-in wording.
  *
  * Fields are plain text: one line ("line") or a short paragraph ("text"). No
- * markup is accepted; line breaks and control characters are removed.
+ * markup is accepted; line breaks and control characters are removed. The menu
+ * and footer also have "link" fields (a page on this site such as /about, or
+ * an https:// address) and an "email" field. An "optional" field may be left
+ * empty, which hides it; a "pair" (a link's name and address) must be filled
+ * in together or left empty together.
  */
 final class PageCopySchema
 {
@@ -69,13 +73,17 @@ final class PageCopySchema
         $errors = [];
         foreach ($this->page($page)['fields'] as $field) {
             $value = self::clean($input[$field['key']] ?? null);
-            $length = mb_strlen($value);
-            if ($length === 0) {
-                $errors[$field['key']] = 'Enter some text.';
-            } elseif ($length > $field['max']) {
-                $errors[$field['key']] = "Use at most {$field['max']} characters.";
-            }
             $values[$field['key']] = $value;
+            $error = self::check($field, $value);
+            if ($error !== null) {
+                $errors[$field['key']] = $error;
+            }
+        }
+        foreach ($this->page($page)['fields'] as $field) {
+            $other = $field['pair'] ?? null;
+            if (is_string($other) && !isset($errors[$field['key']]) && $values[$field['key']] === '' && ($values[$other] ?? '') !== '') {
+                $errors[$field['key']] = 'Fill in both the name and the link, or leave both empty.';
+            }
         }
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
@@ -95,12 +103,45 @@ final class PageCopySchema
     {
         $values = [];
         foreach ($this->page($page)['fields'] as $field) {
-            if (is_string($data[$field['key']] ?? null) && $data[$field['key']] !== '') {
-                $values[$field['key']] = $data[$field['key']];
+            $value = $data[$field['key']] ?? null;
+            // An optional field published empty is kept: it hides that link on the website.
+            if (is_string($value) && ($value !== '' || ($field['optional'] ?? false))) {
+                $values[$field['key']] = $value;
             }
         }
 
         return $values;
+    }
+
+    /** Why a field's value is not acceptable, or null. */
+    private static function check(array $field, string $value): ?string
+    {
+        if ($value === '') {
+            return ($field['optional'] ?? false) ? null : 'Enter some text.';
+        }
+        if (mb_strlen($value) > $field['max']) {
+            return "Use at most {$field['max']} characters.";
+        }
+
+        return match ($field['kind']) {
+            'link' => self::isLink($value) ? null : 'Use a page on this site such as /about, or a full address starting with https://.',
+            'email' => filter_var($value, FILTER_VALIDATE_EMAIL) !== false ? null : 'Enter an email address such as hello@paxofi.com.',
+            default => null,
+        };
+    }
+
+    /** A path on this site (not //host) or an https:// address, with no spaces or quotes. */
+    public static function isLink(string $value): bool
+    {
+        if (preg_match('{^/(?!/)[A-Za-z0-9\-._~/?#=&%+]*$}', $value) === 1) {
+            return true;
+        }
+        if (!str_starts_with($value, 'https://') || preg_match('/[\s"\'<>\\\\]/', $value) === 1) {
+            return false;
+        }
+        $host = parse_url($value, PHP_URL_HOST);
+
+        return is_string($host) && preg_match('/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i', $host) === 1;
     }
 
     /** One line, trimmed, control characters removed. */

@@ -32,6 +32,7 @@ const SERVICES = [
 const PAGE_TEXT = {
   home: { hero_title_start: "Edited", hero_title_highlight: "headline", hero_title_end: "from staff.", meta_description: "Edited search description." },
   contact: { signoff: "Speak soon." },
+  site: { menu_4_label: "", menu_4_link: "", menu_5_label: "Blog", menu_5_link: "https://blog.paxofi.com/", menu_button_label: "Get in touch", footer_signoff: "Onwards, together." },
 };
 
 let api;
@@ -126,7 +127,10 @@ describe("page text (D-015)", () => {
     await page.goto(BASE);
     assert.equal((await page.locator("h1").textContent()).replace(/\s+/g, " ").trim(), "Edited headline from staff.");
     assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), "Edited search description.");
-    await page.getByRole("link", { name: "Talk to us" }).first().waitFor();
+    const menu = page.getByRole("navigation", { name: "Main" });
+    assert.deepEqual(await menu.getByRole("link").allTextContents(), ["About", "Services", "Products", "Blog", "Get in touch"], "Careers hidden, Blog added, button renamed");
+    assert.equal(await menu.getByRole("link", { name: "Blog" }).getAttribute("href"), "https://blog.paxofi.com/");
+    await page.getByText("Onwards, together.").waitFor();
     await page.goto(`${BASE}/contact`);
     await page.getByText("Speak soon.").waitFor();
     await page.getByRole("heading", { name: "Send us a message" }).waitFor();

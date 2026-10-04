@@ -1041,14 +1041,16 @@ textarea:focus-visible {
   background: var(--navy);
   color: var(--white);
 }
+/* Two rows: brand and the signed-in person on top, the menu underneath on its
+   own line, so adding pages never wraps it awkwardly. */
 .admin-bar__inner {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 12px 20px 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 24px;
+  gap: 12px 20px;
 }
 .admin-brand {
   text-decoration: none;
@@ -1063,16 +1065,24 @@ textarea:focus-visible {
   border-radius: 999px;
   padding: 4px 10px;
 }
+.admin-nav {
+  order: 3;
+  flex: 1 0 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  /* On narrow screens the menu scrolls sideways instead of wrapping. */
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
 .admin-nav ul {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px 0;
 }
 .admin-nav a {
   display: inline-block;
+  white-space: nowrap;
   padding: 10px 14px;
   border-radius: 10px;
   color: var(--white);
@@ -1087,6 +1097,7 @@ textarea:focus-visible {
   box-shadow: inset 0 -3px 0 var(--sky-blue);
 }
 .admin-user {
+  order: 2;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -1423,9 +1434,7 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
   .admin-user {
-    margin-left: 0;
-    width: 100%;
-    justify-content: space-between;
+    gap: 10px;
   }
   .admin-title {
     font-size: 26px;
@@ -1766,4 +1775,13 @@ textarea:focus-visible {
 .admin-fieldset .admin-link-button {
   justify-self: start;
   font-size: 14px;
+}
+
+.admin-subsection {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.admin-subsection h3 {
+  margin: 0 0 6px;
 }

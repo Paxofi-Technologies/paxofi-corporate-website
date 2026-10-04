@@ -159,18 +159,32 @@ export default function PageTextEditor({ page }: { page: string }) {
 function TextField({ field, value, error, onChange }: { field: PageTextField; value: string; error?: string; onChange: (value: string) => void }) {
   const over = value.length > field.max;
   const changed = value !== field.default;
+  const hint = [
+    field.kind === "link" ? "A page on this site such as /about, or a full address starting with https://." : "",
+    field.optional && field.pair ? "Leave the name and link empty to hide it." : "",
+    `${value.length} of ${field.max} characters`,
+  ].filter(Boolean).join(" ");
   return (
-    <FieldShell label={field.label} error={error ?? (over ? `Keep this to ${field.max} characters.` : undefined)} hint={`${value.length} of ${field.max} characters`}>
+    <FieldShell label={field.label} error={error ?? (over ? `Keep this to ${field.max} characters.` : undefined)} hint={hint}>
       {(props) => (
         <>
           {field.kind === "text" ? (
-            <textarea {...props} name={field.key} rows={3} value={value} required onChange={(e) => onChange(e.target.value)} />
+            <textarea {...props} name={field.key} rows={3} value={value} required={!field.optional} onChange={(e) => onChange(e.target.value)} />
           ) : (
-            <input {...props} name={field.key} type="text" value={value} required onChange={(e) => onChange(e.target.value)} />
+            <input
+              {...props}
+              name={field.key}
+              type={field.kind === "email" ? "email" : "text"}
+              inputMode={field.kind === "link" ? "url" : undefined}
+              spellCheck={field.kind === "link" || field.kind === "email" ? false : undefined}
+              value={value}
+              required={!field.optional}
+              onChange={(e) => onChange(e.target.value)}
+            />
           )}
           {changed && (
             <button type="button" className="admin-link-button" onClick={() => onChange(field.default)}>
-              Use original wording
+              {field.default === "" ? "Clear" : "Use original wording"}
             </button>
           )}
         </>

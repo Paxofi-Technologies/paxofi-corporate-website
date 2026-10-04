@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PAGE_COPY, defaultCopy, loadPageCopy, mergeCopy } from "../lib/page-copy.ts";
+import { PAGE_COPY, defaultCopy, isSafeLink, loadPageCopy, mergeCopy, siteLinks } from "../lib/page-copy.ts";
 
 const ok = (body: unknown) => (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 
@@ -39,7 +39,18 @@ test("falls back to the built-in wording when the API cannot be read", async () 
 test("every field has a unique key and a default within its limit", () => {
   for (const [page, { fields }] of Object.entries(PAGE_COPY)) {
     assert.equal(new Set(fields.map((f) => f.key)).size, fields.length, `${page} keys are unique`);
-    for (const f of fields) assert.ok(f.default.trim() !== "" && f.default.length <= f.max, `${page}.${f.key} default fits`);
-    assert.ok(fields.some((f) => f.key === "meta_description"), `${page} has a search description`);
+    for (const f of fields) assert.ok((f.optional || f.default.trim() !== "") && f.default.length <= f.max, `${page}.${f.key} default fits`);
+    if (page !== "site") assert.ok(fields.some((f) => f.key === "meta_description"), `${page} has a search description`);
   }
+});
+
+test("menu links: only pages on this site or https:// addresses; empty optional links hide", () => {
+  for (const ok of ["/about", "/", "/products#pay", "https://career.paxofi.com", "https://career.paxofi.com/jobs?x=1"]) assert.ok(isSafeLink(ok), ok);
+  for (const bad of ["javascript:alert(1)", "//evil.example", "http://plain.example", "https://x", "/a b", 'https://a.com/"x', "data:text/html,hi"]) assert.ok(!isSafeLink(bad), bad);
+
+  const copy = mergeCopy("site", { menu_1_link: "javascript:alert(1)", menu_4_label: "", menu_4_link: "", menu_button_label: "", footer_email: "nope" });
+  assert.equal(copy.menu_1_link, "/about", "an unsafe link keeps the built-in one");
+  assert.equal(copy.menu_button_label, "Talk to us", "the button cannot be emptied");
+  assert.equal(copy.footer_email, "hello@paxofi.com");
+  assert.deepEqual(siteLinks(copy).menu.map((l) => l.label), ["About", "Services", "Products"]);
 });

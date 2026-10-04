@@ -10,13 +10,6 @@ export const SITE = {
   careersUrl: "https://career.paxofi.com",
 };
 
-export const NAV_LINKS = [
-  { href: "/about", label: "About" },
-  { href: "/services", label: "Services" },
-  { href: "/products", label: "Products" },
-  { href: "/careers", label: "Careers" },
-] as const;
-
 /** Every public, indexable route (used by the sitemap and the E2E tests). */
 export const PUBLIC_ROUTES = ["/", "/about", "/services", "/products", "/careers", "/contact", "/privacy", "/terms"] as const;
 

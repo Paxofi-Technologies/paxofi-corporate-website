@@ -197,4 +197,8 @@ Do this on **staging first** (RB-14), then on live. About 15 minutes.
 | T6 | Business Development | Sign in as Business Development; edit Contact page text | **Save draft** works; there is no **Publish** button | |
 | T7 | Search description | Change Home's *Description in search results*; publish; view the page source | `<meta name="description">` shows the new text | |
 
+| T8 | Menu | **Content → Page text → Menu and footer**: empty *Menu item 4* (name and link), fill *Menu item 5* with `Blog` and `https://example.com`; **Publish** | Within a minute the menu shows About, Services, Products, Blog; the footer's first column matches | |
+| T9 | Link rules | Type `javascript:alert(1)` as a link and save | A message asks for a page such as /about or an https:// address; nothing is saved | |
+| T10 | Undo | Use **Use original wording** / **Clear** on the changed fields, or restore the earlier version; **Publish** | The menu is back to normal | |
+
 Record sign-off ("Phase 2.7 UAT passed") in Asana.

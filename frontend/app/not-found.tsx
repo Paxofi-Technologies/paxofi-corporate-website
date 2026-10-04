@@ -4,15 +4,17 @@ import { ArrowLeft } from "lucide-react";
 import { PageHero } from "@/components/Sections";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { pageCopy } from "@/lib/page-copy-server";
 
 export const metadata: Metadata = { title: "Page not found", robots: { index: false, follow: true } };
 
 // Rendered by the root layout for any unknown address, so it brings the public chrome itself.
-export default function NotFound() {
+export default async function NotFound() {
+  const site = await pageCopy("site");
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteHeader />
+      <SiteHeader copy={site} />
       <main id="main" tabIndex={-1}>
         <PageHero eyebrow="404" title="Page not found." intro="The page you requested does not exist or has moved.">
           <div className="actions">
@@ -23,7 +25,7 @@ export default function NotFound() {
           </div>
         </PageHero>
       </main>
-      <SiteFooter />
+      <SiteFooter copy={site} />
     </>
   );
 }

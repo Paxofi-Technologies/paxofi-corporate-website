@@ -208,7 +208,7 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
         const errors = {};
         for (const f of PAGE_COPY[key].fields) {
           const value = (body.fields?.[f.key] ?? "").trim();
-          if (!value) errors[f.key] = "Enter some text.";
+          if (!value && !f.optional) errors[f.key] = "Enter some text.";
           else if (value.length > f.max) errors[f.key] = `Use at most ${f.max} characters.`;
         }
         if (Object.keys(errors).length) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: errors } });
@@ -730,6 +730,27 @@ describe("staff area", () => {
 
     await page.getByRole("link", { name: "← Content" }).click();
     await page.getByRole("cell", { name: /Edited, published/ }).waitFor();
+    await page.context().close();
+  });
+
+  test("staff edit the menu: hide a link, add one, and see link rules", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/content?tab=pages`);
+    await page.getByRole("table").getByRole("link", { name: "Menu and footer" }).click();
+    await page.getByRole("heading", { name: "Menu and footer page text" }).waitFor();
+    await assertAccessible(page, "on the menu and footer editor");
+    const menu = page.getByRole("group", { name: "Main menu" });
+    await menu.getByLabel("Menu item 4: name").fill("");
+    await menu.getByLabel("Menu item 4: link").fill("");
+    await menu.getByLabel("Menu item 5: name").fill("Blog");
+    await menu.getByLabel("Menu item 5: link").fill("https://blog.paxofi.com/");
+    await menu.getByLabel("Menu item 5: link").and(page.locator('[aria-describedby]')).waitFor();
+    await page.getByText("A page on this site such as /about", { exact: false }).first().waitFor();
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await page.getByText("Draft saved.", { exact: false }).waitFor();
+    const draft = api.calls.findLast((c) => c.method === "POST" && c.path === "/pages/site/draft");
+    assert.deepEqual([draft.body.fields.menu_4_label, draft.body.fields.menu_5_label, draft.body.fields.menu_5_link], ["", "Blog", "https://blog.paxofi.com/"]);
     await page.context().close();
   });
 
