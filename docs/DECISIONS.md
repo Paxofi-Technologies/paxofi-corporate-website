@@ -350,3 +350,15 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Not chosen:**
   - Emailing CVs to HR as attachments: copies would sit in mailboxes outside the retention rule.
   - Accepting `.doc`, images or ZIPs: older formats can carry macros, and images are rarely real CVs.
+
+### D-019 addendum — attachments on candidate emails (4 Oct 2026)
+
+**Found in UAT (owner, 4 Oct):** the *Selected* email said the PIF Participant Agreement was attached, but candidate emails could not carry files.
+
+**Change:**
+- Staff can attach one PDF or Word `.docx` file (up to 5 MB, checked by content) to any candidate email.
+- The *Selected* template cannot be sent without an attachment.
+- The file is kept with the queued email (`email_attachments`, migration 015) and deleted with it: 30 days after it is sent, or 90 days after it fails.
+- The application's history records the file name, not the file.
+- Queued emails now use the application's clock for their send time, so the outbox and the sender always agree on what is due.
+

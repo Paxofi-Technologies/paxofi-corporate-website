@@ -216,7 +216,7 @@ final class ApiApplication implements HttpHandler
         $mail = $settings->mail ?? MailSettings::disabled();
         // A transport passed in (tests) turns sending on with the configured recipients.
         $this->mail = $mailTransport !== null && !$mail->enabled ? new MailSettings(true, $mail->enquiryAlertTo, $mail->errorAlertTo, $mail->siteUrl) : $mail;
-        $this->outbox = new PdoOutbox($this->database);
+        $this->outbox = new PdoOutbox($this->database, $this->clock);
         $this->alerts = new ErrorAlerts($this->mail, $this->mailTransport, $alertThrottle ?? new FileAlertThrottle(), $this->clock, $logger);
 
         $this->pipeline = new MiddlewarePipeline([

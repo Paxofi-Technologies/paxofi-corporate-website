@@ -13,9 +13,11 @@ use Paxofi\CorporateWebsite\Application\Audit\AuditRecorder;
 use Paxofi\CorporateWebsite\Application\Exception\Conflict;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
+use Paxofi\CorporateWebsite\Application\Mail\Attachment;
 use Paxofi\CorporateWebsite\Application\Mail\Email;
 use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
 use Paxofi\CorporateWebsite\Application\Mail\Outbox;
+use Paxofi\CorporateWebsite\Application\Media\MediaInspector;
 use Paxofi\CorporateWebsite\Application\Media\MediaStorage;
 use Paxofi\CorporateWebsite\Application\RequestContext;
 
@@ -162,7 +164,15 @@ final class RecruitmentService
         return $this->get($id);
     }
 
-    /** Sends a candidate email (edited from a template) and records it on the application. */
+    /** Largest file staff can attach to a candidate email (the agreement). */
+    public const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+    /** Templates that promise an attachment, so cannot be sent without one. */
+    private const NEEDS_ATTACHMENT = ['selection' => 'Attach the PIF Participant Agreement (PDF or Word) before sending.'];
+
+    /**
+     * Sends a candidate email (edited from a template), with an optional PDF or
+     * Word attachment, and records it on the application.
+     */
     public function emailCandidate(string $id, array $input, AuthenticatedStaff $staff, RequestContext $context): array
     {
         $row = $this->find($id);
@@ -171,6 +181,7 @@ final class RecruitmentService
         }
         $subject = Email::oneLine(is_string($input['subject'] ?? null) ? $input['subject'] : '');
         $body = is_string($input['body'] ?? null) ? trim(str_replace(["\r\n", "\r"], "\n", mb_scrub($input['body'], 'UTF-8'))) : '';
+        $template = is_string($input['template'] ?? null) && isset(CandidateEmails::TEMPLATES[$input['template']]) ? $input['template'] : 'custom';
         $errors = [];
         if (mb_strlen($subject) < 3 || mb_strlen($subject) > 200) {
             $errors['subject'] = 'Enter a subject of up to 200 characters.';
@@ -178,20 +189,60 @@ final class RecruitmentService
         if (mb_strlen($body) < 10 || mb_strlen($body) > 8000) {
             $errors['body'] = 'Write the email (up to 8,000 characters).';
         }
-        if ($errors === [] && preg_match('/\[[^\]]{2,60}\]/', $body) === 1) {
+        if (!isset($errors['body']) && preg_match('/\[[^\]]{2,60}\]/', $body) === 1) {
             $errors['body'] = 'Replace the [placeholders] in square brackets before sending.';
+        }
+        $attachment = null;
+        try {
+            $attachment = self::attachment($input['attachment'] ?? null);
+        } catch (ValidationFailed $failure) {
+            $errors['attachment'] = $failure->getMessage();
+        }
+        if ($attachment === null && !isset($errors['attachment']) && isset(self::NEEDS_ATTACHMENT[$template])) {
+            $errors['attachment'] = self::NEEDS_ATTACHMENT[$template];
         }
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
         }
-        $template = is_string($input['template'] ?? null) && isset(CandidateEmails::TEMPLATES[$input['template']]) ? $input['template'] : 'custom';
-        $this->transactions->transaction(function () use ($id, $row, $subject, $body, $template, $staff, $context): void {
-            $this->outbox->add(new Email([(string) $row['email']], $subject, $body . "\n", $this->recruitment->replyTo, 'candidate_' . $template));
-            $this->applications->addNote($id, $staff->user->id, 'email', "Email sent: {$subject}\n\n{$body}");
+        $this->transactions->transaction(function () use ($id, $row, $subject, $body, $template, $attachment, $staff, $context): void {
+            $this->outbox->add(new Email([(string) $row['email']], $subject, $body . "\n", $this->recruitment->replyTo, 'candidate_' . $template, $attachment === null ? [] : [$attachment]));
+            $note = "Email sent: {$subject}" . ($attachment === null ? '' : "\nAttached: {$attachment->filename}") . "\n\n{$body}";
+            $this->applications->addNote($id, $staff->user->id, 'email', $note);
             $this->audit->record(new AuditEvent('application.emailed', AuditEvent::OUTCOME_SUCCESS, 'application', $id, $staff->user->id, $context->requestId));
         });
 
         return $this->get($id);
+    }
+
+    /**
+     * The optional attachment, sent as {filename, content_base64}: a PDF or
+     * Word .docx of up to 5 MB, checked by its content.
+     */
+    private static function attachment(mixed $value): ?Attachment
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+        $filename = is_array($value) && is_string($value['filename'] ?? null) ? $value['filename'] : '';
+        $encoded = is_array($value) && is_string($value['content_base64'] ?? null) ? $value['content_base64'] : '';
+        $bytes = base64_decode($encoded, true);
+        if ($bytes === false || $bytes === '') {
+            throw new ValidationFailed([], 'The attachment could not be read. Choose the file again.');
+        }
+        if (strlen($bytes) > self::ATTACHMENT_MAX_BYTES) {
+            throw new ValidationFailed([], 'Attachments can be up to 5 MB.');
+        }
+        try {
+            $detected = (new MediaInspector())->inspect($bytes, $filename);
+        } catch (ValidationFailed) {
+            $detected = null;
+        }
+        if ($detected === null || !in_array($detected->mimeType, ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], true)) {
+            throw new ValidationFailed([], 'Attach a PDF or Word (.docx) file.');
+        }
+        $base = pathinfo($filename, PATHINFO_FILENAME) ?: 'PIF-Participant-Agreement';
+
+        return new Attachment($base . '.' . $detected->extension, $detected->mimeType, $bytes);
     }
 
     /** @return array{bytes: string, filename: string, media_type: string} */

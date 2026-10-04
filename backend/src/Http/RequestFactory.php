@@ -56,10 +56,14 @@ final class RequestFactory
     /** The media upload route (D-012) is the only one whose body is a file. */
     public const UPLOAD_PATH = '/api/v1/admin/media';
     public const CV_UPLOAD_PATH = '/api/v1/careers/cv';
+    /** Candidate emails may carry a 5 MB attachment as base64 in the JSON body (D-019). */
+    public const CANDIDATE_EMAIL_PATH = '#^/api/v1/admin/applications/[0-9a-f-]{36}/emails$#';
+    public const CANDIDATE_EMAIL_MAX_BYTES = 7 * 1024 * 1024 + 65536;
 
     /**
      * How much of the request body to read: 64 KB, the largest media file on
-     * the media upload route, or the largest CV on the careers upload route.
+     * the media upload route, the largest CV on the careers upload route, or a
+     * candidate email with its attachment.
      *
      * @param array<string, mixed> $server
      */
@@ -75,7 +79,7 @@ final class RequestFactory
             self::UPLOAD_PATH => MediaRules::UPLOAD_MAX_BYTES,
             // One byte over the limit, so a larger file is refused rather than cut short.
             self::CV_UPLOAD_PATH => CareersService::CV_MAX_BYTES + 1,
-            default => self::MAX_BODY_BYTES,
+            default => preg_match(self::CANDIDATE_EMAIL_PATH, $path) === 1 ? self::CANDIDATE_EMAIL_MAX_BYTES : self::MAX_BODY_BYTES,
         };
     }
 

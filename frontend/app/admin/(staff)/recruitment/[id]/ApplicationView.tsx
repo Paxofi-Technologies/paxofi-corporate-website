@@ -9,6 +9,17 @@ import { NoAccess } from "@/components/admin/StaffShell";
 import { AdminApiError, type ApplicationDetail, downloadCv, formatBytes, formatDateTime } from "@/lib/admin-api";
 
 type Gate = "evidence" | "interview";
+const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+const ATTACHMENT_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/** A file's bytes as base64, for the JSON request. */
+async function toBase64(file: Blob): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
 const NOTE_LABELS: Record<string, string> = { note: "Note", stage: "Stage", score: "Score", email: "Email sent" };
 
 /** One application: details, CV, stage, scorecards, candidate emails and notes (D-019). */
@@ -25,6 +36,8 @@ export default function ApplicationView({ id }: { id: string }) {
   const [template, setTemplate] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [fileKey, setFileKey] = useState(0);
 
   useEffect(() => {
     if (!can(user, "recruitment.read")) return;
@@ -105,8 +118,19 @@ export default function ApplicationView({ id }: { id: string }) {
 
   async function sendEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const sent = await run("email", async () => (await request<ApplicationDetail>(`${path}/emails`, { method: "POST", body: { template: template || "custom", subject, body } })).data, `Email sent to ${app?.email}.`);
-    if (sent) chooseTemplate("");
+    if (attachment && attachment.size > ATTACHMENT_MAX_BYTES) {
+      setFailed("email");
+      setFields({ attachment: "Attachments can be up to 5 MB." });
+      setError("Please correct the highlighted fields.");
+      return;
+    }
+    const file = attachment ? { filename: attachment.name, content_base64: await toBase64(attachment) } : undefined;
+    const sent = await run("email", async () => (await request<ApplicationDetail>(`${path}/emails`, { method: "POST", body: { template: template || "custom", subject, body, attachment: file } })).data, `Email sent to ${app?.email}${attachment ? ` with ${attachment.name}` : ""}.`);
+    if (sent) {
+      chooseTemplate("");
+      setAttachment(null);
+      setFileKey((k) => k + 1);
+    }
   }
 
   async function erase() {
@@ -217,6 +241,15 @@ export default function ApplicationView({ id }: { id: string }) {
                   </FieldShell>
                   <FieldShell label="Message" error={errorFor("email", "body")}>
                     {(props) => <textarea name="body" rows={12} maxLength={8000} required value={body} onChange={(e) => setBody(e.target.value)} {...props} />}
+                  </FieldShell>
+                  <FieldShell
+                    label={template === "selection" ? "Attachment: the PIF Participant Agreement (required)" : "Attachment (optional)"}
+                    hint="PDF or Word (.docx), up to 5 MB. It is sent with the email and kept with it for 30 days."
+                    error={errorFor("email", "attachment")}
+                  >
+                    {(props) => (
+                      <input key={fileKey} name="attachment" type="file" accept={ATTACHMENT_ACCEPT} onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} {...props} />
+                    )}
                   </FieldShell>
                   {suggested && suggested !== app.stage && (
                     <p className="admin-help">This email usually goes with the stage “{app.stages.find((s) => s.value === suggested)?.label}”. Change the stage separately if it applies.</p>

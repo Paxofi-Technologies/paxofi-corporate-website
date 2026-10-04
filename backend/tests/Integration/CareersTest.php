@@ -32,7 +32,7 @@ final class CareersTest extends DatabaseTestCase
 
     protected function setUp(): void
     {
-        foreach (['job_applications', 'application_uploads', 'email_outbox', 'sessions', 'login_attempts', 'audit_events', 'user_roles'] as $table) {
+        foreach (['job_applications', 'application_uploads', 'email_attachments', 'email_outbox', 'sessions', 'login_attempts', 'audit_events', 'user_roles'] as $table) {
             self::$pdo->exec("DELETE FROM {$table}");
         }
         self::$pdo->exec('DELETE FROM users');
@@ -189,6 +189,41 @@ final class CareersTest extends DatabaseTestCase
         self::assertSame(200, $this->call('DELETE', "/api/v1/admin/applications/{$id}", cookie: $hr)->status());
         self::assertSame(0, (int) self::scalar('SELECT COUNT(*) FROM job_applications'));
         self::assertFileDoesNotExist(self::$storage . '/applications/' . $reference, 'erasing removes the CV');
+    }
+
+    public function testTheSelectionEmailCarriesTheAgreement(): void
+    {
+        $app = $this->app();
+        $app->handle($this->apply('software-engineer-fellow', []));
+        $id = (string) self::scalar('SELECT id FROM job_applications');
+        $admin = $this->setupAdmin();
+        $app->afterResponse();
+        $this->mail->sent = [];
+        $email = ['template' => 'selection', 'subject' => 'You have been selected', 'body' => "Hello Ada,\n\nAttached is the PIF Participant Agreement. Please return it signed by 20 October."];
+
+        $missing = $this->call('POST', "/api/v1/admin/applications/{$id}/emails", $email, $admin);
+        self::assertSame(422, $missing->status());
+        self::assertStringContainsString('Attach the PIF Participant Agreement', self::decode($missing)['error']['details']['fields']['attachment']);
+        $wrong = $this->call('POST', "/api/v1/admin/applications/{$id}/emails", $email + ['attachment' => ['filename' => 'agreement.pdf', 'content_base64' => base64_encode('<?php echo 1;')]], $admin);
+        self::assertSame(422, $wrong->status(), 'checked by content, not by name');
+
+        $agreement = self::PDF . str_repeat('%', 5000);
+        $sent = $this->call('POST', "/api/v1/admin/applications/{$id}/emails", $email + ['attachment' => ['filename' => 'PIF Participant Agreement (Ada).pdf', 'content_base64' => base64_encode($agreement)]], $admin);
+        self::assertSame(200, $sent->status(), $sent->body());
+        self::assertSame(1, (int) self::scalar('SELECT COUNT(*) FROM email_attachments'));
+        $this->app()->outboxSender()->run();
+        self::assertCount(1, $this->mail->sent);
+        self::assertSame('PIF Participant Agreement Ada.pdf', $this->mail->sent[0]->attachments[0]->filename);
+        self::assertSame($agreement, $this->mail->sent[0]->attachments[0]->content, 'the bytes survive the database round trip');
+        self::assertStringContainsString('Attached: PIF Participant Agreement Ada.pdf', self::decode($sent)['data']['notes'][0]['body']);
+
+        $message = \Paxofi\CorporateWebsite\Infrastructure\Mail\MessageFormatter::format($this->mail->sent[0], 'no-reply@paxofi.com', 'Paxofi');
+        self::assertMatchesRegularExpression('/^Content-Type: multipart\/mixed; boundary="(=_paxofi_[0-9a-f]+)"/m', $message);
+        self::assertStringContainsString('Content-Disposition: attachment; filename="PIF Participant Agreement Ada.pdf"', $message);
+        self::assertStringContainsString(chunk_split(base64_encode($agreement), 76, "\r\n"), $message . "\r\n");
+
+        self::$pdo->exec('DELETE FROM email_outbox');
+        self::assertSame(0, (int) self::scalar('SELECT COUNT(*) FROM email_attachments'), 'attachments go with their email');
     }
 
     public function testRolesAreDraftedPublishedAndClosedInTheStaffArea(): void

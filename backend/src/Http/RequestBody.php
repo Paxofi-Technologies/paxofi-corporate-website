@@ -11,10 +11,10 @@ use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
 final class RequestBody
 {
     /** @return array<string, mixed> */
-    public static function parse(HttpRequest $request): array
+    public static function parse(HttpRequest $request, int $maxBytes = RequestFactory::MAX_BODY_BYTES): array
     {
         $body = $request->body();
-        if (strlen($body) > RequestFactory::MAX_BODY_BYTES) {
+        if (strlen($body) > $maxBytes) {
             throw new ValidationFailed([], 'Request body is too large.');
         }
 
