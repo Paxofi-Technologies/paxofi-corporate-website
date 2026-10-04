@@ -205,7 +205,7 @@ function ResetTwoFactor({ staff, onReset }: { staff: StaffUser; onReset: (messag
     setError("");
     try {
       await request(`/users/${encodeURIComponent(staff.id)}/two-factor/reset`, { method: "POST" });
-      onReset(`Two-factor sign-in was reset for ${staff.display_name}. They set it up again at their next sign-in${staff.role === "administrator" ? " (required for administrators)" : ""}.`);
+      onReset(`Two-factor sign-in was reset for ${staff.display_name}. They set it up again at their next sign-in${staff.role === "administrator" || staff.role === "human_resources" ? " (required for their role)" : ""}.`);
     } catch (e) {
       setError(e instanceof AdminApiError ? e.message : "Two-factor could not be reset.");
     } finally {

@@ -227,3 +227,16 @@ The API sends email through the company mailbox (D-016). The settings are `MAIL_
   4. Point `DB_DATABASE` in `backend/.env` at it, or import it over the live database only after a manual export (Step 1 of the guide).
 - **Restore the media library:** in File Manager, upload the `.tar.gz` into `MEDIA_STORAGE_PATH` → **Extract**.
 - **Disk space:** each copy is about the size of the database plus the media folder. Lower `BACKUP_KEEP_DAYS` if the disk quota gets tight.
+
+## RB-19 Recruitment and CVs
+
+Applications from careers.paxofi.com are handled in the staff area under **Recruitment** (D-019). Reviewers are administrators and Human Resources staff, who sign in with two-factor.
+
+- **Daily:** open **Recruitment**, filter by *Applied*, and move each new application to *Screening* within 2 working days. Score the *Gate 2 evidence review* within 2 weeks. Send the outcome with the email template, replacing every `[placeholder]`.
+- **Someone asks for their data or to withdraw:** find them by name, email or `PIF-` reference. Send what they asked for from hr@paxofi.com, or move the application to *Withdrawn*. To delete it now, use **Erase application**; this also deletes the CV and is audited.
+- **New HR staff:** **Users** → add with the role **Human Resources**. When someone leaves, **disable** their account the same day.
+- **A candidate says they did not get the acknowledgement:** check the spam folder, then `email_outbox` in phpMyAdmin (RB-17). The reference is on the application in the staff area.
+- **Opening or closing a role:** **Recruitment** → *Edit the roles on careers.paxofi.com*. Closing hides the role; its applications stay.
+- **Careers site down:** `https://careers.paxofi.com` is its own Node.js app (`paxofi-careers-website`). Restart it in **Setup Node.js App**; check its `API_BASE_URL` and that `SITE_SECTION=careers`.
+- **Never** forward CVs by email or save them to personal devices. Download a CV only to review it, then delete the downloaded copy.
+

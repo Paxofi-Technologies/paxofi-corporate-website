@@ -36,7 +36,7 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | catalog_revisions (009) | id, item_type (product/service), item_id, state (draft/published/created), data JSON, author_id, created_at; index (item_type, item_id, created_at) | 009 | – | staff area | staff area history | OK; at most one draft per item; no FK so history survives |
 | content_items | id, slug (UNIQUE), title, content_type, lifecycle_state, published_at, timestamps | see 001 | – | migration 004 | `/api/v1/content` | OK |
 | content_revisions | id, content_item_id FK, revision_no (UNIQUE per item), author_id FK NULL, content_json JSON, created_at | see 001/006 | – | migration 004 | latest revision per item | OK; JSON type restored in 006 |
-| career_opportunities | id, slug (UNIQUE), title, description, lifecycle_state, published_at, timestamps | see 001 | – | migration 004 | `/api/v1/careers` | Kept; not used by the website (D-001) |
+| career_opportunities | id, slug (UNIQUE), title, description, lifecycle_state, published_at, timestamps; from 014: code, family, summary, content JSON (lists and assessment text), sort_order | see 001/014 | – | 004, 014 (seven PIF roles), staff area | `/api/v1/careers`, `/api/v1/careers/roles` | OK; roles on careers.paxofi.com (D-018) |
 | schema_migrations | version PK, checksum, baseline, applied_at | 006 runner | – | migrate.php / upgrade SQL | migrate.php | OK |
 
 ## Staff sign-in tables (Phase 2.1, migration 007, D-009)
@@ -57,15 +57,29 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
 | recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
+## Recruitment tables (migration 014, D-019)
+
+| Table | Field | Type / constraint | Personal data | Review |
+|---|---|---|---|---|
+| job_applications | id, reference (UNIQUE, `PIF-XXXXXX`), opportunity_id FK → career_opportunities | CHAR(36) / VARCHAR(16) | – | OK; index (opportunity_id, stage) |
+| | full_name, email, phone, location, hours_per_week | VARCHAR / SMALLINT | yes | Deleted 12 months after closing or last stage change |
+| | portfolio_url, linkedin_url, motivation, experience | VARCHAR(500) / TEXT | yes | As above |
+| | cv_reference, cv_filename, cv_media_type, cv_size | file name in `MEDIA_STORAGE_PATH/applications` | yes (the CV) | File deleted with the row (retention and erase) |
+| | privacy_version, stage, stage_changed_at, closed_at, evidence_scores JSON, interview_scores JSON | | – | OK; indexes (stage, created_at), (closed_at), (email, created_at) |
+| | source_ip, user_agent | VARCHAR(45) / VARCHAR(255) NULL | yes | Cleared after 90 days |
+| application_notes | id, application_id FK ON DELETE CASCADE, author_id, kind (note/stage/score/email), body, created_at | | yes (may mention the candidate) | Deleted with the application |
+| application_uploads | token_hash CHAR(64) PK (SHA-256), file_reference, filename, media_type, size_bytes, source_ip, created_at, claimed_at | | yes (until claimed) | Unclaimed files deleted after a day; rows a day after claiming |
+| roles (014) | `human_resources`, with `recruitment.read`, `recruitment.manage`, `careers.edit` (also given to `administrator`) | | – | Two-factor required for the role |
+
 ## Reserved tables (empty in v1)
 
 | Table | Purpose | Decision |
 |---|---|---|
-| career_applications | Job applications | Not used: careers site (D-001); drop in a later migration if never needed |
+| career_applications | Job applications (001 placeholder) | Not used: superseded by `job_applications` (D-019); drop in a later migration |
 
 ## Findings
 
-1. Personal data is stored in `enquiries` and, from Phase 2.1, in the staff tables (`users`, `sessions`, `login_attempts`); retention is automated for all of them (D-008, `bin/purge-retention.php`).
+1. Personal data is stored in `enquiries`, from Phase 2.1 in the staff tables (`users`, `sessions`, `login_attempts`), and from migration 014 in the recruitment tables and CV files; retention is automated for all of them (D-008, D-019, `bin/purge-retention.php`).
 2. All text columns are utf8mb4; integration tests round-trip non-Latin text and emoji (`MigrationTest`).
 3. Every query path used by v1 is indexed (published listings, rate limit by email and by IP, audit by action).
 4. Phase 2.1 delivered `users.password_hash`, hashed session tokens and sign-in throttling (007); Phase 2.2 the TOTP second factor with encrypted secrets and hashed recovery codes (008). Phase 2.3 added drafts and versions for products and services (`catalog_revisions`, 009); Phase 2.4 the media library (`media_assets` extended, 010). Still to design: editing other page text with `content_items`.

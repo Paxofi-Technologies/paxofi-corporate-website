@@ -342,3 +342,12 @@ describe("contact journey", () => {
     await page.context().close();
   });
 });
+
+describe("site sections", () => {
+  test("the careers site's pages are not served on the corporate site (D-018)", async () => {
+    for (const path of ["/careers-site", "/careers-site/privacy", "/careers-site/roles/software-engineer-fellow"]) {
+      assert.equal((await fetch(BASE + path)).status, 404, path);
+    }
+    assert.equal((await fetch(`${BASE}/careers`)).status, 200);
+  });
+});

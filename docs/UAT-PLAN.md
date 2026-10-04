@@ -228,3 +228,22 @@ Record sign-off ("Phase 2.8 UAT passed") in Asana.
 | AC3 | Apply links | Click every *Explore opportunities* / *Apply* button | Each opens careers.paxofi.com | |
 | AC4 | Wording | Read the fellowship panel and the FAQ | No pay is promised; 15 hours/week minimum; rolling intake | |
 | AC5 | Phone | Open both pages on a phone | Nothing overflows sideways; FAQ answers open and close | |
+
+## careers.paxofi.com and Recruitment (D-018, D-019)
+
+Run after guide Step 10d. About 30 minutes. Use your own email address as the candidate.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| CR1 | Careers home | Open https://careers.paxofi.com on a laptop and a phone | The seven roles, the fellowship terms, the journey, the hiring steps and the FAQ show; nothing overflows sideways | |
+| CR2 | Role page | Open *Software Engineer Fellow* | Purpose, duties, skills, tools, how it is assessed, and *Unpaid fellowship* in the facts | |
+| CR3 | Apply with a CV | Fill the form with a small PDF CV and submit | *Application received* with a `PIF-` reference; the acknowledgement email arrives; `RECRUITMENT_ALERT_TO` gets the alert (no contact details in it) | |
+| CR4 | Checks | Try a `.png` as the CV; leave both CV and links empty; apply again for the same role | The PNG is refused; *Add your CV, a portfolio link or your LinkedIn profile*; *You already have an application in progress* | |
+| CR5 | HR login | Add an HR user (Users → Human Resources) and sign in as them | Two-factor set-up is asked first; then only **Recruitment** and **My account** show | |
+| CR6 | Pipeline | As HR: open the application, download the CV, move to *Screening*, save the evidence scorecard, send *Screening: moving forward* | All are listed under *Notes and history*; the candidate email arrives with Reply-To hr@paxofi.com | |
+| CR7 | Roles | **Recruitment** → *Edit the roles* → close a role, then open it again | Closed: it disappears from careers.paxofi.com. Opened: it is back, at the same address | |
+| CR8 | Privacy and erase | Read /privacy on the careers site; then **Erase application** | The notice states 12 months; the application and CV are gone | |
+| CR9 | Corporate links | On corporate.paxofi.com /careers, click *Explore opportunities* | Opens https://careers.paxofi.com | |
+
+Record sign-off ("Careers UAT passed") in Asana before any recruitment campaign goes out.
+
