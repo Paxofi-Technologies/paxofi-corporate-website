@@ -116,6 +116,15 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
       state.signedIn = true;
       return reply(route, 200, { ...state.user, two_factor_enabled: true, mfa_required: false });
     }
+    if (path === "/password-reset" && method === "POST") {
+      if (!/@/.test(body.email ?? "")) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { email: "Enter the email address you sign in with." } } });
+      return reply(route, 202, { requested: true, available: true });
+    }
+    if (path === "/password-reset/complete" && method === "POST") {
+      if (body.token !== "a".repeat(43)) return reply(route, 422, { code: "VALIDATION_ERROR", message: "This reset link has expired or was already used. Ask for a new one.", details: { fields: { token: "This reset link has expired or was already used. Ask for a new one." } } });
+      if ((body.password ?? "").length < 12) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { password: "Use at least 12 characters." } } });
+      return reply(route, 200, { changed: true });
+    }
     if (state.pending) return reply(route, 401, { code: "MFA_REQUIRED", message: "Enter the code from your authenticator app to finish signing in." });
     if (!state.signedIn) return reply(route, 401, unauthenticated);
 
@@ -705,6 +714,44 @@ describe("staff area", () => {
     await page.getByRole("heading", { name: "Paxofi-Pay-brochure.pdf" }).waitFor();
     await page.getByRole("button", { name: "Upload" }).waitFor();
     assert.equal(await page.getByRole("button", { name: /^Delete/ }).count(), 0);
+    await page.context().close();
+  });
+
+  test("a forgotten password is reset with the emailed link (D-016)", async () => {
+    const page = await newPage();
+    const api = await fakeAdminApi(page);
+    await page.goto(`${BASE}/admin/login`);
+    await page.getByRole("link", { name: "Forgot your password?" }).click();
+    await page.getByRole("heading", { name: "Forgot your password?" }).waitFor();
+    await page.getByLabel("Email").fill("ada@paxofi.com");
+    await page.getByRole("button", { name: "Email me a link" }).click();
+    await page.getByText("If that address belongs to a staff account", { exact: false }).waitFor();
+    await assertAccessible(page, "on forgot password");
+    assert.equal(api.calls.findLast((c) => c.path === "/password-reset").body.email, "ada@paxofi.com");
+
+    await page.goto(`${BASE}/admin/reset-password#${"a".repeat(43)}`);
+    await page.getByRole("heading", { name: "Choose a new password" }).waitFor();
+    assert.equal(new URL(page.url()).hash, "", "the token is removed from the address bar");
+    await page.getByLabel("New password", { exact: true }).fill("A brand new phrase 7");
+    await page.getByLabel("Confirm new password").fill("Something else 77");
+    await page.getByRole("button", { name: "Set new password" }).click();
+    await page.getByText("The two passwords do not match.").waitFor();
+    await page.getByLabel("Confirm new password").fill("A brand new phrase 7");
+    await page.getByRole("button", { name: "Set new password" }).click();
+    await page.getByRole("heading", { name: "Password changed" }).waitFor();
+    await assertAccessible(page, "after the reset");
+
+    await page.goto("about:blank");
+    await page.goto(`${BASE}/admin/reset-password#${"b".repeat(43)}`);
+    await page.getByLabel("New password", { exact: true }).fill("A brand new phrase 7");
+    await page.getByLabel("Confirm new password").fill("A brand new phrase 7");
+    await page.getByRole("button", { name: "Set new password" }).click();
+    await page.getByText("expired or was already used", { exact: false }).first().waitFor();
+    await page.getByRole("link", { name: "Ask for a new link" }).waitFor();
+
+    await page.goto("about:blank");
+    await page.goto(`${BASE}/admin/reset-password`);
+    await page.getByRole("heading", { name: "This link does not work" }).waitFor();
     await page.context().close();
   });
 

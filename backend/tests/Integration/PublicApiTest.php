@@ -71,8 +71,9 @@ final class PublicApiTest extends DatabaseTestCase
     {
         $body = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers')));
 
-        self::assertSame('Backend Engineer', $body['data'][0]['title']);
-        self::assertSame('Build APIs.', $body['data'][0]['description']);
+        $byTitle = array_column($body['data'], 'description', 'title');
+        self::assertSame('Build APIs.', $byTitle['Backend Engineer']);
+        self::assertArrayHasKey('Software Engineer Fellow', $byTitle, 'the seven PIF role families are seeded (migration 014)');
     }
 
     public function testContentReturnsLatestRevisionOfPublishedItemsOnly(): void

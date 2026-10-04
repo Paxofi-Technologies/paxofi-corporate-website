@@ -211,10 +211,29 @@ describe("navigation", () => {
   test("careers links go to the careers site, which handles all applications", async () => {
     const page = await newPage();
     await page.goto(`${BASE}/careers`);
-    const hrefs = await page.locator('main a[href*="career."]').evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+    const hrefs = await page.locator('main a[href*="careers.paxofi"]').evaluateAll((links) => links.map((a) => a.getAttribute("href")));
     assert.ok(hrefs.length >= 1);
-    for (const href of hrefs) assert.equal(href, "https://career.paxofi.com");
+    for (const href of hrefs) assert.equal(href, "https://careers.paxofi.com");
     assert.equal(await page.locator("main form").count(), 0, "no application form on the corporate site");
+    await page.context().close();
+  });
+
+  test("About tells the company story; Careers explains the fellowship and how to apply", async () => {
+    const page = await newPage();
+    await page.goto(`${BASE}/about`);
+    for (const heading of ["We build digital solutions that solve real problems.", "From a vision to a growing reality.", "Our vision", "Our mission", "What we stand for.", "Want to build with us?"]) {
+      await page.getByRole("heading", { name: heading }).waitFor();
+    }
+    await page.getByRole("link", { name: "Explore careers" }).first().click();
+    await page.waitForURL(`${BASE}/careers`);
+    await page.getByRole("heading", { name: "Your next opportunity could start here." }).waitFor();
+    assert.equal(await page.locator(".role-list li").count(), 7, "the seven PIF role families");
+    await page.getByText("No stipend or salary at this time", { exact: false }).waitFor();
+    const faq = page.getByText("Is the fellowship paid?");
+    await faq.click();
+    await page.getByText("does not offer a stipend, allowance or salary", { exact: false }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "hr@paxofi.com" }).getAttribute("href"), "mailto:hr@paxofi.com");
+    await assertAccessible(page, "on careers with an open answer");
     await page.context().close();
   });
 
@@ -321,5 +340,14 @@ describe("contact journey", () => {
     await page.getByRole("button", { name: "Send enquiry" }).click();
     await page.getByText("We could not send your enquiry.").waitFor();
     await page.context().close();
+  });
+});
+
+describe("site sections", () => {
+  test("the careers site's pages are not served on the corporate site (D-018)", async () => {
+    for (const path of ["/careers-site", "/careers-site/privacy", "/careers-site/roles/software-engineer-fellow"]) {
+      assert.equal((await fetch(BASE + path)).status, 404, path);
+    }
+    assert.equal((await fetch(`${BASE}/careers`)).status, 200);
   });
 });

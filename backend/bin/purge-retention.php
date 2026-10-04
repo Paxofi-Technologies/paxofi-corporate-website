@@ -10,7 +10,12 @@ declare(strict_types=1);
  *   - staff sign-in attempts older than 90 days and sessions ended more than
  *     30 days ago are deleted (D-009);
  *   - visitor analytics: daily totals after 25 months, visitor hashes and
- *     salts once their day is over (D-014).
+ *     salts once their day is over (D-014);
+ *   - sent emails after 30 days, failed ones after 90, password reset links a
+ *     day after they expire (D-016);
+ *   - job applications and their CVs 12 months after closing (or after their
+ *     last stage change while still open), applicants' IP/user-agent after 90
+ *     days, CV uploads never attached to an application after a day (D-019).
  *
  *   php bin/purge-retention.php
  *
@@ -22,7 +27,9 @@ use Paxofi\Core\Configuration\EnvLoader;
 use Paxofi\Core\Configuration\Environment;
 use Paxofi\CorporateWebsite\Application\Retention\RetentionPolicy;
 use Paxofi\CorporateWebsite\Application\Retention\RetentionPurge;
+use Paxofi\CorporateWebsite\Bootstrap\ApiApplication;
 use Paxofi\CorporateWebsite\Database\Connection;
+use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -33,9 +40,18 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 try {
     $environment = Environment::from((new EnvLoader())->load(dirname(__DIR__) . '/.env'));
-    $result = (new RetentionPurge(Connection::make($environment), new RetentionPolicy()))->run();
+    $mediaPath = trim($environment->get('MEDIA_STORAGE_PATH', '') ?? '');
+    $cvStorage = new FilesystemMediaStorage(ApiApplication::cvFolder($mediaPath === '' ? null : $mediaPath));
+    $deleteCv = static function (string $reference) use ($cvStorage): void {
+        try {
+            $cvStorage->delete($reference);
+        } catch (Throwable) {
+            // Storage not set up: there is no file to delete.
+        }
+    };
+    $result = (new RetentionPurge(Connection::make($environment), new RetentionPolicy(), $deleteCv))->run();
     fwrite(STDOUT, sprintf(
-        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted, %d sign-in attempts deleted, %d sessions deleted, %d analytics rows deleted.\n",
+        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted, %d sign-in attempts deleted, %d sessions deleted, %d analytics rows deleted, %d emails deleted, %d password reset links deleted, %d job applications deleted (with their CVs), %d applications' IP/user-agent cleared, %d unused CV uploads deleted.\n",
         gmdate('Y-m-d H:i:s'),
         $result['enquiries_deleted'],
         $result['enquiry_metadata_cleared'],
@@ -43,6 +59,11 @@ try {
         $result['login_attempts_deleted'],
         $result['sessions_deleted'],
         $result['analytics_rows_deleted'],
+        $result['emails_deleted'],
+        $result['password_resets_deleted'],
+        $result['applications_deleted'],
+        $result['application_metadata_cleared'],
+        $result['cv_uploads_deleted'],
     ));
 } catch (Throwable $exception) {
     fwrite(STDERR, 'Retention purge failed: ' . $exception->getMessage() . PHP_EOL);

@@ -10,13 +10,16 @@ use Paxofi\CorporateWebsite\Application\Audit\AuditEvent;
 use Paxofi\CorporateWebsite\Application\Audit\AuditRecorder;
 use Paxofi\CorporateWebsite\Application\Exception\RateLimited;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
+use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
+use Paxofi\CorporateWebsite\Application\Mail\Outbox;
 use Paxofi\CorporateWebsite\Application\RequestContext;
 
 /**
  * Use case: a visitor submits a public form (currently only "contact").
  *
  * Orchestrates validation, abuse controls, persistence and auditing. The
- * enquiry and its audit event are written atomically.
+ * enquiry, its audit event and the staff email alert (D-016) are written
+ * atomically; the alert is then sent from the outbox.
  */
 final class ContactService
 {
@@ -30,6 +33,8 @@ final class ContactService
         private readonly Logger $logger,
         private readonly int $rateLimitMax = 5,
         private readonly int $rateLimitWindowMinutes = 10,
+        private readonly ?Outbox $outbox = null,
+        private readonly ?MailSettings $mail = null,
     ) {
     }
 
@@ -70,6 +75,10 @@ final class ContactService
                 targetId: $id,
                 requestId: $context->requestId,
             ));
+            $alert = $this->outbox !== null && $this->mail !== null ? EnquiryAlert::email($this->mail, $id, $submission) : null;
+            if ($alert !== null) {
+                $this->outbox->add($alert);
+            }
         });
 
         return new EnquiryReceipt($formKey, persisted: true);

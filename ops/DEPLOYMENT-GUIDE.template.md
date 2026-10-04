@@ -219,6 +219,83 @@ From this release the website counts its own visits, without cookies (decision D
 
 From this release staff can change the wording of the Home, About, Services, Products, Careers and Contact pages under **Content → Page text** (decision D-015). There is nothing to set up: the database upgrade adds the table. The menu and footer are edited the same way (**Content → Page text → Menu and footer**). Until someone publishes a change, every page keeps its current wording. Try it on staging first.
 
+## Step 10c — One time: turn on email and nightly backups (about 30 minutes)
+
+From this release the API can email staff about every new enquiry, send *Forgot your password?* links, email you when something breaks, and back itself up every night (decision D-016). Nothing changes until you add the settings below.
+
+1. **A mailbox to send from.** In cPanel → **Email Accounts** → **Create**, make `no-reply@paxofi.com` with a long random password, or use an existing mailbox. Then click **Connect Devices** for it and note the *Outgoing Server* (for example `mail.paxofi.com`) and the *SMTP Port* for SSL (usually 465).
+2. **A backup folder.** In File Manager, create `/home/paxoalhu/paxofi-backups`. It must be outside `public_html`, `paxofi-api-runtime` and `paxofi-corporate-website`.
+3. **Settings.** Open `/home/paxoalhu/paxofi-api-runtime/backend/.env` in File Manager → **Edit** and add these lines, using your own values:
+
+```text
+MAIL_TRANSPORT=smtp
+MAIL_HOST=mail.paxofi.com
+MAIL_PORT=465
+MAIL_ENCRYPTION=ssl
+MAIL_USERNAME=no-reply@paxofi.com
+MAIL_PASSWORD="the mailbox password"
+MAIL_FROM_ADDRESS=no-reply@paxofi.com
+MAIL_FROM_NAME="Paxofi Technologies"
+ENQUIRY_ALERT_TO=hello@paxofi.com
+ERROR_ALERT_TO=paxofitechnologies@gmail.com
+STAFF_AREA_URL=https://corporate.paxofi.com
+BACKUP_PATH=/home/paxoalhu/paxofi-backups
+BACKUP_KEEP_DAYS=14
+```
+
+   `ENQUIRY_ALERT_TO` and `ERROR_ALERT_TO` can hold several addresses separated by commas.
+4. **Two cron jobs** (cPanel → **Cron Jobs**, as in Step 6):
+   - *Every 5 minutes* (Common Settings → **Once Per Five Minutes**):
+
+```text
+/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/send-mail.php >> /home/paxoalhu/logs/send-mail.log 2>&1
+```
+
+   - *Once per day*, at minute `41` and hour `2`:
+
+```text
+/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/backup.php >> /home/paxoalhu/logs/backup.log 2>&1
+```
+
+5. **Test.**
+   - Send a message through the website's contact form: the alert should arrive within a minute.
+   - On the staff sign-in page, use **Forgot your password?** with your own address and follow the link.
+   - The next morning, `paxofi-backups` should hold a `paxofi-database-….sql.gz` file.
+6. On **staging**, use the same mailbox but `STAFF_AREA_URL=https://staging.corporate.paxofi.com` and its own backup folder (`/home/paxoalhu/paxofi-backups-staging`). Point `ENQUIRY_ALERT_TO` at yourself, so test enquiries don't reach the team.
+
+If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
+
+## Step 10d — One time: open careers.paxofi.com and HR staff accounts (about 45 minutes)
+
+From this release, **careers.paxofi.com** lists the open Paxofi Innovation Fellowship roles and takes applications with a CV (PDF or Word, up to 5 MB) and a portfolio or LinkedIn link. Applications are reviewed in the staff area under **Recruitment**, by administrators and by **Human Resources** staff with their own logins (decisions D-018, D-019). Applications and CVs are deleted automatically 12 months after they close.
+
+Do Steps 8 (two-factor), 10 (uploads) and 10c (email) first: HR staff must use two-factor sign-in, CVs are stored in the uploads folder, and candidates get emails.
+
+1. **Mailbox for candidates' replies:** cPanel → **Email Accounts** → **Create** `hr@paxofi.com` (if it does not exist). Candidate emails are sent from the `MAIL_FROM_ADDRESS` mailbox with *Reply-To: hr@paxofi.com*.
+2. **Domain:** cPanel → **Domains** → **Create A New Domain** → `careers.paxofi.com`, document root `/careers.paxofi.com` (its own folder; untick *Share document root*). Then **SSL/TLS Status** → select it → **Run AutoSSL**, and turn on **Force HTTPS Redirect** under **Domains**. If the address does not open after 30 minutes, add `careers` in the DNS where `paxofi.com` is managed (same IP address as `corporate.paxofi.com`).
+3. **API settings:** File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/.env` → **Edit**:
+    - change `CORS_ALLOWED_ORIGINS` so it lists both sites, separated by a comma and no spaces:
+
+            CORS_ALLOWED_ORIGINS=https://corporate.paxofi.com,https://careers.paxofi.com
+
+    - add:
+
+            RECRUITMENT_ALERT_TO=hr@paxofi.com
+            RECRUITMENT_REPLY_TO=hr@paxofi.com
+            CAREERS_SITE_URL=https://careers.paxofi.com
+
+    `RECRUITMENT_ALERT_TO` is told about each new application (several addresses can be separated by commas). The alert has no contact details; the application is read in the staff area.
+4. **The careers website** (the same website package, run a second time):
+    - Upload `paxofi-corporate-website-{{VERSION}}.zip` to `/home/paxoalhu/release-{{VERSION}}`, **Extract**, and rename the extracted `paxofi-corporate-website` folder to `paxofi-careers-website`. **Move** it to `/home/paxoalhu/`.
+    - cPanel → **Setup Node.js App** → **Create Application**: Node.js **22**, mode **Production**, application root `paxofi-careers-website`, application URL `careers.paxofi.com`, startup file `app.js`.
+    - **Environment variables:** `API_BASE_URL` = `https://api.paxofi.com/api/v1`, `SITE_SECTION` = `careers`, `CAREERS_SITE_URL` = `https://careers.paxofi.com`.
+    - **Create**, then **Start App**. Do not click *Run NPM Install*.
+5. **Check the roles:** open `https://careers.paxofi.com`. The seven fellowship roles show. Open one; the application form is at the bottom. `https://careers.paxofi.com/admin` must show *Not found* (the staff area is only on corporate.paxofi.com).
+6. **HR staff accounts:** sign in at {{SITE_URL}}/admin → **Users** → add each HR person with the role **Human Resources**. At their first sign-in they set up two-factor sign-in, then see only **Recruitment** and **My account**.
+7. **Test:** apply for a role with your own email and a small PDF CV. You should receive the acknowledgement with a `PIF-…` reference, and `RECRUITMENT_ALERT_TO` the alert. In the staff area → **Recruitment**, open the application, download the CV, move it to *Screening*, then **Erase application**.
+
+Every later release: after updating `paxofi-corporate-website` (Step 4), do the same for `paxofi-careers-website` (extract the same ZIP, rename the folder, swap it in, **Restart** its Node.js app). The roles are edited under **Recruitment → Edit the roles on careers.paxofi.com**, without a release.
+
 ## Step 11 — One time: create the staging copy (about 45 minutes)
 
 The staging copy is a private second website where each new release is installed and checked **before** it goes live (decision D-013). It uses the same release files as the live site, its own database, folders and media, and a password, so nothing done there touches the live website.
@@ -269,7 +346,9 @@ For every new release:
 2. **Test on staging:** the release notes say what to check (the UAT scenarios). Tell engineering about anything wrong; the live site is untouched.
 3. **Live:** when staging is right, do Steps 1–5 on the live site as usual, with the same files.
 
-If staging and live ever differ in a setting, the difference must be one of: the database name and user, `CORS_ALLOWED_ORIGINS`, `MFA_ENCRYPTION_KEY`, `MEDIA_STORAGE_PATH`, `API_BASE_URL`, and the two staging variables. Everything else is the same.
+If staging and live ever differ in a setting, the difference must be one of: the database name and user, `CORS_ALLOWED_ORIGINS`, `MFA_ENCRYPTION_KEY`, `MEDIA_STORAGE_PATH`, `API_BASE_URL`, `CAREERS_SITE_URL`, and the two staging variables. Everything else is the same.
+
+The careers site (Step 10d) is updated with every release on live, from the same website ZIP. Staging does not need its own careers site: test the careers pages on staging by giving the staging website a second Node.js app only when a release changes them.
 
 ## If something goes wrong
 
@@ -281,6 +360,9 @@ If staging and live ever differ in a setting, the difference must be one of: the
 | `/readiness` shows `"database":false` | `DB_*` values in `.env` are wrong, or the database user lacks privileges on `paxoalhu_corporate` (cPanel → MySQL Databases). |
 | Contact form fails and the address bar shows **Not secure** / `http://` (console: *blocked by CORS policy* from origin `http://…`) | The site is being served without HTTPS. Step 0 *HTTPS*: valid certificate (Run AutoSSL) and **Force HTTPS Redirect** on. Do not add `http://` to `CORS_ALLOWED_ORIGINS`. |
 | Contact form says *"We could not send your enquiry"*; the browser console (F12) mentions **CORS** | `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `{{SITE_URL}}` (no trailing slash). |
+| Careers application says *We could not send your application* and the console mentions **CORS** | `CORS_ALLOWED_ORIGINS` must also list `https://careers.paxofi.com` (Step 10d.3). |
+| Careers page says *We could not load the open roles* | The careers Node.js app's `API_BASE_URL` is wrong or the API is down; check `/api/v1/readiness`. |
+| CV upload says *CV uploads are not available right now* | `MEDIA_STORAGE_PATH` is missing in the API `.env` (Step 10). The API creates `applications/` inside it by itself. |
 | Contact form error without CORS message | `API_BASE_URL` in the Node app's environment variables must be the API base ending in `/api/v1`; restart the app after changing it. |
 | Website shows a file list, *403 Forbidden*, downloads a file, or the default cPanel page | The `corporate.paxofi.com` document root is wrong or its Node.js routing was not written: redo Step 0, then Setup Node.js App → **Edit** → **Save** → **Restart**. |
 | Website still shows the previous release (`/release.txt` shows the old version, or old pages appear after a restart) | Check `paxofi-corporate-website/RELEASE.txt` in File Manager. If it is old, the new folder was moved *inside* the old one: rename the outer folder to `…-old-{{VERSION}}`, move the inner `paxofi-corporate-website` to `/`, then **Restart**. If `RELEASE.txt` is new but pages are old, the server cache is serving copies of an earlier release: do the one-time cache step below. |

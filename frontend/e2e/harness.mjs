@@ -18,8 +18,11 @@ assert.ok(ENGINES[BROWSER], `unknown E2E_BROWSER ${BROWSER}`);
  * Registers before/after hooks for one suite file; returns its base URL and a page factory.
  * apiBase: the API the server itself reads (catalogue pages); defaults to an unreachable host.
  * env: extra settings for the website server (e.g. staging mode, D-013).
+ * host: the address the server listens on. "0.0.0.0" is what app.js uses on
+ * cPanel; it is needed where proxy.ts rewrites paths (Next.js names 127.0.0.1
+ * "localhost" in rewrites and would otherwise proxy them back to itself).
  */
-export function startHarness(port, { apiBase = API_BASE, env = {} } = {}) {
+export function startHarness(port, { apiBase = API_BASE, env = {}, host = "127.0.0.1" } = {}) {
   const base = `http://127.0.0.1:${port}`;
   let server;
   let browser;
@@ -27,7 +30,7 @@ export function startHarness(port, { apiBase = API_BASE, env = {} } = {}) {
   before(async () => {
     const root = new URL("..", import.meta.url).pathname;
     // Own process group, so the whole server tree can be stopped afterwards.
-    server = spawn(`${root}node_modules/.bin/next`, ["start", "-p", String(port), "-H", "127.0.0.1"], {
+    server = spawn(`${root}node_modules/.bin/next`, ["start", "-p", String(port), "-H", host], {
       cwd: root,
       detached: true,
       env: { ...process.env, API_BASE_URL: apiBase, NODE_ENV: "production", ...env },

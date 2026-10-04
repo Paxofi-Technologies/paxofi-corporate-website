@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets', 'job_applications', 'application_notes', 'application_uploads'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -66,7 +66,7 @@ final class MigrationTest extends DatabaseTestCase
         $file = array_values(array_filter(self::migrationFiles(), static fn (string $f): bool => str_contains($f, 'staff_sign_in')))[0];
         self::applySqlFile($file);
 
-        self::assertSame(['administrator', 'business_development'], self::$pdo->query('SELECT name FROM roles ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
+        self::assertSame(['administrator', 'business_development', 'human_resources'], self::$pdo->query('SELECT name FROM roles ORDER BY name')->fetchAll(PDO::FETCH_COLUMN));
         self::assertSame(6, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE p.name IN ('enquiries.read', 'enquiries.update', 'users.manage', 'audit.read')"));
         self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id WHERE r.name = 'business_development' AND p.name LIKE 'enquiries.%'"));
     }
@@ -155,6 +155,6 @@ final class MigrationTest extends DatabaseTestCase
         }
 
         $foreignKeys = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()')->fetchColumn();
-        self::assertSame(14, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010)');
+        self::assertSame(17, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010), password_resets.user_id (013), job_applications.opportunity_id and application_notes.application_id (014)');
     }
 }

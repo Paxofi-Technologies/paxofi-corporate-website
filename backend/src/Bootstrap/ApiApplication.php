@@ -22,9 +22,18 @@ use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogEditor;
 use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopyEditor;
 use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopySchema;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
+use Paxofi\CorporateWebsite\Application\Admin\PasswordResetService;
+use Paxofi\CorporateWebsite\Application\Mail\AlertThrottle;
+use Paxofi\CorporateWebsite\Application\Mail\ErrorAlerts;
+use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
+use Paxofi\CorporateWebsite\Application\Mail\MailTransport;
+use Paxofi\CorporateWebsite\Application\Mail\OutboxSender;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
 use Paxofi\CorporateWebsite\Application\Analytics\Analytics;
+use Paxofi\CorporateWebsite\Application\Careers\CareerRoleEditor;
+use Paxofi\CorporateWebsite\Application\Careers\CareersService;
+use Paxofi\CorporateWebsite\Application\Careers\RecruitmentService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -36,14 +45,18 @@ use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareerRolesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPagesController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPasswordResetController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRecruitmentController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
 use Paxofi\CorporateWebsite\Http\Controllers\AnalyticsController;
+use Paxofi\CorporateWebsite\Http\Controllers\CareersController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
@@ -59,16 +72,21 @@ use Paxofi\CorporateWebsite\Http\Middleware\SecurityHeadersMiddleware;
 use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
 use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
+use Paxofi\CorporateWebsite\Infrastructure\Mail\FileAlertThrottle;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoOutbox;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPasswordResets;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditRecorder;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCareerRoles;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogEditorRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoEnquiryRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoJobApplications;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoLoginAttempts;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoMediaRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPageCopyRepository;
@@ -99,6 +117,10 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/products'],
         ['GET', '/api/v1/services'],
         ['GET', '/api/v1/careers'],
+        ['GET', '/api/v1/careers/roles'],
+        ['GET', '/api/v1/careers/roles/{slug}'],
+        ['POST', '/api/v1/careers/cv'],
+        ['POST', '/api/v1/careers/roles/{slug}/apply'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
         ['POST', '/api/v1/analytics/pageview'],
@@ -114,6 +136,8 @@ final class ApiApplication implements HttpHandler
         ['DELETE', '/api/v1/admin/session'],
         ['POST', '/api/v1/admin/session/password'],
         ['POST', '/api/v1/admin/session/mfa'],
+        ['POST', '/api/v1/admin/password-reset'],
+        ['POST', '/api/v1/admin/password-reset/complete'],
         ['GET', '/api/v1/admin/account/two-factor'],
         ['POST', '/api/v1/admin/account/two-factor/setup'],
         ['POST', '/api/v1/admin/account/two-factor/enable'],
@@ -146,6 +170,19 @@ final class ApiApplication implements HttpHandler
         ['DELETE', '/api/v1/admin/pages/{page}/draft'],
         ['POST', '/api/v1/admin/pages/{page}/publish'],
         ['POST', '/api/v1/admin/pages/{page}/revisions/{revision}/restore'],
+        ['GET', '/api/v1/admin/applications'],
+        ['GET', '/api/v1/admin/applications/{id}'],
+        ['GET', '/api/v1/admin/applications/{id}/cv'],
+        ['PATCH', '/api/v1/admin/applications/{id}'],
+        ['POST', '/api/v1/admin/applications/{id}/scores'],
+        ['POST', '/api/v1/admin/applications/{id}/notes'],
+        ['POST', '/api/v1/admin/applications/{id}/emails'],
+        ['DELETE', '/api/v1/admin/applications/{id}'],
+        ['GET', '/api/v1/admin/career-roles'],
+        ['POST', '/api/v1/admin/career-roles'],
+        ['GET', '/api/v1/admin/career-roles/{id}'],
+        ['PATCH', '/api/v1/admin/career-roles/{id}'],
+        ['POST', '/api/v1/admin/career-roles/{id}/state'],
     ];
 
     private readonly HttpHandler $pipeline;
@@ -153,6 +190,10 @@ final class ApiApplication implements HttpHandler
     /** @var Closure(): DateTimeImmutable */
     private readonly Closure $clock;
     private readonly PasswordHashing $hasher;
+    private readonly MailSettings $mail;
+    private readonly ?MailTransport $mailTransport;
+    private readonly ErrorAlerts $alerts;
+    private readonly PdoOutbox $outbox;
 
     /**
      * @param (Closure(): PDO)|null $connect override for tests
@@ -165,22 +206,63 @@ final class ApiApplication implements HttpHandler
         ?Closure $clock = null,
         ?PasswordHashing $hasher = null,
         private readonly ?ImageProcessor $imageProcessor = null,
+        ?MailTransport $mailTransport = null,
+        ?AlertThrottle $alertThrottle = null,
     ) {
         $this->database = new Database($connect ?? fn (): PDO => Connection::make($settings->environment));
         $this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $this->hasher = $hasher ?? new NativeStaffPasswordHasher();
+        $this->mailTransport = $mailTransport ?? $settings->mailTransport;
+        $mail = $settings->mail ?? MailSettings::disabled();
+        // A transport passed in (tests) turns sending on with the configured recipients.
+        $this->mail = $mailTransport !== null && !$mail->enabled ? new MailSettings(true, $mail->enquiryAlertTo, $mail->errorAlertTo, $mail->siteUrl) : $mail;
+        $this->outbox = new PdoOutbox($this->database);
+        $this->alerts = new ErrorAlerts($this->mail, $this->mailTransport, $alertThrottle ?? new FileAlertThrottle(), $this->clock, $logger);
 
         $this->pipeline = new MiddlewarePipeline([
             new RequestIdMiddleware(),
             new SecurityHeadersMiddleware(enforceHsts: $settings->environment->isProduction()),
             new CorsMiddleware($settings->corsAllowedOrigins),
-            new ErrorHandlingMiddleware($logger, $settings->debug),
+            new ErrorHandlingMiddleware($logger, $settings->debug, $this->alerts),
         ], $this->router());
     }
 
     public function handle(HttpRequest $request): HttpResponse
     {
         return $this->pipeline->handle($request);
+    }
+
+    /**
+     * Work done after the response has gone to the browser (public/index.php):
+     * sends error alerts and any emails this request queued (D-016). The
+     * bin/send-mail.php cron job retries whatever could not be sent here.
+     */
+    public function afterResponse(float $budgetSeconds = 20.0): void
+    {
+        $this->alerts->flush();
+        if ($this->mailTransport === null || !$this->mail->enabled || $this->outbox->addedCount() === 0) {
+            return;
+        }
+        try {
+            $this->outboxSender()->run(10, $budgetSeconds);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('mail.after_response_failed', ['error' => $exception->getMessage()]);
+        }
+        $this->alerts->flush();
+    }
+
+    public function outboxSender(): OutboxSender
+    {
+        if ($this->mailTransport === null) {
+            throw new \LogicException('Email sending is not configured (MAIL_TRANSPORT).');
+        }
+
+        return new OutboxSender($this->outbox, $this->mailTransport, $this->clock, $this->logger, $this->alerts->report(...));
+    }
+
+    public function errorAlerts(): ErrorAlerts
+    {
+        return $this->alerts;
     }
 
     private function router(): Router
@@ -202,6 +284,11 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
         $router->get('/api/v1/pages/{page}', $this->lazy(fn (): Controller => new PageCopyController($this->pageCopyEditor())));
+        $careers = fn (): CareersController => new CareersController($this->careersService());
+        $router->get('/api/v1/careers/roles', static fn (HttpRequest $r): HttpResponse => $careers()->roles($r));
+        $router->get('/api/v1/careers/roles/{slug}', static fn (HttpRequest $r): HttpResponse => $careers()->role($r));
+        $router->post('/api/v1/careers/cv', static fn (HttpRequest $r): HttpResponse => $careers()->uploadCv($r));
+        $router->post('/api/v1/careers/roles/{slug}/apply', static fn (HttpRequest $r): HttpResponse => $careers()->apply($r));
         $router->post('/api/v1/analytics/pageview', $this->lazy(fn (): Controller => new AnalyticsController($this->analytics())));
 
         $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
@@ -212,6 +299,10 @@ final class ApiApplication implements HttpHandler
         $router->add('DELETE', '/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->signOut($r));
         $router->post('/api/v1/admin/session/password', static fn (HttpRequest $r): HttpResponse => $session()->changePassword($r));
         $router->post('/api/v1/admin/session/mfa', static fn (HttpRequest $r): HttpResponse => $session()->verifySecondFactor($r));
+
+        $reset = fn (): AdminPasswordResetController => new AdminPasswordResetController($this->passwordResetService(), $this->adminGuard());
+        $router->post('/api/v1/admin/password-reset', static fn (HttpRequest $r): HttpResponse => $reset()->request($r));
+        $router->post('/api/v1/admin/password-reset/complete', static fn (HttpRequest $r): HttpResponse => $reset()->complete($r));
 
         $twoFactor = fn (): AdminTwoFactorController => new AdminTwoFactorController($this->twoFactorService(), $this->adminGuard());
         $router->get('/api/v1/admin/account/two-factor', static fn (HttpRequest $r): HttpResponse => $twoFactor()->status($r));
@@ -275,6 +366,26 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/admin/pages/{page}/publish', static fn (HttpRequest $r): HttpResponse => $pages()->publish($r));
         $router->post('/api/v1/admin/pages/{page}/revisions/{revision}/restore', static fn (HttpRequest $r): HttpResponse => $pages()->restore($r));
 
+        $recruitment = fn (): AdminRecruitmentController => new AdminRecruitmentController($this->recruitmentService(), $this->adminGuard());
+        $router->get('/api/v1/admin/applications', static fn (HttpRequest $r): HttpResponse => $recruitment()->list($r));
+        $router->get('/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->show($r));
+        $router->get('/api/v1/admin/applications/{id}/cv', static fn (HttpRequest $r): HttpResponse => $recruitment()->cv($r));
+        $router->add('PATCH', '/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->stage($r));
+        $router->post('/api/v1/admin/applications/{id}/scores', static fn (HttpRequest $r): HttpResponse => $recruitment()->score($r));
+        $router->post('/api/v1/admin/applications/{id}/notes', static fn (HttpRequest $r): HttpResponse => $recruitment()->note($r));
+        $router->post('/api/v1/admin/applications/{id}/emails', static fn (HttpRequest $r): HttpResponse => $recruitment()->email($r));
+        $router->add('DELETE', '/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->delete($r));
+
+        $roles = fn (): AdminCareerRolesController => new AdminCareerRolesController(
+            new CareerRoleEditor(new PdoCareerRoles($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), Uuid::v4(...)),
+            $this->adminGuard(),
+        );
+        $router->get('/api/v1/admin/career-roles', static fn (HttpRequest $r): HttpResponse => $roles()->list($r));
+        $router->post('/api/v1/admin/career-roles', static fn (HttpRequest $r): HttpResponse => $roles()->create($r));
+        $router->get('/api/v1/admin/career-roles/{id}', static fn (HttpRequest $r): HttpResponse => $roles()->show($r));
+        $router->add('PATCH', '/api/v1/admin/career-roles/{id}', static fn (HttpRequest $r): HttpResponse => $roles()->update($r));
+        $router->post('/api/v1/admin/career-roles/{id}/state', static fn (HttpRequest $r): HttpResponse => $roles()->state($r));
+
         $router->get('/api/v1/admin/analytics', fn (HttpRequest $r): HttpResponse => (new AdminAnalyticsController($this->analytics(), $this->adminGuard()))->report($r));
 
         $router->get('/api/v1/admin/audit', fn (HttpRequest $r): HttpResponse => (new AdminAuditController(new PdoAuditLog($this->database), $this->adminGuard()))->list($r));
@@ -303,6 +414,21 @@ final class ApiApplication implements HttpHandler
             $this->clock,
             $this->settings->adminSetupToken,
             twoFactor: $this->twoFactorService(),
+        );
+    }
+
+    private function passwordResetService(): PasswordResetService
+    {
+        return new PasswordResetService(
+            new PdoStaffRepository($this->database),
+            new PdoPasswordResets($this->database),
+            new PdoSessionStore($this->database),
+            $this->hasher,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->outbox,
+            $this->mail,
+            $this->clock,
         );
     }
 
@@ -368,6 +494,58 @@ final class ApiApplication implements HttpHandler
         return $registry;
     }
 
+    private function careersService(): CareersService
+    {
+        return new CareersService(
+            new PdoCareerRoles($this->database),
+            new PdoJobApplications($this->database),
+            $this->cvStorage(),
+            $this->outbox,
+            $this->mail,
+            $this->settings->recruitment,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->logger,
+            $this->clock,
+            Uuid::v4(...),
+        );
+    }
+
+    private function recruitmentService(): RecruitmentService
+    {
+        return new RecruitmentService(
+            new PdoJobApplications($this->database),
+            new PdoCareerRoles($this->database),
+            $this->cvStorage(),
+            $this->outbox,
+            $this->mail,
+            $this->settings->recruitment,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
+        );
+    }
+
+    /** CVs live in their own folder inside the media folder, never served publicly (D-019). */
+    private function cvStorage(): FilesystemMediaStorage
+    {
+        return new FilesystemMediaStorage(self::cvFolder($this->settings->mediaStoragePath));
+    }
+
+    /** MEDIA_STORAGE_PATH/applications, created on first use; null while media storage is not set up. */
+    public static function cvFolder(?string $mediaStoragePath): ?string
+    {
+        if ($mediaStoragePath === null || !is_dir($mediaStoragePath)) {
+            return null;
+        }
+        $folder = rtrim($mediaStoragePath, '/\\') . DIRECTORY_SEPARATOR . 'applications';
+        if (!is_dir($folder)) {
+            @mkdir($folder, 0750);
+        }
+
+        return $folder;
+    }
+
     private function contactService(): ContactService
     {
         return new ContactService(
@@ -378,6 +556,8 @@ final class ApiApplication implements HttpHandler
             $this->logger,
             $this->settings->contactRateLimitMax,
             $this->settings->contactRateLimitWindowMinutes,
+            $this->outbox,
+            $this->mail,
         );
     }
 }

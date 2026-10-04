@@ -6,6 +6,7 @@ namespace Paxofi\CorporateWebsite\Http;
 
 use Paxofi\Core\Contracts\HttpRequest;
 use Paxofi\Core\Http\Request;
+use Paxofi\CorporateWebsite\Application\Careers\CareersService;
 use Paxofi\CorporateWebsite\Application\Media\MediaRules;
 
 /** Builds an immutable PCF request from PHP superglobals (SAPI boundary). */
@@ -54,19 +55,28 @@ final class RequestFactory
 
     /** The media upload route (D-012) is the only one whose body is a file. */
     public const UPLOAD_PATH = '/api/v1/admin/media';
+    public const CV_UPLOAD_PATH = '/api/v1/careers/cv';
 
     /**
-     * How much of the request body to read: 64 KB, or the largest media file
-     * on the upload route.
+     * How much of the request body to read: 64 KB, the largest media file on
+     * the media upload route, or the largest CV on the careers upload route.
      *
      * @param array<string, mixed> $server
      */
     public static function bodyLimit(array $server): int
     {
         $path = is_string($server['REQUEST_URI'] ?? null) ? (string) parse_url($server['REQUEST_URI'], PHP_URL_PATH) : '';
-        $isUpload = ($server['REQUEST_METHOD'] ?? '') === 'POST' && rtrim($path, '/') === self::UPLOAD_PATH;
+        $path = rtrim($path, '/');
+        if (($server['REQUEST_METHOD'] ?? '') !== 'POST') {
+            return self::MAX_BODY_BYTES;
+        }
 
-        return $isUpload ? MediaRules::UPLOAD_MAX_BYTES : self::MAX_BODY_BYTES;
+        return match ($path) {
+            self::UPLOAD_PATH => MediaRules::UPLOAD_MAX_BYTES,
+            // One byte over the limit, so a larger file is refused rather than cut short.
+            self::CV_UPLOAD_PATH => CareersService::CV_MAX_BYTES + 1,
+            default => self::MAX_BODY_BYTES,
+        };
     }
 
     public static function readBody(int $limit = self::MAX_BODY_BYTES): string

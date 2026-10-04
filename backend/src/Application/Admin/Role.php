@@ -9,12 +9,15 @@ enum Role: string
 {
     case Administrator = 'administrator';
     case BusinessDevelopment = 'business_development';
+    /** Recruitment only: applications, CVs and careers roles (D-019). */
+    case HumanResources = 'human_resources';
 
     public function label(): string
     {
         return match ($this) {
             self::Administrator => 'Administrator',
             self::BusinessDevelopment => 'Business Development',
+            self::HumanResources => 'Human Resources',
         };
     }
 }

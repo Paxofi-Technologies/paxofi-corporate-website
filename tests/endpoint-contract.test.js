@@ -16,6 +16,10 @@ const routes = [
   ["GET", "/api/v1/products", "public"],
   ["GET", "/api/v1/services", "public"],
   ["GET", "/api/v1/careers", "public"],
+  ["GET", "/api/v1/careers/roles", "public"],
+  ["GET", "/api/v1/careers/roles/{slug}", "public"],
+  ["POST", "/api/v1/careers/cv", "public+rate-limit"],
+  ["POST", "/api/v1/careers/roles/{slug}/apply", "public+rate-limit"],
   ["POST", "/api/v1/forms/{form_key}/submit", "public+rate-limit"],
   ["GET", "/api/v1/media/{id}/{filename}", "public"],
   ["POST", "/api/v1/analytics/pageview", "public"],
@@ -27,6 +31,8 @@ const routes = [
   ["DELETE", "/api/v1/admin/session", "admin"],
   ["POST", "/api/v1/admin/session/password", "admin"],
   ["POST", "/api/v1/admin/session/mfa", "admin"],
+  ["POST", "/api/v1/admin/password-reset", "admin-entry"],
+  ["POST", "/api/v1/admin/password-reset/complete", "admin-entry"],
   ["GET", "/api/v1/admin/account/two-factor", "admin"],
   ["POST", "/api/v1/admin/account/two-factor/setup", "admin"],
   ["POST", "/api/v1/admin/account/two-factor/enable", "admin"],
@@ -59,6 +65,19 @@ const routes = [
   ["DELETE", "/api/v1/admin/pages/{page}/draft", "admin"],
   ["POST", "/api/v1/admin/pages/{page}/publish", "admin"],
   ["POST", "/api/v1/admin/pages/{page}/revisions/{revision}/restore", "admin"],
+  ["GET", "/api/v1/admin/applications", "admin"],
+  ["GET", "/api/v1/admin/applications/{id}", "admin"],
+  ["GET", "/api/v1/admin/applications/{id}/cv", "admin"],
+  ["PATCH", "/api/v1/admin/applications/{id}", "admin"],
+  ["POST", "/api/v1/admin/applications/{id}/scores", "admin"],
+  ["POST", "/api/v1/admin/applications/{id}/notes", "admin"],
+  ["POST", "/api/v1/admin/applications/{id}/emails", "admin"],
+  ["DELETE", "/api/v1/admin/applications/{id}", "admin"],
+  ["GET", "/api/v1/admin/career-roles", "admin"],
+  ["POST", "/api/v1/admin/career-roles", "admin"],
+  ["GET", "/api/v1/admin/career-roles/{id}", "admin"],
+  ["PATCH", "/api/v1/admin/career-roles/{id}", "admin"],
+  ["POST", "/api/v1/admin/career-roles/{id}/state", "admin"],
 ];
 
 test("endpoint RTM has unique method/route entries", () => {
@@ -77,9 +96,9 @@ test("route inventory matches backend/config/routes.php exactly", () => {
   assert.deepEqual(inventory.sort(), routes.map((r) => r.join(" ")).sort());
 });
 
-test("every admin route requires the staff guard, except the sign-in entry points", () => {
+test("every admin route requires the staff guard, except the sign-in and password-reset entry points", () => {
   for (const [method, route, auth] of routes.filter((r) => r[1].startsWith("/api/v1/admin"))) {
-    const entry = (route === "/api/v1/admin/setup") || (method === "POST" && route === "/api/v1/admin/session");
+    const entry = (route === "/api/v1/admin/setup") || (method === "POST" && route === "/api/v1/admin/session") || route.startsWith("/api/v1/admin/password-reset");
     assert.equal(auth, entry ? "admin-entry" : "admin", `${method} ${route}`);
   }
 });
@@ -100,9 +119,10 @@ test("every admin controller action goes through AdminGuard", () => {
   }
 });
 
-test("media uploads read large bodies on the upload route only (D-012)", () => {
+test("media and CV uploads read large bodies on their upload routes only (D-012, D-019)", () => {
   const factory = read("backend", "src", "Http", "RequestFactory.php");
   assert.match(factory, /UPLOAD_PATH = '\/api\/v1\/admin\/media'/);
+  assert.match(factory, /CV_UPLOAD_PATH = '\/api\/v1\/careers\/cv'/);
   assert.match(read("backend", "public", "index.php"), /readBody\(RequestFactory::bodyLimit\(\$_SERVER\)\)/);
 });
 

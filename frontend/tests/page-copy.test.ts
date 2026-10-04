@@ -45,7 +45,7 @@ test("every field has a unique key and a default within its limit", () => {
 });
 
 test("menu links: only pages on this site or https:// addresses; empty optional links hide", () => {
-  for (const ok of ["/about", "/", "/products#pay", "https://career.paxofi.com", "https://career.paxofi.com/jobs?x=1"]) assert.ok(isSafeLink(ok), ok);
+  for (const ok of ["/about", "/", "/products#pay", "https://careers.paxofi.com", "https://careers.paxofi.com/jobs?x=1"]) assert.ok(isSafeLink(ok), ok);
   for (const bad of ["javascript:alert(1)", "//evil.example", "http://plain.example", "https://x", "/a b", 'https://a.com/"x', "data:text/html,hi"]) assert.ok(!isSafeLink(bad), bad);
 
   const copy = mergeCopy("site", { menu_1_link: "javascript:alert(1)", menu_4_label: "", menu_4_link: "", menu_button_label: "", footer_email: "nope" });

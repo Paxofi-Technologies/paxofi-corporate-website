@@ -103,7 +103,7 @@ final class PageCopyTest extends DatabaseTestCase
     {
         $admin = $this->setupAdmin();
         $fields = array_column(self::decode($this->call('GET', '/api/v1/admin/pages/site', cookie: $admin))['data']['fields'], 'default', 'key');
-        self::assertSame(['/about', '/contact', 'https://career.paxofi.com'], [$fields['menu_1_link'], $fields['menu_button_link'], $fields['footer_careers_link']]);
+        self::assertSame(['/about', '/contact', 'https://careers.paxofi.com'], [$fields['menu_1_link'], $fields['menu_button_link'], $fields['footer_careers_link']]);
 
         $bad = $this->call('POST', '/api/v1/admin/pages/site/draft', ['fields' => [
             'menu_1_link' => 'javascript:alert(1)',
