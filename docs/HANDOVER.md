@@ -9,7 +9,7 @@ Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.c
 | Website (Next.js 16, Node 22) | https://corporate.paxofi.com | Setup Node.js App, app root `paxofi-corporate-website`, startup `app.js`, env `API_BASE_URL` | `/release.txt`; UptimeRobot |
 | API (PHP 8.4, Paxofi Core Framework 1.1) | https://api.paxofi.com/api/v1 | `paxofi-api-runtime/backend/public` (document root), secrets in `backend/.env` (600) | `/health`, `/readiness`; UptimeRobot |
 | Database (MariaDB 11.4) | `paxoalhu_corporate` | phpMyAdmin | `/readiness` → `"database":true` |
-| Careers | https://career.paxofi.com | separate site (decision D-001) | – |
+| Careers | https://careers.paxofi.com | separate site (decision D-001) | – |
 
 ## 2. Day-to-day
 

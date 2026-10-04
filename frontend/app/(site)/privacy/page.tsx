@@ -67,7 +67,7 @@ export default function Privacy() {
           <h2>Job applications</h2>
           <p>
             This website does not collect job applications. Recruitment is handled on{" "}
-            <a href="https://career.paxofi.com" rel="noopener">career.paxofi.com</a>, which has its own privacy terms.
+            <a href="https://careers.paxofi.com" rel="noopener">careers.paxofi.com</a>, which has its own privacy terms.
           </p>
 
           <h2>Questions and requests</h2>

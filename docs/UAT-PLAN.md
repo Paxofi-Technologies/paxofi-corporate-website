@@ -21,7 +21,7 @@ Automated tests already cover these flows in Chromium, Firefox and WebKit on eve
 | U1 | First impression | Open https://corporate.paxofi.com | Home page loads within about 3 seconds, Paxofi branding (blue/navy), headline "Technology for a Brighter Tomorrow.", no errors, padlock shown | | | |
 | U2 | Navigation | Use the menu to open About, Services, Products, Careers, then **Talk to us** | Each page opens; the current page is highlighted in the menu. On phones, the menu button opens and closes the menu | | | |
 | U3 | Content accuracy | Read every page, including the footer | Company name, products, services, values, email address and wording are correct and approved; no spelling mistakes; no placeholder text | | | |
-| U4 | Careers hand-off | Careers → **View opportunities** | career.paxofi.com opens. No application form on the corporate site | | | |
+| U4 | Careers hand-off | Careers → **View opportunities** | careers.paxofi.com opens. No application form on the corporate site | | | |
 | U5 | Send an enquiry | Contact → fill in name, email, company, a message starting "UAT test" → **Send enquiry** | "Thanks — your enquiry has been received."; the form clears | | | |
 | U6 | Enquiry arrives | phpMyAdmin → `paxoalhu_corporate` → `enquiries` → Browse (newest first) | The U5 enquiries are there with the right details | | – | – |
 | U7 | Form mistakes | Contact → enter an email without "@" → Send | The browser or the form points to the email field and asks for a valid address; nothing is sent | | | |

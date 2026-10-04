@@ -2,7 +2,7 @@
 
 Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–009 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
 
-**Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on career.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
+**Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on careers.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
 
 ## Active tables
 
