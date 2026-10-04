@@ -225,3 +225,23 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Not chosen:**
   - A general page builder: it would let a change break the layout or accessibility.
   - Rich text (bold, links): it adds a sanitising risk for little gain on marketing pages. Revisit if a page needs it.
+
+
+## D-016 — Email alerts, staff password reset, error alerts and nightly backups (4 Oct 2026)
+
+**Decision (CTO; recommended 3 Oct, the owner asked to start on 4 Oct 2026; slice P2.8):** the API sends email through the company mailbox, and the server keeps its own nightly backups.
+
+- **How email is sent:** through the company mailbox on the hosting account (SMTP, `MAIL_*` settings). Every email is first written to `email_outbox` (migration 013) and sent straight after the page has answered, so a slow mail server never slows the website. A cron job (`bin/send-mail.php`, every 5 minutes) retries anything that failed: after 1, 5, 15, 60 and 240 minutes, then gives up and raises an error alert. Sent emails are deleted after 30 days and failed ones after 90, because they contain personal data. While `MAIL_TRANSPORT` is not set, nothing is sent and the site works as before.
+- **New-enquiry alert:** every contact-form enquiry (not spam) emails `ENQUIRY_ALERT_TO`. The email contains the name, email, company, message and a link to the enquiry in the staff area. *Reply* answers the visitor directly (Reply-To).
+- **Staff forgot-password:** *Forgot your password?* on the sign-in page.
+  - The answer is the same for any address, so the form cannot be used to find out who has an account.
+  - The emailed link holds a random 256-bit token, of which only a SHA-256 is stored. It sits after `#`, so it never reaches server logs.
+  - The link works once, for 30 minutes.
+  - At most 3 links an hour per account and 10 per IP address.
+  - A new password signs the person out everywhere and sends them a "password changed" email. Two-factor sign-in still applies at the next sign-in.
+  - Everything is audited.
+- **Error alerts:** server errors, the database being unreachable, a failed backup and an email given up on all email `ERROR_ALERT_TO`, at most once an hour per problem. These go straight to the mail server, not through the outbox, so they still work when the database is down.
+- **Nightly backups:** `bin/backup.php` writes the whole database as a gzipped SQL file (restored with phpMyAdmin → Import) and the media library as a `.tar.gz` to `BACKUP_PATH`, outside the website folders. It keeps 14 days of copies and emails an alert when a backup fails. It is pure PHP, so no `mysqldump` is needed. Backups on the same server do not protect against losing the server, so a copy should be downloaded weekly (RB-18).
+- **Not chosen:**
+  - A paid email API (SendGrid, Mailgun): one more supplier and contract, when the hosting mailbox is enough for these volumes.
+  - Sending inside the request: a slow mail server would slow the contact form.

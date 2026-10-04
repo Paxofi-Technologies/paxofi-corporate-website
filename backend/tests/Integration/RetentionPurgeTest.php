@@ -32,7 +32,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
 
         $result = (new RetentionPurge(self::$pdo, new RetentionPolicy()))->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0], $result);
+        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0], $result);
         self::assertSame(['203.0.113.7', 'test-agent'], $this->network($fresh));
         self::assertSame([null, null], $this->network($ninetyOneDays));
         self::assertSame('0', (string) self::scalar('SELECT COUNT(*) FROM enquiries WHERE id = ?', [$expired]));
@@ -66,7 +66,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
         $purge = new RetentionPurge(self::$pdo, new RetentionPolicy());
         $purge->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0], $purge->run($this->now));
+        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0], $purge->run($this->now));
         self::assertSame('1', (string) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'data_retention.purged'"), 'no audit noise');
     }
 

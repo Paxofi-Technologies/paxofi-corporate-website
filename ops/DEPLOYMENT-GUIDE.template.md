@@ -219,6 +219,52 @@ From this release the website counts its own visits, without cookies (decision D
 
 From this release staff can change the wording of the Home, About, Services, Products, Careers and Contact pages under **Content → Page text** (decision D-015). There is nothing to set up: the database upgrade adds the table. The menu and footer are edited the same way (**Content → Page text → Menu and footer**). Until someone publishes a change, every page keeps its current wording. Try it on staging first.
 
+## Step 10c — One time: turn on email and nightly backups (about 30 minutes)
+
+From this release the API can email staff about every new enquiry, send *Forgot your password?* links, email you when something breaks, and back itself up every night (decision D-016). Nothing changes until you add the settings below.
+
+1. **A mailbox to send from.** In cPanel → **Email Accounts** → **Create**, make `no-reply@paxofi.com` with a long random password, or use an existing mailbox. Then click **Connect Devices** for it and note the *Outgoing Server* (for example `mail.paxofi.com`) and the *SMTP Port* for SSL (usually 465).
+2. **A backup folder.** In File Manager, create `/home/paxoalhu/paxofi-backups`. It must be outside `public_html`, `paxofi-api-runtime` and `paxofi-corporate-website`.
+3. **Settings.** Open `/home/paxoalhu/paxofi-api-runtime/backend/.env` in File Manager → **Edit** and add these lines, using your own values:
+
+```text
+MAIL_TRANSPORT=smtp
+MAIL_HOST=mail.paxofi.com
+MAIL_PORT=465
+MAIL_ENCRYPTION=ssl
+MAIL_USERNAME=no-reply@paxofi.com
+MAIL_PASSWORD="the mailbox password"
+MAIL_FROM_ADDRESS=no-reply@paxofi.com
+MAIL_FROM_NAME="Paxofi Technologies"
+ENQUIRY_ALERT_TO=hello@paxofi.com
+ERROR_ALERT_TO=paxofitechnologies@gmail.com
+STAFF_AREA_URL=https://corporate.paxofi.com
+BACKUP_PATH=/home/paxoalhu/paxofi-backups
+BACKUP_KEEP_DAYS=14
+```
+
+   `ENQUIRY_ALERT_TO` and `ERROR_ALERT_TO` can hold several addresses separated by commas.
+4. **Two cron jobs** (cPanel → **Cron Jobs**, as in Step 6):
+   - *Every 5 minutes* (Common Settings → **Once Per Five Minutes**):
+
+```text
+/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/send-mail.php >> /home/paxoalhu/logs/send-mail.log 2>&1
+```
+
+   - *Once per day*, at minute `41` and hour `2`:
+
+```text
+/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/backup.php >> /home/paxoalhu/logs/backup.log 2>&1
+```
+
+5. **Test.**
+   - Send a message through the website's contact form: the alert should arrive within a minute.
+   - On the staff sign-in page, use **Forgot your password?** with your own address and follow the link.
+   - The next morning, `paxofi-backups` should hold a `paxofi-database-….sql.gz` file.
+6. On **staging**, use the same mailbox but `STAFF_AREA_URL=https://staging.corporate.paxofi.com` and its own backup folder (`/home/paxoalhu/paxofi-backups-staging`). Point `ENQUIRY_ALERT_TO` at yourself, so test enquiries don't reach the team.
+
+If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
+
 ## Step 11 — One time: create the staging copy (about 45 minutes)
 
 The staging copy is a private second website where each new release is installed and checked **before** it goes live (decision D-013). It uses the same release files as the live site, its own database, folders and media, and a password, so nothing done there touches the live website.

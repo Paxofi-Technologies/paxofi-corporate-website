@@ -20,6 +20,8 @@ return [
  ['DELETE','/api/v1/admin/session','admin','sign out',null],
  ['POST','/api/v1/admin/session/password','admin','change own password',null],
  ['POST','/api/v1/admin/session/mfa','admin','second sign-in step: authenticator or recovery code (throttled)',null],
+ ['POST','/api/v1/admin/password-reset','admin-entry','staff forgot-password: emails a one-time reset link; same answer for any address (throttled, D-016)'],
+ ['POST','/api/v1/admin/password-reset/complete','admin-entry','staff forgot-password: sets a new password with the emailed link and signs out everywhere (D-016)'],
  ['GET','/api/v1/admin/account/two-factor','admin','own two-factor status',null],
  ['POST','/api/v1/admin/account/two-factor/setup','admin','start authenticator set-up',null],
  ['POST','/api/v1/admin/account/two-factor/enable','admin','confirm set-up; returns recovery codes once',null],

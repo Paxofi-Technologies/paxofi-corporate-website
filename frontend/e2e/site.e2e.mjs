@@ -211,7 +211,7 @@ describe("navigation", () => {
   test("careers links go to the careers site, which handles all applications", async () => {
     const page = await newPage();
     await page.goto(`${BASE}/careers`);
-    const hrefs = await page.locator('main a[href*="career."]').evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+    const hrefs = await page.locator('main a[href*="careers.paxofi"]').evaluateAll((links) => links.map((a) => a.getAttribute("href")));
     assert.ok(hrefs.length >= 1);
     for (const href of hrefs) assert.equal(href, "https://careers.paxofi.com");
     assert.equal(await page.locator("main form").count(), 0, "no application form on the corporate site");

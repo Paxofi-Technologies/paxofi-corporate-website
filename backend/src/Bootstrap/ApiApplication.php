@@ -22,6 +22,12 @@ use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogEditor;
 use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopyEditor;
 use Paxofi\CorporateWebsite\Application\Admin\Pages\PageCopySchema;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
+use Paxofi\CorporateWebsite\Application\Admin\PasswordResetService;
+use Paxofi\CorporateWebsite\Application\Mail\AlertThrottle;
+use Paxofi\CorporateWebsite\Application\Mail\ErrorAlerts;
+use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
+use Paxofi\CorporateWebsite\Application\Mail\MailTransport;
+use Paxofi\CorporateWebsite\Application\Mail\OutboxSender;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
 use Paxofi\CorporateWebsite\Application\Analytics\Analytics;
@@ -40,6 +46,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPagesController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPasswordResetController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
@@ -59,6 +66,9 @@ use Paxofi\CorporateWebsite\Http\Middleware\SecurityHeadersMiddleware;
 use Paxofi\CorporateWebsite\Infrastructure\Health\DatabaseHealthCheck;
 use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
+use Paxofi\CorporateWebsite\Infrastructure\Mail\FileAlertThrottle;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoOutbox;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPasswordResets;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
@@ -114,6 +124,8 @@ final class ApiApplication implements HttpHandler
         ['DELETE', '/api/v1/admin/session'],
         ['POST', '/api/v1/admin/session/password'],
         ['POST', '/api/v1/admin/session/mfa'],
+        ['POST', '/api/v1/admin/password-reset'],
+        ['POST', '/api/v1/admin/password-reset/complete'],
         ['GET', '/api/v1/admin/account/two-factor'],
         ['POST', '/api/v1/admin/account/two-factor/setup'],
         ['POST', '/api/v1/admin/account/two-factor/enable'],
@@ -153,6 +165,10 @@ final class ApiApplication implements HttpHandler
     /** @var Closure(): DateTimeImmutable */
     private readonly Closure $clock;
     private readonly PasswordHashing $hasher;
+    private readonly MailSettings $mail;
+    private readonly ?MailTransport $mailTransport;
+    private readonly ErrorAlerts $alerts;
+    private readonly PdoOutbox $outbox;
 
     /**
      * @param (Closure(): PDO)|null $connect override for tests
@@ -165,22 +181,63 @@ final class ApiApplication implements HttpHandler
         ?Closure $clock = null,
         ?PasswordHashing $hasher = null,
         private readonly ?ImageProcessor $imageProcessor = null,
+        ?MailTransport $mailTransport = null,
+        ?AlertThrottle $alertThrottle = null,
     ) {
         $this->database = new Database($connect ?? fn (): PDO => Connection::make($settings->environment));
         $this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $this->hasher = $hasher ?? new NativeStaffPasswordHasher();
+        $this->mailTransport = $mailTransport ?? $settings->mailTransport;
+        $mail = $settings->mail ?? MailSettings::disabled();
+        // A transport passed in (tests) turns sending on with the configured recipients.
+        $this->mail = $mailTransport !== null && !$mail->enabled ? new MailSettings(true, $mail->enquiryAlertTo, $mail->errorAlertTo, $mail->siteUrl) : $mail;
+        $this->outbox = new PdoOutbox($this->database);
+        $this->alerts = new ErrorAlerts($this->mail, $this->mailTransport, $alertThrottle ?? new FileAlertThrottle(), $this->clock, $logger);
 
         $this->pipeline = new MiddlewarePipeline([
             new RequestIdMiddleware(),
             new SecurityHeadersMiddleware(enforceHsts: $settings->environment->isProduction()),
             new CorsMiddleware($settings->corsAllowedOrigins),
-            new ErrorHandlingMiddleware($logger, $settings->debug),
+            new ErrorHandlingMiddleware($logger, $settings->debug, $this->alerts),
         ], $this->router());
     }
 
     public function handle(HttpRequest $request): HttpResponse
     {
         return $this->pipeline->handle($request);
+    }
+
+    /**
+     * Work done after the response has gone to the browser (public/index.php):
+     * sends error alerts and any emails this request queued (D-016). The
+     * bin/send-mail.php cron job retries whatever could not be sent here.
+     */
+    public function afterResponse(float $budgetSeconds = 20.0): void
+    {
+        $this->alerts->flush();
+        if ($this->mailTransport === null || !$this->mail->enabled || $this->outbox->addedCount() === 0) {
+            return;
+        }
+        try {
+            $this->outboxSender()->run(10, $budgetSeconds);
+        } catch (\Throwable $exception) {
+            $this->logger->warning('mail.after_response_failed', ['error' => $exception->getMessage()]);
+        }
+        $this->alerts->flush();
+    }
+
+    public function outboxSender(): OutboxSender
+    {
+        if ($this->mailTransport === null) {
+            throw new \LogicException('Email sending is not configured (MAIL_TRANSPORT).');
+        }
+
+        return new OutboxSender($this->outbox, $this->mailTransport, $this->clock, $this->logger, $this->alerts->report(...));
+    }
+
+    public function errorAlerts(): ErrorAlerts
+    {
+        return $this->alerts;
     }
 
     private function router(): Router
@@ -212,6 +269,10 @@ final class ApiApplication implements HttpHandler
         $router->add('DELETE', '/api/v1/admin/session', static fn (HttpRequest $r): HttpResponse => $session()->signOut($r));
         $router->post('/api/v1/admin/session/password', static fn (HttpRequest $r): HttpResponse => $session()->changePassword($r));
         $router->post('/api/v1/admin/session/mfa', static fn (HttpRequest $r): HttpResponse => $session()->verifySecondFactor($r));
+
+        $reset = fn (): AdminPasswordResetController => new AdminPasswordResetController($this->passwordResetService(), $this->adminGuard());
+        $router->post('/api/v1/admin/password-reset', static fn (HttpRequest $r): HttpResponse => $reset()->request($r));
+        $router->post('/api/v1/admin/password-reset/complete', static fn (HttpRequest $r): HttpResponse => $reset()->complete($r));
 
         $twoFactor = fn (): AdminTwoFactorController => new AdminTwoFactorController($this->twoFactorService(), $this->adminGuard());
         $router->get('/api/v1/admin/account/two-factor', static fn (HttpRequest $r): HttpResponse => $twoFactor()->status($r));
@@ -306,6 +367,21 @@ final class ApiApplication implements HttpHandler
         );
     }
 
+    private function passwordResetService(): PasswordResetService
+    {
+        return new PasswordResetService(
+            new PdoStaffRepository($this->database),
+            new PdoPasswordResets($this->database),
+            new PdoSessionStore($this->database),
+            $this->hasher,
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->outbox,
+            $this->mail,
+            $this->clock,
+        );
+    }
+
     private function twoFactorService(): TwoFactorService
     {
         $key = $this->settings->mfaEncryptionKey;
@@ -378,6 +454,8 @@ final class ApiApplication implements HttpHandler
             $this->logger,
             $this->settings->contactRateLimitMax,
             $this->settings->contactRateLimitWindowMinutes,
+            $this->outbox,
+            $this->mail,
         );
     }
 }

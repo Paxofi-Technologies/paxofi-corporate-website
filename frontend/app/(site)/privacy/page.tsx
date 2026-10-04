@@ -28,7 +28,8 @@ export default function Privacy() {
           <p>
             We use this information only to respond to your enquiry and to keep the service secure. Only Paxofi staff
             who handle enquiries can read it, through a signed-in staff area that records who viewed or updated each
-            enquiry. We do not sell it or use it for advertising.
+            enquiry. A copy of your enquiry is also emailed to the Paxofi mailbox of the staff who answer it; those
+            emails are kept in our own email system for 30 days. We do not sell it or use it for advertising.
           </p>
 
           <h2>How long we keep it</h2>

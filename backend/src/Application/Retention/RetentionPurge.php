@@ -20,7 +20,7 @@ final class RetentionPurge
     {
     }
 
-    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int, analytics_rows_deleted: int} */
+    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int, analytics_rows_deleted: int, emails_deleted: int, password_resets_deleted: int} */
     public function run(?DateTimeImmutable $now = null): array
     {
         $now = ($now ?? new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'));
@@ -56,6 +56,10 @@ final class RetentionPurge
                     + $this->execute('DELETE FROM analytics_devices WHERE day < :cutoff', $this->policy->analyticsCutoff($now))
                     + $this->execute('DELETE FROM analytics_visitors WHERE day < :cutoff', $this->policy->analyticsVisitorCutoff($now))
                     + $this->execute('DELETE FROM analytics_salts WHERE day < :cutoff', $this->policy->analyticsVisitorCutoff($now)),
+                // Outbox and reset links (D-016).
+                'emails_deleted' => $this->execute("DELETE FROM email_outbox WHERE status = 'sent' AND created_at < :cutoff", $this->policy->sentEmailCutoff($now))
+                    + $this->execute("DELETE FROM email_outbox WHERE status = 'failed' AND created_at < :cutoff", $this->policy->failedEmailCutoff($now)),
+                'password_resets_deleted' => $this->execute('DELETE FROM password_resets WHERE expires_at < :cutoff', $this->policy->passwordResetCutoff($now)),
             ];
 
             if (array_sum($result) > 0) {

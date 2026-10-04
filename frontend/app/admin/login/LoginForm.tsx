@@ -121,7 +121,7 @@ export default function LoginForm({ notice, next, codeStep = false }: { notice: 
         </button>
       </form>
       <p className="form-note admin-help">
-        Forgotten your password? Ask an administrator to set a temporary one for you.
+        <Link href="/admin/forgot-password">Forgot your password?</Link>
         {setupAvailable && (
           <>
             {" "}First time here? <Link href="/admin/setup">Set up the first administrator</Link>.

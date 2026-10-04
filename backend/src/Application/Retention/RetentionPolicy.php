@@ -25,6 +25,9 @@ final class RetentionPolicy
         public readonly int $loginAttemptDays = 90,
         public readonly int $endedSessionDays = 30,
         public readonly int $analyticsMonths = 25,
+        public readonly int $sentEmailDays = 30,
+        public readonly int $failedEmailDays = 90,
+        public readonly int $passwordResetDays = 1,
     ) {
         if ($enquiryMonths < 1 || $networkMetadataDays < 1 || $auditEventMonths < 1 || $loginAttemptDays < 1 || $endedSessionDays < 1 || $analyticsMonths < 1) {
             throw new InvalidArgumentException('Retention periods must be positive.');
@@ -60,6 +63,23 @@ final class RetentionPolicy
     public function analyticsVisitorCutoff(DateTimeImmutable $now): DateTimeImmutable
     {
         return $now->setTime(0, 0);
+    }
+
+    /** Sent emails after 30 days, given-up ones after 90 (D-016): the outbox holds personal data. */
+    public function sentEmailCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->sentEmailDays} days");
+    }
+
+    public function failedEmailCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->failedEmailDays} days");
+    }
+
+    /** Password reset links a day after they expired or were used. */
+    public function passwordResetCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->passwordResetDays} days");
     }
 
     public function endedSessionCutoff(DateTimeImmutable $now): DateTimeImmutable

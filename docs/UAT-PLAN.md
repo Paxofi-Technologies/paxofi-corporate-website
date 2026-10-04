@@ -202,3 +202,19 @@ Do this on **staging first** (RB-14), then on live. About 15 minutes.
 | T10 | Undo | Use **Use original wording** / **Clear** on the changed fields, or restore the earlier version; **Publish** | The menu is back to normal | |
 
 Record sign-off ("Phase 2.7 UAT passed") in Asana.
+
+
+## Phase 2.8 — email alerts, password reset, error alerts, backups (D-016)
+
+Run after guide Step 10c, on staging first. About 20 minutes, plus a check the next morning.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| E1 | Enquiry alert | Send a message through the contact form | Within a minute an email "New enquiry from …" arrives at `ENQUIRY_ALERT_TO`. Its link opens the enquiry in the staff area; **Reply** goes to the sender | |
+| E2 | Forgot password | Sign out → **Forgot your password?** → your address | An email with a link arrives. The link opens *Choose a new password* | |
+| E3 | Reset once | Set a new password, then open the same link again | You can sign in with the new password (two-factor code still asked). The second use says the link expired or was used. A "password changed" email arrives | |
+| E4 | Unknown address | **Forgot your password?** with an address that has no account | Same message as E2; no email | |
+| E5 | Error alert | On staging only: temporarily change `DB_PASSWORD` in `backend/.env`, open `https://api-staging.paxofi.com/api/v1/products`, then put the password back | One email "The API cannot reach the database" arrives at `ERROR_ALERT_TO` | |
+| E6 | Nightly backup | Next morning, open the backup folder | A `paxofi-database-….sql.gz` (and media `.tar.gz` if uploads are on) from last night | |
+
+Record sign-off ("Phase 2.8 UAT passed") in Asana.
