@@ -8,7 +8,8 @@ import Logo, { LogoMark } from "@/components/Logo";
 import { CtaBand, IconCard, PageHero, SectionHead } from "@/components/Sections";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
-import { NAV_LINKS, SITE } from "@/lib/site";
+import { defaultCopy, siteLinks } from "@/lib/page-copy";
+import { SITE } from "@/lib/site";
 
 const html = (node: React.ReactElement) => renderToStaticMarkup(node);
 
@@ -48,10 +49,24 @@ test("the logo mark is decorative and its gradient ids are unique per instance",
 
 test("the header lists every main section and the contact call to action", () => {
   const markup = html(<SiteHeader />);
-  for (const { href, label } of NAV_LINKS) assert.match(markup, new RegExp(`href="${href}"[^>]*>${label}<`));
+  const { menu } = siteLinks(defaultCopy("site"));
+  assert.deepEqual(menu.map((l) => l.label), ["About", "Services", "Products", "Careers"]);
+  for (const { href, label } of menu) assert.match(markup, new RegExp(`href="${href}"[^>]*>${label}<`));
   assert.match(markup, /class="nav-cta"[^>]*>Talk to us</);
   assert.match(markup, /aria-expanded="false"/);
   assert.match(markup, /aria-label="Main"/);
+});
+
+test("menu and footer follow the published wording; emptied links are hidden", () => {
+  const copy = { ...defaultCopy("site"), menu_4_label: "", menu_4_link: "", menu_5_label: "Blog", menu_5_link: "https://blog.paxofi.com/", menu_button_label: "Get in touch", footer_signoff: "See you soon." };
+  const header = html(<SiteHeader copy={copy} />);
+  assert.doesNotMatch(header, />Careers</);
+  assert.match(header, /href="https:\/\/blog.paxofi.com\/" rel="noopener"[^>]*>Blog</);
+  assert.match(header, /class="nav-cta"[^>]*>Get in touch</);
+  const footer = html(<SiteFooter copy={copy} />);
+  assert.match(footer, />Blog</);
+  assert.match(footer, /See you soon\./);
+  assert.match(footer, /href="\/privacy"/, "legal links stay");
 });
 
 test("the footer links to careers, privacy, terms and the contact email", () => {

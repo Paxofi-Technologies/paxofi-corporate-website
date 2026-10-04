@@ -1,43 +1,43 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { NAV_LINKS, SITE } from "@/lib/site";
+import { type PageCopy, type SiteLink, defaultCopy, siteLinks } from "@/lib/page-copy";
+import { SITE } from "@/lib/site";
 
-export default function SiteFooter() {
+/** The footer; its wording and links come from the staff area (Menu and footer, D-015). Privacy and Terms stay fixed. */
+export default function SiteFooter({ copy = defaultCopy("site") }: { copy?: PageCopy }) {
+  const { menu, contact } = siteLinks(copy);
   return (
     <footer className="footer">
       <div className="container footer-grid">
         <div className="footer-brand">
           <Logo tone="dark" descriptor />
-          <p>
-            We build people, products and solutions that create real impact across Africa and beyond.
-          </p>
+          <p>{copy.footer_text}</p>
         </div>
         <nav aria-label="Footer">
-          <h2 className="footer-heading">Explore</h2>
+          <h2 className="footer-heading">{copy.footer_explore_heading}</h2>
           <ul>
-            {NAV_LINKS.map(({ href, label }) => (
-              <li key={href}>
-                <Link href={href}>{label}</Link>
+            {menu.map((link) => (
+              <li key={`${link.href}|${link.label}`}>
+                <FooterLink {...link} />
               </li>
             ))}
           </ul>
         </nav>
         <div>
-          <h2 className="footer-heading">Contact</h2>
+          <h2 className="footer-heading">{copy.footer_contact_heading}</h2>
           <ul>
             <li>
-              <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+              <a href={`mailto:${copy.footer_email}`}>{copy.footer_email}</a>
             </li>
-            <li>
-              <Link href="/contact">Start a conversation</Link>
-            </li>
-            <li>
-              <a href={SITE.careersUrl} rel="noopener">career.paxofi.com</a>
-            </li>
+            {contact.map((link) => (
+              <li key={`${link.href}|${link.label}`}>
+                <FooterLink {...link} />
+              </li>
+            ))}
           </ul>
         </div>
         <div>
-          <h2 className="footer-heading">Company</h2>
+          <h2 className="footer-heading">{copy.footer_company_heading}</h2>
           <ul>
             <li>
               <Link href="/privacy">Privacy</Link>
@@ -52,8 +52,12 @@ export default function SiteFooter() {
         <span>
           © {new Date().getFullYear()} {SITE.legalName}. All rights reserved.
         </span>
-        <span className="footer-signoff">A brighter tomorrow, together.</span>
+        <span className="footer-signoff">{copy.footer_signoff}</span>
       </div>
     </footer>
   );
+}
+
+function FooterLink({ href, label }: SiteLink) {
+  return href.startsWith("/") ? <Link href={href}>{label}</Link> : <a href={href} rel="noopener">{label}</a>;
 }

@@ -60,15 +60,17 @@ export default function MyAccount() {
             <dt>Last sign-in</dt><dd>{formatDateTime(user.last_login_at)}</dd>
           </dl>
           <p className="form-note">To change your name, email or role, ask an administrator.</p>
-          <h3>Two-factor sign-in</h3>
-          <p>
-            {user.two_factor_enabled ? "On: you enter a code from your authenticator app after your password." : "Off: you sign in with your password only."}
-          </p>
-          <p>
-            <Link className="button button--outline" href="/admin/account/two-factor">
-              {user.two_factor_enabled ? "Manage two-factor sign-in" : "Set up two-factor sign-in"}
-            </Link>
-          </p>
+          <div className="admin-subsection">
+            <h3>Two-factor sign-in</h3>
+            <p>
+              {user.two_factor_enabled ? "On: you enter a code from your authenticator app after your password." : "Off: you sign in with your password only."}
+            </p>
+            <p>
+              <Link className="button button--outline" href="/admin/account/two-factor">
+                {user.two_factor_enabled ? "Manage two-factor sign-in" : "Set up two-factor sign-in"}
+              </Link>
+            </p>
+          </div>
         </section>
         <section className="form-card" aria-labelledby="password-heading">
           <h2 id="password-heading">Change password</h2>

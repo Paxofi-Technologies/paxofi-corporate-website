@@ -278,10 +278,20 @@ function count(n: number, one: string, many = `${one}s`): string {
   return `${number.format(n)} ${n === 1 ? one : many}`;
 }
 
+const PAGE_NAMES: Record<string, string> = {
+  "/": "Home",
+  "/about": "About",
+  "/services": "Services",
+  "/products": "Products",
+  "/careers": "Careers",
+  "/contact": "Contact",
+  "/privacy": "Privacy",
+  "/terms": "Terms",
+  "(other)": "Other pages",
+};
+
 function pageLabel(path: string): string {
-  if (path === "/") return "Home";
-  if (path === "(other)") return "Other pages";
-  return path;
+  return PAGE_NAMES[path] ?? path;
 }
 
 function formatDay(day: string, short = false): string {

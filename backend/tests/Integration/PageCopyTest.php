@@ -39,7 +39,7 @@ final class PageCopyTest extends DatabaseTestCase
 
         $admin = $this->setupAdmin();
         $list = self::decode($this->call('GET', '/api/v1/admin/pages', cookie: $admin))['data'];
-        self::assertSame(['home', 'about', 'services', 'products', 'careers', 'contact'], array_column($list, 'page'));
+        self::assertSame(['home', 'about', 'services', 'products', 'careers', 'contact', 'site'], array_column($list, 'page'));
         self::assertNull($list[0]['published_at']);
 
         $page = self::decode($this->call('GET', '/api/v1/admin/pages/home', cookie: $admin))['data'];
@@ -97,6 +97,35 @@ final class PageCopyTest extends DatabaseTestCase
         self::assertSame(200, $this->call('POST', '/api/v1/admin/pages/contact/publish', cookie: $admin)->status());
         self::assertSame('Lagos, Abuja and online.', self::decode($this->call('GET', '/api/v1/pages/contact'))['data']['fields']['where_text']);
         self::assertSame(401, $this->call('GET', '/api/v1/admin/pages')->status());
+    }
+
+    public function testMenuAndFooterLinksAreCheckedAndCanBeHidden(): void
+    {
+        $admin = $this->setupAdmin();
+        $fields = array_column(self::decode($this->call('GET', '/api/v1/admin/pages/site', cookie: $admin))['data']['fields'], 'default', 'key');
+        self::assertSame(['/about', '/contact', 'https://career.paxofi.com'], [$fields['menu_1_link'], $fields['menu_button_link'], $fields['footer_careers_link']]);
+
+        $bad = $this->call('POST', '/api/v1/admin/pages/site/draft', ['fields' => [
+            'menu_1_link' => 'javascript:alert(1)',
+            'menu_2_link' => '//evil.example',
+            'menu_3_link' => 'http://plain.example',
+            'menu_5_label' => 'Blog',
+            'footer_email' => 'not an email',
+            'menu_button_label' => '',
+        ] + $fields], cookie: $admin);
+        self::assertSame(422, $bad->status());
+        $errors = self::decode($bad)['error']['details']['fields'];
+        self::assertEqualsCanonicalizing(['menu_1_link', 'menu_2_link', 'menu_3_link', 'menu_button_label', 'menu_5_link', 'footer_email'], array_keys($errors));
+        self::assertStringContainsString('https://', $errors['menu_1_link']);
+        self::assertSame('Fill in both the name and the link, or leave both empty.', $errors['menu_5_link']);
+        self::assertSame('Enter some text.', $errors['menu_button_label'], 'the button is always shown');
+
+        // Hide Careers, add a Blog link to an outside site, change the footer email.
+        $edited = ['menu_4_label' => '', 'menu_4_link' => '', 'menu_5_label' => 'Blog', 'menu_5_link' => 'https://blog.paxofi.com/', 'footer_email' => 'hello@paxofi.com'] + $fields;
+        self::assertSame(200, $this->call('POST', '/api/v1/admin/pages/site/draft', ['fields' => $edited], cookie: $admin)->status());
+        self::assertSame(200, $this->call('POST', '/api/v1/admin/pages/site/publish', cookie: $admin)->status());
+        $live = self::decode($this->call('GET', '/api/v1/pages/site'))['data']['fields'];
+        self::assertSame(['', '', 'Blog', 'https://blog.paxofi.com/'], [$live['menu_4_label'], $live['menu_4_link'], $live['menu_5_label'], $live['menu_5_link']], 'an emptied optional link is published as empty, which hides it');
     }
 
     public function testBuiltInWordingFitsEveryField(): void

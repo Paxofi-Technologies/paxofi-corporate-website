@@ -9,8 +9,19 @@
  */
 import schema from "./page-copy.json";
 
-export type PageKey = "home" | "about" | "services" | "products" | "careers" | "contact";
-export type PageField = { key: string; group: string; label: string; kind: "line" | "text"; max: number; default: string };
+export type PageKey = "home" | "about" | "services" | "products" | "careers" | "contact" | "site";
+export type PageField = {
+  key: string;
+  group: string;
+  label: string;
+  kind: "line" | "text" | "link" | "email";
+  max: number;
+  default: string;
+  /** May be published empty, which hides it (menu and footer links). */
+  optional?: boolean;
+  /** The other half of a link: name and address are filled in together. */
+  pair?: string;
+};
 export type PageCopy = Record<string, string>;
 
 export const PAGE_COPY = schema.pages as Record<PageKey, { label: string; path: string; fields: PageField[] }>;
@@ -22,15 +33,48 @@ export function defaultCopy(page: PageKey): PageCopy {
   return Object.fromEntries(PAGE_COPY[page].fields.map((field) => [field.key, field.default]));
 }
 
-/** Published text over the built-in wording; anything missing, empty or too long keeps the built-in text. */
+/**
+ * Published text over the built-in wording. Anything missing, too long or not
+ * a valid link or email keeps the built-in text; an empty value is accepted
+ * only for optional fields (it hides that link).
+ */
 export function mergeCopy(page: PageKey, published: unknown): PageCopy {
   const copy = defaultCopy(page);
   if (!isRecord(published)) return copy;
   for (const field of PAGE_COPY[page].fields) {
     const value = published[field.key];
-    if (typeof value === "string" && value.trim() !== "" && value.length <= field.max) copy[field.key] = value;
+    if (typeof value !== "string" || value.length > field.max) continue;
+    if (value.trim() === "") {
+      if (field.optional) copy[field.key] = "";
+      continue;
+    }
+    if (field.kind === "link" && !isSafeLink(value)) continue;
+    if (field.kind === "email" && !/^[^\s@<>"]+@[^\s@<>"]+\.[A-Za-z]{2,}$/.test(value)) continue;
+    copy[field.key] = value;
   }
   return copy;
+}
+
+/** A path on this site (not //host) or an https:// address; the API applies the same rule. */
+export function isSafeLink(value: string): boolean {
+  if (/^\/(?!\/)[A-Za-z0-9\-._~/?#=&%+]*$/.test(value)) return true;
+  if (!value.startsWith("https://") || /[\s"'<>\\]/.test(value)) return false;
+  try {
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
+export type SiteLink = { label: string; href: string };
+
+/** The menu and footer links of the "site" copy, without the hidden (empty) ones. */
+export function siteLinks(copy: PageCopy) {
+  const link = (prefix: string): SiteLink | null =>
+    copy[`${prefix}_label`] && copy[`${prefix}_link`] ? { label: copy[`${prefix}_label`], href: copy[`${prefix}_link`] } : null;
+  const menu = [1, 2, 3, 4, 5, 6].map((i) => link(`menu_${i}`)).filter((l): l is SiteLink => l !== null);
+  const contact = ["footer_contact", "footer_careers", "footer_extra"].map(link).filter((l): l is SiteLink => l !== null);
+  return { menu, button: link("menu_button") ?? { label: "Talk to us", href: "/contact" }, contact };
 }
 
 /** A page's text from the API, or its built-in wording if the API cannot be read in time. */

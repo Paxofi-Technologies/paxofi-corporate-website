@@ -154,6 +154,38 @@
         { "key": "where_text", "group": "Form and contact details", "label": "Where we work", "kind": "line", "max": 80, "default": "Across Africa and beyond." },
         { "key": "signoff", "group": "Form and contact details", "label": "Closing line", "kind": "line", "max": 60, "default": "A brighter tomorrow, together." }
       ]
+    },
+    "site": {
+      "label": "Menu and footer",
+      "path": "/",
+      "fields": [
+        { "key": "menu_1_label", "group": "Main menu", "label": "Menu item 1: name", "kind": "line", "max": 24, "default": "About", "optional": true, "pair": "menu_1_link" },
+        { "key": "menu_1_link", "group": "Main menu", "label": "Menu item 1: link", "kind": "link", "max": 200, "default": "/about", "optional": true, "pair": "menu_1_label" },
+        { "key": "menu_2_label", "group": "Main menu", "label": "Menu item 2: name", "kind": "line", "max": 24, "default": "Services", "optional": true, "pair": "menu_2_link" },
+        { "key": "menu_2_link", "group": "Main menu", "label": "Menu item 2: link", "kind": "link", "max": 200, "default": "/services", "optional": true, "pair": "menu_2_label" },
+        { "key": "menu_3_label", "group": "Main menu", "label": "Menu item 3: name", "kind": "line", "max": 24, "default": "Products", "optional": true, "pair": "menu_3_link" },
+        { "key": "menu_3_link", "group": "Main menu", "label": "Menu item 3: link", "kind": "link", "max": 200, "default": "/products", "optional": true, "pair": "menu_3_label" },
+        { "key": "menu_4_label", "group": "Main menu", "label": "Menu item 4: name", "kind": "line", "max": 24, "default": "Careers", "optional": true, "pair": "menu_4_link" },
+        { "key": "menu_4_link", "group": "Main menu", "label": "Menu item 4: link", "kind": "link", "max": 200, "default": "/careers", "optional": true, "pair": "menu_4_label" },
+        { "key": "menu_5_label", "group": "Main menu", "label": "Menu item 5: name", "kind": "line", "max": 24, "default": "", "optional": true, "pair": "menu_5_link" },
+        { "key": "menu_5_link", "group": "Main menu", "label": "Menu item 5: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "menu_5_label" },
+        { "key": "menu_6_label", "group": "Main menu", "label": "Menu item 6: name", "kind": "line", "max": 24, "default": "", "optional": true, "pair": "menu_6_link" },
+        { "key": "menu_6_link", "group": "Main menu", "label": "Menu item 6: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "menu_6_label" },
+        { "key": "menu_button_label", "group": "Main menu", "label": "Button: name", "kind": "line", "max": 24, "default": "Talk to us" },
+        { "key": "menu_button_link", "group": "Main menu", "label": "Button: link", "kind": "link", "max": 200, "default": "/contact" },
+        { "key": "footer_text", "group": "Footer", "label": "Text under the logo", "kind": "text", "max": 200, "default": "We build people, products and solutions that create real impact across Africa and beyond." },
+        { "key": "footer_explore_heading", "group": "Footer", "label": "First column heading (lists the menu items)", "kind": "line", "max": 30, "default": "Explore" },
+        { "key": "footer_contact_heading", "group": "Footer", "label": "Second column heading", "kind": "line", "max": 30, "default": "Contact" },
+        { "key": "footer_email", "group": "Footer", "label": "Email address", "kind": "email", "max": 120, "default": "hello@paxofi.com" },
+        { "key": "footer_contact_label", "group": "Footer", "label": "Link 1: name", "kind": "line", "max": 40, "default": "Start a conversation", "pair": "footer_contact_link" },
+        { "key": "footer_contact_link", "group": "Footer", "label": "Link 1: link", "kind": "link", "max": 200, "default": "/contact", "pair": "footer_contact_label" },
+        { "key": "footer_careers_label", "group": "Footer", "label": "Link 2: name", "kind": "line", "max": 40, "default": "career.paxofi.com", "optional": true, "pair": "footer_careers_link" },
+        { "key": "footer_careers_link", "group": "Footer", "label": "Link 2: link", "kind": "link", "max": 200, "default": "https://career.paxofi.com", "optional": true, "pair": "footer_careers_label" },
+        { "key": "footer_extra_label", "group": "Footer", "label": "Link 3: name", "kind": "line", "max": 40, "default": "", "optional": true, "pair": "footer_extra_link" },
+        { "key": "footer_extra_link", "group": "Footer", "label": "Link 3: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "footer_extra_label" },
+        { "key": "footer_company_heading", "group": "Footer", "label": "Third column heading (Privacy and Terms)", "kind": "line", "max": 30, "default": "Company" },
+        { "key": "footer_signoff", "group": "Footer", "label": "Line at the bottom right", "kind": "line", "max": 60, "default": "A brighter tomorrow, together." }
+      ]
     }
   }
 }
