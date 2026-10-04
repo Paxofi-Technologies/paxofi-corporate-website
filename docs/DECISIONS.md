@@ -245,3 +245,44 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Not chosen:**
   - A paid email API (SendGrid, Mailgun): one more supplier and contract, when the hosting mailbox is enough for these volumes.
   - Sending inside the request: a slow mail server would slow the contact form.
+
+
+## D-017 — About and Careers content from the About Us & Career Platform brief (4 Oct 2026)
+
+**Decision (CTO; the owner supplied the brief, the page concepts and screenshots on 4 Oct 2026):** the About and Careers pages carry the brief's sections (Sections 4 and 5). All of their wording is editable under **Content → Page text**.
+
+- **About:**
+  - hero, with *Explore careers* and *Join our journey* buttons;
+  - who we are, with four facts;
+  - our story (four milestones);
+  - vision and mission (PKDMS wording);
+  - what we do (six services);
+  - products and innovation: the products come from **Content → Products**, so nothing is listed that staff have not published;
+  - six values;
+  - how we work;
+  - our people;
+  - *Want to build with us?*
+- **Careers:**
+  - hero;
+  - why Paxofi (six reasons);
+  - who can join (four audiences);
+  - the seven PIF 2026 role families;
+  - the Paxofi Innovation Fellowship panel;
+  - Learn → Build → Collaborate → Contribute → Grow;
+  - the seven recruitment steps;
+  - what candidates can expect;
+  - nine questions and answers;
+  - equal opportunity;
+  - a closing call to action with hr@paxofi.com.
+  Every application button goes to **careers.paxofi.com**.
+- **Wording rules applied:**
+  - The brief's content principle: no invented corporate facts. Early-stage is presented honestly.
+  - The PKDMS PIF 2026 rules:
+    - *Paxofi Innovation Fellow* is the public engagement label;
+    - no stipend, allowance or salary is promised;
+    - recruitment is rolling, with no closing date or opening counts;
+    - terms of 3, 6 or 12 months are confirmed at offer;
+    - at least 15 hours a week, 20 hours the target.
+  - The screenshots' *Volunteers / Interns / Fellows / Future talent* cards became *who can join* audiences (students and graduates, career changers, early-career and experienced professionals). A note says everyone joins as a PIF Fellow and that any volunteer, internship or employment roles are listed separately. This keeps the screenshots' message without breaking the PIF classification rules.
+  - *Are these paid internships?* is answered plainly: no stipend at this time.
+- **To validate (ABOUT-00):** the owner checks the facts (*Founded in 2026*, the story milestones) and can change them under **Content → Page text** without a release.

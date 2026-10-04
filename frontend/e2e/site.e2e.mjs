@@ -218,6 +218,25 @@ describe("navigation", () => {
     await page.context().close();
   });
 
+  test("About tells the company story; Careers explains the fellowship and how to apply", async () => {
+    const page = await newPage();
+    await page.goto(`${BASE}/about`);
+    for (const heading of ["We build digital solutions that solve real problems.", "From a vision to a growing reality.", "Our vision", "Our mission", "What we stand for.", "Want to build with us?"]) {
+      await page.getByRole("heading", { name: heading }).waitFor();
+    }
+    await page.getByRole("link", { name: "Explore careers" }).first().click();
+    await page.waitForURL(`${BASE}/careers`);
+    await page.getByRole("heading", { name: "Your next opportunity could start here." }).waitFor();
+    assert.equal(await page.locator(".role-list li").count(), 7, "the seven PIF role families");
+    await page.getByText("No stipend or salary at this time", { exact: false }).waitFor();
+    const faq = page.getByText("Is the fellowship paid?");
+    await faq.click();
+    await page.getByText("does not offer a stipend, allowance or salary", { exact: false }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "hr@paxofi.com" }).getAttribute("href"), "mailto:hr@paxofi.com");
+    await assertAccessible(page, "on careers with an open answer");
+    await page.context().close();
+  });
+
   test("desktop navigation reaches every section", async () => {
     const page = await newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(BASE);
