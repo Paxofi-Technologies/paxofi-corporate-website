@@ -645,8 +645,15 @@ describe("staff area", () => {
     await page.getByRole("button", { name: "Upload" }).click();
     await page.getByText("Pay-on-a-phone.png uploaded.").waitFor();
     const thumb = page.locator(".media-card").first().locator("img");
-    await thumb.waitFor();
-    assert.ok(await thumb.evaluate((img) => img.complete && img.naturalWidth > 0), "the picture loads from the API host (CSP img-src)");
+    await thumb.scrollIntoViewIfNeeded();
+    // Wait for the image to finish loading (WebKit may still be fetching it), then check it decoded.
+    const loaded = await thumb.evaluate((img) =>
+      img.complete ? img.naturalWidth > 0 : new Promise((resolve) => {
+        img.addEventListener("load", () => resolve(img.naturalWidth > 0), { once: true });
+        img.addEventListener("error", () => resolve(false), { once: true });
+      }),
+    );
+    assert.ok(loaded, "the picture loads from the API host (CSP img-src)");
 
     await file.setInputFiles({ name: "Price list.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4") });
     assert.equal(await page.getByLabel("Title (optional)").count(), 1, "documents ask for a title, not a description");
