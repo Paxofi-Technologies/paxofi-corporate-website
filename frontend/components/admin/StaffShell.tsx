@@ -9,6 +9,7 @@ import { AdminApiError, StaffUser, TWO_FACTOR_PATH, adminRequest } from "@/lib/a
 
 const NAV = [
   { href: "/admin/enquiries", label: "Enquiries", permission: "enquiries.read" },
+  { href: "/admin/recruitment", label: "Recruitment", permission: "recruitment.read" },
   { href: "/admin/content", label: "Content", permission: "content.edit" },
   { href: "/admin/media", label: "Media", permission: "content.edit" },
   { href: "/admin/analytics", label: "Analytics", permission: "analytics.read" },
@@ -45,11 +46,17 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
     };
   }, [apiBase, user, setUser, router, pathname]);
 
-  // Administrators set up two-factor sign-in before anything else (D-010).
+  // Administrators and HR staff set up two-factor sign-in before anything else (D-010, D-019).
   const enrolling = Boolean(user?.two_factor_enrollment_required);
   useEffect(() => {
     if (enrolling && pathname !== TWO_FACTOR_PATH) router.replace(TWO_FACTOR_PATH);
   }, [enrolling, pathname, router]);
+
+  // Sign-in lands on the inbox; staff without it (Human Resources, D-019) go to their first section.
+  const home = user ? (NAV.find((item) => item.permission !== null && can(user, item.permission))?.href ?? "/admin/account") : "/admin/enquiries";
+  useEffect(() => {
+    if (user && !enrolling && pathname === "/admin/enquiries" && !can(user, "enquiries.read")) router.replace(home);
+  }, [user, enrolling, pathname, home, router]);
 
   async function signOut() {
     leaving.current = true;
@@ -66,7 +73,7 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
     <>
       <header className="admin-bar">
         <div className="admin-bar__inner">
-          <Link href="/admin/enquiries" className="admin-brand" aria-label="Staff area home">
+          <Link href={home} className="admin-brand" aria-label="Staff area home">
             <Logo tone="dark" />
           </Link>
           <span className="admin-badge">Staff area</span>

@@ -17,4 +17,10 @@ final class Permission
     public const CONTENT_PUBLISH = 'content.publish';
     /** See the visitor analytics (D-014). */
     public const ANALYTICS_READ = 'analytics.read';
+    /** See applications and download CVs (D-019). */
+    public const RECRUITMENT_READ = 'recruitment.read';
+    /** Move applications through the stages, score, add notes, email candidates (D-019). */
+    public const RECRUITMENT_MANAGE = 'recruitment.manage';
+    /** Edit, publish and close the roles on careers.paxofi.com (D-018). */
+    public const CAREERS_EDIT = 'careers.edit';
 }

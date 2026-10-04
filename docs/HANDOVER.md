@@ -9,11 +9,12 @@ Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.c
 | Website (Next.js 16, Node 22) | https://corporate.paxofi.com | Setup Node.js App, app root `paxofi-corporate-website`, startup `app.js`, env `API_BASE_URL` | `/release.txt`; UptimeRobot |
 | API (PHP 8.4, Paxofi Core Framework 1.1) | https://api.paxofi.com/api/v1 | `paxofi-api-runtime/backend/public` (document root), secrets in `backend/.env` (600) | `/health`, `/readiness`; UptimeRobot |
 | Database (MariaDB 11.4) | `paxoalhu_corporate` | phpMyAdmin | `/readiness` → `"database":true` |
-| Careers | https://careers.paxofi.com | separate site (decision D-001) | – |
+| Careers site (same release, `SITE_SECTION=careers`) | https://careers.paxofi.com | Setup Node.js App, app root `paxofi-careers-website`, env `API_BASE_URL`, `SITE_SECTION`, `CAREERS_SITE_URL` (guide Step 10d, D-018) | `/release.txt`; add an UptimeRobot monitor |
 
 ## 2. Day-to-day
 
 - **Enquiries:** staff area https://corporate.paxofi.com/admin → **Enquiries** (from the Phase 2.1 release; before it, phpMyAdmin → `enquiries`). Business Development replies within 2 business days (D-007). Staff accounts: RUNBOOKS RB-11.
+- **Applications:** staff area → **Recruitment** (administrators and Human Resources staff, D-019). Acknowledge within 2 working days, screen within 2 weeks; data requests and erasure: RB-19. Applications and CVs are deleted automatically 12 months after they close.
 - **Monitoring:** UptimeRobot (5 monitors) emails the operations address. Alerts lead to `RUNBOOKS.md` RB-3/RB-5/RB-6.
 - **Weekly check (5 minutes):** `RUNBOOKS.md` → Daily/weekly checks.
 - **Retention:** the daily cron job `bin/purge-retention.php` (RB-10, guide Step 6). Confirm `logs/purge-retention.log` gains a line each day.

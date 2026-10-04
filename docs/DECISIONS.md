@@ -286,3 +286,67 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
   - The screenshots' *Volunteers / Interns / Fellows / Future talent* cards became *who can join* audiences (students and graduates, career changers, early-career and experienced professionals). A note says everyone joins as a PIF Fellow and that any volunteer, internship or employment roles are listed separately. This keeps the screenshots' message without breaking the PIF classification rules.
   - *Are these paid internships?* is answered plainly: no stipend at this time.
 - **To validate (ABOUT-00):** the owner checks the facts (*Founded in 2026*, the story milestones) and can change them under **Content → Page text** without a release.
+
+## D-018 — careers.paxofi.com: the careers site and its roles (4 Oct 2026)
+
+**Decision (CTO; the owner asked on 4 Oct 2026 for careers.paxofi.com, not career.paxofi.com, before any campaign goes out):** the careers site is the same website release run a second time, as its own cPanel Node.js app with `SITE_SECTION=careers`.
+
+- **One codebase, two sites.** `proxy.ts` serves the internal `app/careers-site` pages at the careers address and hides them on the corporate site. The careers site has its own header, footer, page titles, canonical address (`CAREERS_SITE_URL`), robots.txt and sitemap (home, each open role, privacy notice). It shows no staff area. Every release updates both apps from the same ZIP.
+- **Content.**
+  - The fellowship terms, the journey, the seven recruitment steps, what candidates can expect, the FAQ and the equal-opportunity text come from the Careers page text, so one edit under **Content → Page text → Careers** changes both sites.
+  - Each role has its own page: purpose, what you will do, deliverables, skills, tools, how it is assessed, and the fixed fellowship terms (remote; at least 15 hours a week, 20 recommended; 3, 6 or 12 months; unpaid).
+- **Roles are data.** `career_opportunities` gains a code, family, summary, details (JSON) and display order (migration 014). The seven PIF 2026 roles from the brief are seeded:
+  - Project Manager;
+  - Program Coordinator;
+  - Graphics / Creative Designer;
+  - Software Engineer;
+  - Frontend Developer;
+  - HR Officer;
+  - UX/UI Designer.
+  Staff with `careers.edit` (Administrator, Human Resources) add, edit, open and close roles under **Recruitment → roles**. A role's address is set once from its title and never changes, so shared campaign links keep working. A closed role is hidden and its applications stay.
+- **Not chosen:**
+  - A separate careers codebase or a hosted applicant-tracking system: a second product to maintain or a new supplier holding candidates' personal data, for one intake a year.
+  - Careers pages under `corporate.paxofi.com/careers/…`: the owner wants a dedicated address for campaigns.
+
+## D-019 — Applications, CVs, the HR role and the recruitment pipeline (4 Oct 2026)
+
+**Decision (CTO; the owner asked on 4 Oct 2026 for CV uploads, PDF or Word up to 5 MB, a portfolio or LinkedIn link, keeping applications for 12 months, and HR staff with their own logins):**
+
+- **The application** asks only for what recruitment needs, following the PIF launch pack's data rules:
+  - name, email, optional phone, and country/city;
+  - hours a week (15 to 40);
+  - why this role, and experience or evidence (50–3,000 characters each);
+  - a CV and/or a portfolio or LinkedIn link (at least one);
+  - confirmation of being 18 or older;
+  - agreement to the applicant privacy notice (version `2026-10-04` is stored).
+  Nothing sensitive is asked for (no date of birth, gender, religion, health or finances).
+- **CVs:**
+  - Uploaded first, as a PDF or Word `.docx` of up to 5 MB, and checked by their content, not their name.
+  - Kept in `MEDIA_STORAGE_PATH/applications`, outside the website, where the web server refuses to serve them. They are never public.
+  - The upload returns a one-time token (only its SHA-256 is stored) that the application must claim within a day.
+  - Staff download a CV through the signed-in API; every download is audited.
+- **Abuse limits:**
+  - a hidden honeypot field;
+  - 10 CV uploads per IP address an hour;
+  - 5 applications per IP an hour and 3 per email a day;
+  - one open application per person per role.
+- **Emails** (through the D-016 outbox, replies to `RECRUITMENT_REPLY_TO`):
+  - Every application gets an acknowledgement with its `PIF-XXXXXX` reference.
+  - `RECRUITMENT_ALERT_TO` gets an alert with no contact details, linking to the staff area.
+  - Staff send the launch pack's candidate emails from templates: screening outcome, assessment invitation, interview invitation, selection, onboarding, not selected and withdrawal. Unreplaced `[placeholders]` are refused, and every email sent is recorded on the application.
+- **The HR role and its permissions.** The new role **Human Resources** gets:
+  - `recruitment.read`: list, view and download CVs;
+  - `recruitment.manage`: stage, scorecards, notes, emails, erase;
+  - `careers.edit`: the roles.
+  HR staff do not see enquiries, users or the audit log. Administrators get all three permissions. **Two-factor sign-in is required for HR staff**, as for administrators, because they see CVs.
+- **The pipeline:** the launch pack's 13 stages, from *Applied* through *Screening*, *Shortlisted*, *Assessment*, *Interview*, *Selected*, *Agreement pending*, *Accepted*, *Onboarding* and *Active*, plus the closing stages *Declined*, *Withdrawn* and *Not selected*. There are two scorecards: Gate 2 evidence review (7 criteria scored 1–5, progression at 21/35) and Gate 4 interview (progression at 24/35). Stage changes, scores, notes and emails form the application's history.
+- **Retention (extends D-008):**
+  - Applications, their notes and CVs are deleted 12 months after they close, or 12 months after their last stage change while still open.
+  - Applicants' IP addresses and user-agents are deleted after 90 days.
+  - CV uploads never attached to an application are deleted after one day.
+  - The daily retention job (Step 6) does all of this, CV files included.
+  - Staff can erase an application at once, for example on request.
+  - Backups roll over within 14 days.
+- **Not chosen:**
+  - Emailing CVs to HR as attachments: copies would sit in mailboxes outside the retention rule.
+  - Accepting `.doc`, images or ZIPs: older formats can carry macros, and images are rarely real CVs.

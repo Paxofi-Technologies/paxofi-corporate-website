@@ -9,12 +9,12 @@ export type StaffUser = {
   email: string;
   display_name: string;
   status: "active" | "disabled";
-  role: "administrator" | "business_development" | null;
+  role: "administrator" | "business_development" | "human_resources" | null;
   role_label: string | null;
   permissions: string[];
   last_login_at: string | null;
   two_factor_enabled?: boolean;
-  /** Administrators must set up two-factor sign-in before using the staff area (D-010). */
+  /** Administrators and HR staff must set up two-factor sign-in before using the staff area (D-010, D-019). */
   two_factor_enrollment_required?: boolean;
 };
 
@@ -143,6 +143,99 @@ export type AnalyticsReport = {
   sources: { source: string; views: number }[];
   devices: { device: string; views: number }[];
 };
+
+/** Recruitment (D-019): applications from careers.paxofi.com. */
+export type StageOption = { value: string; label: string; closed: boolean };
+export type ApplicationRow = {
+  id: string;
+  reference: string;
+  full_name: string;
+  email: string;
+  role_title: string;
+  stage: string;
+  stage_label: string;
+  created_at: string;
+  evidence_total: number | null;
+  interview_total: number | null;
+  has_cv: boolean;
+};
+export type ScoreSummary = { scores: Record<string, number>; total: number; out_of: number; pass: number; passed: boolean } | null;
+export type ScorecardDefinition = { label: string; pass: number; criteria: Record<string, string> };
+export type ApplicationNote = { id: string; kind: "note" | "stage" | "score" | "email"; body: string; author_name: string | null; created_at: string };
+export type EmailTemplate = { key: string; label: string; subject: string; body: string; stage: string | null };
+export type ApplicationDetail = {
+  id: string;
+  reference: string;
+  role: { id: string; title: string; slug: string };
+  full_name: string;
+  email: string;
+  phone: string | null;
+  location: string;
+  hours_per_week: number;
+  portfolio_url: string | null;
+  linkedin_url: string | null;
+  motivation: string;
+  experience: string;
+  cv: { filename: string; size_bytes: number; media_type: string } | null;
+  stage: string;
+  stage_label: string;
+  stage_changed_at: string;
+  closed_at: string | null;
+  created_at: string;
+  evidence: ScoreSummary;
+  interview: ScoreSummary;
+  notes: ApplicationNote[];
+  stages: StageOption[];
+  scorecards: Record<"evidence" | "interview", ScorecardDefinition>;
+  email_templates: EmailTemplate[];
+  email_available: boolean;
+};
+
+/** Roles on careers.paxofi.com (D-018). */
+export type CareerRoleState = "draft" | "published" | "closed";
+export type CareerRoleAdmin = {
+  id: string;
+  slug: string;
+  code: string;
+  title: string;
+  family: string;
+  summary: string;
+  purpose: string;
+  responsibilities: string[];
+  deliverables: string[];
+  competencies: string[];
+  tools: string[];
+  evidence: string;
+  assessment: string;
+  interview: string;
+  state: CareerRoleState;
+  sort_order: number;
+  published_at: string | null;
+  updated_at: string | null;
+};
+
+/**
+ * Downloads a CV through the API with the staff session (D-019) and saves it,
+ * so the file never sits at a shareable address.
+ */
+export async function downloadCv(apiBase: string | undefined, id: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetchImpl(adminUrl(apiBase, `/applications/${encodeURIComponent(id)}/cv`), { credentials: "include", cache: "no-store" });
+  } catch {
+    throw new AdminApiError(0, "NETWORK", NETWORK_FAILURE);
+  }
+  if (!response.ok) throw toError(response.status, await response.json().catch(() => null));
+  const name = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "CV";
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
 
 export type TwoFactorStatus = { configured: boolean; enabled: boolean; required: boolean; recovery_codes_left: number };
 
