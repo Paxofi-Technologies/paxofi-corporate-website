@@ -57,7 +57,8 @@ final class TwoFactorService
 
     public function requiredFor(StaffUser $user): bool
     {
-        return $this->configured() && $user->role === Role::Administrator;
+        // Administrators and HR staff (who see CVs, D-019) must use two-factor sign-in.
+        return $this->configured() && in_array($user->role, [Role::Administrator, Role::HumanResources], true);
     }
 
     /** @return array{configured: bool, enabled: bool, required: bool, recovery_codes_left: int} */
@@ -172,7 +173,7 @@ final class TwoFactorService
     public function disable(AuthenticatedStaff $staff, array $input, RequestContext $context): void
     {
         if ($this->requiredFor($staff->user)) {
-            throw new Forbidden('Administrators must keep two-factor sign-in on. To move to a new phone, ask another administrator to reset it.');
+            throw new Forbidden('Administrators and HR staff must keep two-factor sign-in on. To move to a new phone, ask an administrator to reset it.');
         }
         if (!$this->store->find($staff->user->id)->enabled()) {
             throw new Conflict('Two-factor sign-in is already off.');

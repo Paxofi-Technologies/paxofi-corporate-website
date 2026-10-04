@@ -14,7 +14,9 @@ use InvalidArgumentException;
  * events are deleted after 24 months. Staff sign-in attempts are deleted after
  * 90 days and ended staff sessions after 30 days (D-009). Visitor analytics
  * keep daily totals for 25 months; the day's visitor hashes go when the day
- * ends (D-014).
+ * ends (D-014). Job applications and their CVs are deleted 12 months after
+ * they close or, while still open, 12 months after they last moved stage;
+ * CV uploads never attached to an application go after a day (D-019).
  */
 final class RetentionPolicy
 {
@@ -28,8 +30,10 @@ final class RetentionPolicy
         public readonly int $sentEmailDays = 30,
         public readonly int $failedEmailDays = 90,
         public readonly int $passwordResetDays = 1,
+        public readonly int $applicationMonths = 12,
+        public readonly int $cvUploadDays = 1,
     ) {
-        if ($enquiryMonths < 1 || $networkMetadataDays < 1 || $auditEventMonths < 1 || $loginAttemptDays < 1 || $endedSessionDays < 1 || $analyticsMonths < 1) {
+        if ($enquiryMonths < 1 || $networkMetadataDays < 1 || $auditEventMonths < 1 || $loginAttemptDays < 1 || $endedSessionDays < 1 || $analyticsMonths < 1 || $applicationMonths < 1 || $cvUploadDays < 1) {
             throw new InvalidArgumentException('Retention periods must be positive.');
         }
     }
@@ -85,5 +89,15 @@ final class RetentionPolicy
     public function endedSessionCutoff(DateTimeImmutable $now): DateTimeImmutable
     {
         return $now->modify("-{$this->endedSessionDays} days");
+    }
+
+    public function applicationCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->applicationMonths} months");
+    }
+
+    public function cvUploadCutoff(DateTimeImmutable $now): DateTimeImmutable
+    {
+        return $now->modify("-{$this->cvUploadDays} days");
     }
 }

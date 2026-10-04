@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Paxofi\CorporateWebsite\Bootstrap;
 
 use Paxofi\Core\Configuration\Environment;
+use Paxofi\CorporateWebsite\Application\Careers\RecruitmentSettings;
 use Paxofi\CorporateWebsite\Application\Mail\Email;
 use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
 use Paxofi\CorporateWebsite\Application\Mail\MailTransport;
@@ -26,6 +27,7 @@ final readonly class Settings
         public ?string $mediaStoragePath = null,
         public ?MailTransport $mailTransport = null,
         public ?MailSettings $mail = null,
+        public RecruitmentSettings $recruitment = new RecruitmentSettings(),
     ) {
     }
 
@@ -55,6 +57,12 @@ final readonly class Settings
                 enquiryAlertTo: Email::addressList($environment->get('ENQUIRY_ALERT_TO', '')),
                 errorAlertTo: Email::addressList($environment->get('ERROR_ALERT_TO', '')),
                 siteUrl: rtrim(trim($environment->get('STAFF_AREA_URL', '') ?? '') ?: ($origins[0] ?? 'https://corporate.paxofi.com'), '/'),
+            ),
+            // careers.paxofi.com (D-018, D-019): who hears about new applications, and where candidates reply.
+            recruitment: new RecruitmentSettings(
+                alertTo: Email::addressList($environment->get('RECRUITMENT_ALERT_TO', '')),
+                replyTo: Email::isAddress($reply = trim($environment->get('RECRUITMENT_REPLY_TO', '') ?? '')) ? $reply : 'hr@paxofi.com',
+                careersSiteUrl: rtrim(trim($environment->get('CAREERS_SITE_URL', '') ?? '') ?: 'https://careers.paxofi.com', '/'),
             ),
         );
     }
