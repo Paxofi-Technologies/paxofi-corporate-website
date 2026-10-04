@@ -189,4 +189,5 @@ Staff change the wording of the main pages under **Content → Page text** (D-01
 - **A change is not showing:** publishing takes up to one minute to appear (the API caches page text for 60 seconds). Check that the page says *Edited text published …* and has no unpublished changes.
 - **A page shows the original wording after it was edited:** the website could not read the API in time. Check that `https://api…/api/v1/pages/home` answers, and look for `page-copy: showing built-in` in the website's `stderr.log`.
 - **Undo a change:** open the page, choose **Restore as draft** on an earlier version, then **Publish**. To go back to the original wording, use **Use original wording** on each changed field, then **Publish**.
+- **Menu and footer:** under **Content → Page text → Menu and footer**. To hide a menu item, empty both its name and link. Links must be a page on this site such as `/about` or a full `https://` address.
 - **Change Privacy or Terms:** these stay in code. Change them through a pull request and a release.

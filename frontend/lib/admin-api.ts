@@ -43,7 +43,7 @@ export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: strin
 
 /** Page text edited in the staff area (D-015). Fields come from page-copy.json via the API. */
 export type PageTextSummary = { page: string; label: string; path: string; published_at: string | null; has_draft: boolean };
-export type PageTextField = { key: string; group: string; label: string; kind: "line" | "text"; max: number; default: string };
+export type PageTextField = { key: string; group: string; label: string; kind: "line" | "text" | "link" | "email"; max: number; default: string; optional?: boolean; pair?: string };
 export type PageTextDetail = {
   page: string;
   label: string;

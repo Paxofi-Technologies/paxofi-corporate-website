@@ -4,14 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Logo from "@/components/Logo";
-import { NAV_LINKS } from "@/lib/site";
+import { type PageCopy, defaultCopy, siteLinks } from "@/lib/page-copy";
 
 function isCurrent(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (!href.startsWith("/")) return false;
+  const path = href.split(/[?#]/)[0];
+  return path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
 }
 
-export default function SiteHeader() {
+/** A page on this site, or another site (opened normally, without passing on this page's address). */
+function MenuLink({ href, current, className, onClick, children }: { href: string; current: boolean; className?: string; onClick: () => void; children: React.ReactNode }) {
+  if (!href.startsWith("/")) {
+    return <a href={href} className={className} rel="noopener" onClick={onClick}>{children}</a>;
+  }
+  return <Link href={href} className={className} aria-current={current ? "page" : undefined} onClick={onClick}>{children}</Link>;
+}
+
+/** The main menu; its links and button come from the staff area (Content → Page text → Menu and footer, D-015). */
+export default function SiteHeader({ copy = defaultCopy("site") }: { copy?: PageCopy }) {
   const pathname = usePathname() ?? "/";
+  const { menu, button } = siteLinks(copy);
   // The menu remembers the page it was opened on, so it is closed on any other
   // page: navigating (by link or browser back/forward) closes it without an effect.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -45,19 +57,14 @@ export default function SiteHeader() {
           <span className="visually-hidden">{open ? "Close menu" : "Open menu"}</span>
         </button>
         <nav id="primary-nav" aria-label="Main" data-open={open}>
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link key={href} href={href} aria-current={isCurrent(pathname, href) ? "page" : undefined} onClick={close}>
+          {menu.map(({ href, label }) => (
+            <MenuLink key={`${href}|${label}`} href={href} current={isCurrent(pathname, href)} onClick={close}>
               {label}
-            </Link>
+            </MenuLink>
           ))}
-          <Link
-            href="/contact"
-            className="nav-cta"
-            aria-current={isCurrent(pathname, "/contact") ? "page" : undefined}
-            onClick={close}
-          >
-            Talk to us
-          </Link>
+          <MenuLink href={button.href} className="nav-cta" current={isCurrent(pathname, button.href)} onClick={close}>
+            {button.label}
+          </MenuLink>
         </nav>
       </div>
     </header>

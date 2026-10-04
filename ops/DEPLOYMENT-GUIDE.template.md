@@ -217,7 +217,7 @@ From this release the website counts its own visits, without cookies (decision D
 
 ## Step 10b — Page text editing (no server change)
 
-From this release staff can change the wording of the Home, About, Services, Products, Careers and Contact pages under **Content → Page text** (decision D-015). There is nothing to set up: the database upgrade adds the table. Until someone publishes a change, every page keeps its current wording. Try it on staging first.
+From this release staff can change the wording of the Home, About, Services, Products, Careers and Contact pages under **Content → Page text** (decision D-015). There is nothing to set up: the database upgrade adds the table. The menu and footer are edited the same way (**Content → Page text → Menu and footer**). Until someone publishes a change, every page keeps its current wording. Try it on staging first.
 
 ## Step 11 — One time: create the staging copy (about 45 minutes)
 
