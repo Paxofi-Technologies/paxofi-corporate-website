@@ -51,3 +51,15 @@ try {
 }
 
 ResponseEmitter::emit($response, includeBody: $method !== 'HEAD');
+
+// Send queued emails and error alerts (D-016) after the browser has its
+// answer, so a slow mail server never delays a page.
+if (isset($application)) {
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } elseif (function_exists('litespeed_finish_request')) {
+        litespeed_finish_request();
+    }
+    ignore_user_abort(true);
+    $application->afterResponse();
+}

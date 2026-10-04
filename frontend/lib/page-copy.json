@@ -136,8 +136,8 @@
         { "key": "fellowship_eyebrow", "group": "Fellowship panel", "label": "Small heading", "kind": "line", "max": 50, "default": "Paxofi Innovation Fellowship" },
         { "key": "fellowship_title", "group": "Fellowship panel", "label": "Heading", "kind": "line", "max": 70, "default": "Learn through real product and technology work." },
         { "key": "fellowship_text", "group": "Fellowship panel", "label": "Text", "kind": "text", "max": 200, "default": "Our fellowship creates practical opportunities to learn through real product and technology work." },
-        { "key": "fellowship_button", "group": "Fellowship panel", "label": "Button (to career.paxofi.com)", "kind": "line", "max": 28, "default": "View opportunities" },
-        { "key": "note", "group": "Fellowship panel", "label": "Note below the panel (the career.paxofi.com link follows it)", "kind": "text", "max": 160, "default": "All open roles, applications and recruitment updates are handled on our careers site," }
+        { "key": "fellowship_button", "group": "Fellowship panel", "label": "Button (to careers.paxofi.com)", "kind": "line", "max": 28, "default": "View opportunities" },
+        { "key": "note", "group": "Fellowship panel", "label": "Note below the panel (the careers.paxofi.com link follows it)", "kind": "text", "max": 160, "default": "All open roles, applications and recruitment updates are handled on our careers site," }
       ]
     },
     "contact": {
@@ -179,8 +179,8 @@
         { "key": "footer_email", "group": "Footer", "label": "Email address", "kind": "email", "max": 120, "default": "hello@paxofi.com" },
         { "key": "footer_contact_label", "group": "Footer", "label": "Link 1: name", "kind": "line", "max": 40, "default": "Start a conversation", "pair": "footer_contact_link" },
         { "key": "footer_contact_link", "group": "Footer", "label": "Link 1: link", "kind": "link", "max": 200, "default": "/contact", "pair": "footer_contact_label" },
-        { "key": "footer_careers_label", "group": "Footer", "label": "Link 2: name", "kind": "line", "max": 40, "default": "career.paxofi.com", "optional": true, "pair": "footer_careers_link" },
-        { "key": "footer_careers_link", "group": "Footer", "label": "Link 2: link", "kind": "link", "max": 200, "default": "https://career.paxofi.com", "optional": true, "pair": "footer_careers_label" },
+        { "key": "footer_careers_label", "group": "Footer", "label": "Link 2: name", "kind": "line", "max": 40, "default": "careers.paxofi.com", "optional": true, "pair": "footer_careers_link" },
+        { "key": "footer_careers_link", "group": "Footer", "label": "Link 2: link", "kind": "link", "max": 200, "default": "https://careers.paxofi.com", "optional": true, "pair": "footer_careers_label" },
         { "key": "footer_extra_label", "group": "Footer", "label": "Link 3: name", "kind": "line", "max": 40, "default": "", "optional": true, "pair": "footer_extra_link" },
         { "key": "footer_extra_link", "group": "Footer", "label": "Link 3: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "footer_extra_label" },
         { "key": "footer_company_heading", "group": "Footer", "label": "Third column heading (Privacy and Terms)", "kind": "line", "max": 30, "default": "Company" },

@@ -10,7 +10,7 @@ Baseline of what version 1 of the Paxofi corporate website is, how it is governe
 |---|---|
 | Present who Paxofi is, what it builds and offers | All 8 pages live, on-brand (D-002), WCAG 2.1 AA |
 | Turn interest into conversations | Contact enquiries received and answered within 2 business days (D-007) |
-| Route job seekers to recruitment | Every careers link goes to career.paxofi.com (D-001) |
+| Route job seekers to recruitment | Every careers link goes to careers.paxofi.com (D-001) |
 | Be fast, secure and trustworthy | Lighthouse ≥ 90, LCP ≤ 2.5 s, security headers, ZAP scan clean, 99.5% uptime |
 
 **Audiences:** prospective clients and partners (primary), job seekers (routed to the careers site), investors and press, the Paxofi team.
@@ -23,7 +23,7 @@ corporate.paxofi.com
 ├── /about       About Paxofi
 ├── /services    Services
 ├── /products    Products (Paxofi Pay, Paxofi Core Framework)
-├── /careers     Working at Paxofi → career.paxofi.com
+├── /careers     Working at Paxofi → careers.paxofi.com
 ├── /contact     Contact form (primary conversion)
 ├── /privacy     Privacy notice
 └── /terms       Terms of use
@@ -42,14 +42,14 @@ Main navigation: About, Services, Products, Careers, and the **Talk to us** butt
 | About | Explain who Paxofi is, mission, values | Contact |
 | Services | Describe what Paxofi does for clients | Start a conversation → Contact |
 | Products | Present Paxofi Pay and Paxofi Core Framework | Contact |
-| Careers | Describe working at Paxofi | View opportunities → career.paxofi.com |
+| Careers | Describe working at Paxofi | View opportunities → careers.paxofi.com |
 | Contact | Collect an enquiry | Send enquiry |
 | Privacy / Terms | Legal information, retention periods (D-008), no tracking (D-006) | – |
 
 ## 4. User journeys and conversion paths (CW-PD-004)
 
 1. **Enquiry (primary):** any page → *Talk to us* / CTA band → Contact → fill name, email, company (optional), message → *Send enquiry* → confirmation. Errors are shown next to the field and focused; rate limit and outage messages are explained. Covered by E2E tests in three browsers.
-2. **Job seeker:** Home/nav → Careers → *View opportunities* → career.paxofi.com.
+2. **Job seeker:** Home/nav → Careers → *View opportunities* → careers.paxofi.com.
 3. **Product discovery:** Home → product card *More about …* → Products → Contact.
 
 ## 5. Content model (CW-PD-005)

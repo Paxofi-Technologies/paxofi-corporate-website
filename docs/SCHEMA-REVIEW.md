@@ -2,7 +2,7 @@
 
 Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode_ci (migration 006). Migrations 001–009 are frozen: changes ship as new numbered migrations (`database/README.md`); `bin/migrate.php` warns if an applied file changes.
 
-**Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on career.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
+**Use in v1:** *Active* = read or written by the v1 API. *Reserved* = created by 001, empty, kept for later Phase 2 slices (decision D-005) or unused because careers live on careers.paxofi.com (D-001). Phase 2.1 (migration 007, decision D-009) activates the staff sign-in tables.
 
 ## Active tables
 
@@ -29,6 +29,8 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | products / services (010) | image_id, document_id | CHAR(36) NULL, FK → media_assets ON DELETE SET NULL | – | staff area (D-012) | public API resolves them to the picture and download | OK; files in use cannot be deleted |
 | media_assets (001, 010) | id, kind (`image`/`document`), filename (safe download name), media_type (checked MIME), storage_reference (= id), lifecycle_state, size_bytes, width/height (images), alt_text (images), title (documents), sha256, uploaded_by FK → users ON DELETE SET NULL, created_at, updated_at; index (kind, created_at) | 001/010 | uploader id only | staff area (D-012) | `/api/v1/media/{id}/{filename}`, staff area | OK; file bytes live in `MEDIA_STORAGE_PATH`, not in the database; no visitor data |
 | analytics_daily / analytics_sources / analytics_devices (011) | day + path / source / device (PK), views, visitors | 011 | – | page-view beacon (D-014) | staff Analytics page | OK; daily totals only, deleted after 25 months; at most 9 paths and 500 new sources a day |
+| email_outbox (013) | kind, recipients, reply-to, subject, text, status, attempts, last error, times | 013 | yes: email addresses and enquiry text | enquiry alerts, password reset | bin/send-mail.php, after-response sending | OK; sent deleted after 30 days, failed after 90 (retention purge) |
+| password_resets (013) | SHA-256 of the reset token, staff user (FK, cascade), IP, created/expires/used | 013 | IP address | *Forgot your password?* | reset page | OK; one use, 30 minutes; deleted a day after expiry |
 | page_revisions (012) | page key, state (draft or published), JSON of the page's fields, author, time | 012 | staff user id (author) | staff **Content → Page text** | public `GET /pages/{page}`, staff editor | OK; one draft per page; text only, limits checked against `page-copy.json`; Privacy and Terms are not stored here |
 | analytics_salts / analytics_visitors (011) | today's random salt; SHA-256 visitor hashes per page | 011 | pseudonymous, today only | page-view beacon | unique-visitor counting | OK; deleted when the day ends; no IP or user agent stored |
 | catalog_revisions (009) | id, item_type (product/service), item_id, state (draft/published/created), data JSON, author_id, created_at; index (item_type, item_id, created_at) | 009 | – | staff area | staff area history | OK; at most one draft per item; no FK so history survives |

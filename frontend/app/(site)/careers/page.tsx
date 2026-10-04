@@ -45,7 +45,7 @@ export default async function Careers() {
           </div>
           <p className="page-note">
             {t.note}{" "}
-            <a href={SITE.careersUrl} rel="noopener">career.paxofi.com</a>.
+            <a href={SITE.careersUrl} rel="noopener">careers.paxofi.com</a>.
           </p>
         </div>
       </section>

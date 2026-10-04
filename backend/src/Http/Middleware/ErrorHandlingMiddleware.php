@@ -18,17 +18,19 @@ use Paxofi\CorporateWebsite\Application\Exception\RateLimited;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
 use Paxofi\CorporateWebsite\Application\Exception\Unauthenticated;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
+use Paxofi\CorporateWebsite\Application\Mail\ErrorAlerts;
 use Paxofi\CorporateWebsite\Http\ApiResponse;
 use Throwable;
 
 /**
  * Maps application exceptions to safe JSON errors, converts the PCF router's
  * plain-text 404/405 into the API envelope, and turns anything unexpected
- * into a generic 500 while logging diagnostics with the request id.
+ * into a generic 500 while logging diagnostics with the request id. Server
+ * errors and outages also raise an email alert (D-016).
  */
 final class ErrorHandlingMiddleware implements HttpMiddleware
 {
-    public function __construct(private readonly Logger $logger, private readonly bool $debug = false)
+    public function __construct(private readonly Logger $logger, private readonly bool $debug = false, private readonly ?ErrorAlerts $alerts = null)
     {
     }
 
@@ -41,7 +43,8 @@ final class ErrorHandlingMiddleware implements HttpMiddleware
         } catch (HttpException $exception) {
             return ApiResponse::error($request, $exception->status(), 'HTTP_' . $exception->status(), $this->debug ? $exception->getMessage() : 'Request could not be processed.');
         } catch (Throwable $exception) {
-            $this->logger->error('http.unhandled_exception', $this->logContext($request, $exception));
+            $this->logger->error('http.unhandled_exception', $context = $this->logContext($request, $exception));
+            $this->alerts?->report('Server error in the API', $context);
 
             return ApiResponse::error($request, 500, 'INTERNAL_ERROR', $this->debug ? $exception->getMessage() : 'An unexpected error occurred.');
         }
@@ -63,7 +66,8 @@ final class ErrorHandlingMiddleware implements HttpMiddleware
         };
 
         if ($exception instanceof DependencyUnavailable) {
-            $this->logger->error('dependency.unavailable', $this->logContext($request, $exception));
+            $this->logger->error('dependency.unavailable', $context = $this->logContext($request, $exception));
+            $this->alerts?->report('The API cannot reach the database', $context);
         }
 
         return ApiResponse::error($request, $status, $exception->errorCode(), $exception->getMessage(), $exception->details(), $headers);

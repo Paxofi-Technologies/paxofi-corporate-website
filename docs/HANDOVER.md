@@ -9,7 +9,7 @@ Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.c
 | Website (Next.js 16, Node 22) | https://corporate.paxofi.com | Setup Node.js App, app root `paxofi-corporate-website`, startup `app.js`, env `API_BASE_URL` | `/release.txt`; UptimeRobot |
 | API (PHP 8.4, Paxofi Core Framework 1.1) | https://api.paxofi.com/api/v1 | `paxofi-api-runtime/backend/public` (document root), secrets in `backend/.env` (600) | `/health`, `/readiness`; UptimeRobot |
 | Database (MariaDB 11.4) | `paxoalhu_corporate` | phpMyAdmin | `/readiness` → `"database":true` |
-| Careers | https://career.paxofi.com | separate site (decision D-001) | – |
+| Careers | https://careers.paxofi.com | separate site (decision D-001) | – |
 
 ## 2. Day-to-day
 
@@ -56,7 +56,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 |---|---|---|
 | KI-001 | Facebook link previews blocked (HTTP 403) by the shared host's bot protection | Retest with the Facebook Sharing Debugger after the move to the VPS; or ask Namecheap to whitelist `facebookexternalhit` |
 | D-004 | Interim logo mark | Replace `components/Logo.tsx`, `app/icon.svg` and `public/og-image.png` when the designer delivers the master logo |
-| D-005 | Phase 2: staff sign-in (done: P2.1, D-009), two-factor sign-in (done: P2.2, D-010), products and services editing (done: P2.3, D-011), media library (done: P2.4, D-012; back up `paxofi-media` with the database), staging copy (P2.5, D-013: every release goes to staging first; RB-14), visitor analytics (P2.6, D-014, cookieless; RB-15), page text editing (P2.7, D-015; Content → Page text) | Asana tasks labelled "[Phase 2]" |
+| D-005 | Phase 2: staff sign-in (done: P2.1, D-009), two-factor sign-in (done: P2.2, D-010), products and services editing (done: P2.3, D-011), media library (done: P2.4, D-012; back up `paxofi-media` with the database), staging copy (P2.5, D-013: every release goes to staging first; RB-14), visitor analytics (P2.6, D-014, cookieless; RB-15), page text editing (P2.7, D-015; Content → Page text), email alerts, staff password reset, error alerts and nightly backups (P2.8, D-016; RB-17, RB-18) | Asana tasks labelled "[Phase 2]" |
 | D-006 | No analytics in v1 | Revisit in Phase 2 (cookieless, self-hosted) |
 | VPS | Planned move from shared hosting | Then re-test Facebook (KI-001); consider Git-based deploys and server-level HTTPS/HSTS |
 

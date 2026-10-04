@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -155,6 +155,6 @@ final class MigrationTest extends DatabaseTestCase
         }
 
         $foreignKeys = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()')->fetchColumn();
-        self::assertSame(14, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010)');
+        self::assertSame(15, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010), password_resets.user_id (013)');
     }
 }

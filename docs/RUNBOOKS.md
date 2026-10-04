@@ -61,6 +61,8 @@ cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.
 
 ## RB-7 Backups and restore
 
+- **Nightly (from P2.8):** see RB-18. The points below remain the release and monthly routine.
+
 - **Before every release:** phpMyAdmin → Export (Quick, SQL) — guide Step 1.
 - **Regular:** cPanel → Backup (or JetBackup if offered) must include the database; download a full account backup monthly and store it off the server.
 - **Restore a database export:** phpMyAdmin → `paxoalhu_corporate` → Import → the `.sql` file. Restore into a new empty database first when you only need to inspect old data.
@@ -191,3 +193,37 @@ Staff change the wording of the main pages under **Content → Page text** (D-01
 - **Undo a change:** open the page, choose **Restore as draft** on an earlier version, then **Publish**. To go back to the original wording, use **Use original wording** on each changed field, then **Publish**.
 - **Menu and footer:** under **Content → Page text → Menu and footer**. To hide a menu item, empty both its name and link. Links must be a page on this site such as `/about` or a full `https://` address.
 - **Change Privacy or Terms:** these stay in code. Change them through a pull request and a release.
+
+
+## RB-17 Email and alerts
+
+The API sends email through the company mailbox (D-016). The settings are `MAIL_*`, `ENQUIRY_ALERT_TO` and `ERROR_ALERT_TO` in `backend/.env`.
+
+- **No enquiry alert arrived:**
+  1. Check the spam folder.
+  2. Check that `MAIL_TRANSPORT=smtp` and the `MAIL_*` settings are in `backend/.env`.
+  3. In phpMyAdmin, look at `email_outbox`: `status` and `last_error` say what happened. `pending` with an error means it will be retried. `failed` means it was given up after about 5 hours.
+  4. Check that the cron job `bin/send-mail.php` runs every 5 minutes (`/home/paxoalhu/logs/send-mail.log`).
+- **"Could not connect to the mail server":** the mail host or port is wrong. cPanel → **Email Accounts** → *Connect Devices* shows the *Outgoing Server* and its SSL port (usually 465 with `MAIL_ENCRYPTION=ssl`).
+- **"replied 535 to AUTH":** the mailbox password in `MAIL_PASSWORD` is wrong, or the mailbox password was changed.
+- **Error alert emails:** each describes the problem and the request id. Use the request id to find the full detail in the API error log. The same problem is not emailed again for an hour.
+  - *The API cannot reach the database:* follow RB-5.
+  - *Server error in the API:* look up the request id in the log and fix, or report it.
+  - *The nightly backup failed:* follow RB-18.
+  - *Email could not be sent:* see above.
+- **A staff member cannot reset their password:** the link works once, for 30 minutes, and only 3 can be requested per hour. An administrator can still set a temporary password under **Users**.
+- **Turn email off:** remove `MAIL_TRANSPORT` from `backend/.env`. The site keeps working; alerts and reset links stop.
+
+## RB-18 Nightly backups and restore
+
+`bin/backup.php` runs every night (D-016). It writes `paxofi-database-<date>.sql.gz` and `paxofi-media-<date>.tar.gz` to `BACKUP_PATH`, for example `/home/paxoalhu/paxofi-backups`, and keeps 14 days of copies.
+
+- **Check it works:** the folder has a new pair of files each morning, and `/home/paxoalhu/logs/backup.log` shows `backup: N tables …`. A failure sends an error alert email.
+- **Keep a copy off the server (weekly):** in File Manager, download the newest two files and store them somewhere safe, such as the company Google Drive. Backups on the same server do not survive losing the server.
+- **Restore the database:**
+  1. Create a NEW empty database (cPanel → MySQL Databases).
+  2. In phpMyAdmin, select it → **Import** → the `.sql.gz` file. phpMyAdmin reads gzip directly.
+  3. Check the data.
+  4. Point `DB_DATABASE` in `backend/.env` at it, or import it over the live database only after a manual export (Step 1 of the guide).
+- **Restore the media library:** in File Manager, upload the `.tar.gz` into `MEDIA_STORAGE_PATH` → **Extract**.
+- **Disk space:** each copy is about the size of the database plus the media folder. Lower `BACKUP_KEEP_DAYS` if the disk quota gets tight.

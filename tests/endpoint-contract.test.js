@@ -27,6 +27,8 @@ const routes = [
   ["DELETE", "/api/v1/admin/session", "admin"],
   ["POST", "/api/v1/admin/session/password", "admin"],
   ["POST", "/api/v1/admin/session/mfa", "admin"],
+  ["POST", "/api/v1/admin/password-reset", "admin-entry"],
+  ["POST", "/api/v1/admin/password-reset/complete", "admin-entry"],
   ["GET", "/api/v1/admin/account/two-factor", "admin"],
   ["POST", "/api/v1/admin/account/two-factor/setup", "admin"],
   ["POST", "/api/v1/admin/account/two-factor/enable", "admin"],
@@ -77,9 +79,9 @@ test("route inventory matches backend/config/routes.php exactly", () => {
   assert.deepEqual(inventory.sort(), routes.map((r) => r.join(" ")).sort());
 });
 
-test("every admin route requires the staff guard, except the sign-in entry points", () => {
+test("every admin route requires the staff guard, except the sign-in and password-reset entry points", () => {
   for (const [method, route, auth] of routes.filter((r) => r[1].startsWith("/api/v1/admin"))) {
-    const entry = (route === "/api/v1/admin/setup") || (method === "POST" && route === "/api/v1/admin/session");
+    const entry = (route === "/api/v1/admin/setup") || (method === "POST" && route === "/api/v1/admin/session") || route.startsWith("/api/v1/admin/password-reset");
     assert.equal(auth, entry ? "admin-entry" : "admin", `${method} ${route}`);
   }
 });

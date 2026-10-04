@@ -7,7 +7,7 @@ export const SITE = {
   description:
     "Paxofi Technologies builds dependable digital products, software platforms and technology infrastructure for businesses and communities.",
   email: "hello@paxofi.com",
-  careersUrl: "https://career.paxofi.com",
+  careersUrl: "https://careers.paxofi.com",
 };
 
 /** Every public, indexable route (used by the sitemap and the E2E tests). */
