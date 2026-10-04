@@ -13,6 +13,7 @@ use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\ApiResponse;
 use Paxofi\CorporateWebsite\Http\RequestBody;
 use Paxofi\CorporateWebsite\Http\RequestContexts;
+use Paxofi\CorporateWebsite\Http\RequestFactory;
 
 /**
  * /api/v1/admin/applications[/{id}...] (D-019). Reading needs
@@ -65,7 +66,9 @@ final class AdminRecruitmentController
     {
         $staff = $this->guard->require($request, Permission::RECRUITMENT_MANAGE);
 
-        return ApiResponse::success($request, $this->recruitment->emailCandidate(self::id($request), RequestBody::parse($request), $staff, RequestContexts::from($request)));
+        $input = RequestBody::parse($request, RequestFactory::CANDIDATE_EMAIL_MAX_BYTES);
+
+        return ApiResponse::success($request, $this->recruitment->emailCandidate(self::id($request), $input, $staff, RequestContexts::from($request)));
     }
 
     /** The CV, always as a download and never cached (personal data). */

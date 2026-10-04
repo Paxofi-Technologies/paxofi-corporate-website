@@ -242,6 +242,7 @@ Run after guide Step 10d. About 30 minutes. Use your own email address as the ca
 | CR5 | HR login | Add an HR user (Users → Human Resources) and sign in as them | Two-factor set-up is asked first; then only **Recruitment** and **My account** show | |
 | CR6 | Pipeline | As HR: open the application, download the CV, move to *Screening*, save the evidence scorecard, send *Screening: moving forward* | All are listed under *Notes and history*; the candidate email arrives with Reply-To hr@paxofi.com | |
 | CR7 | Roles | **Recruitment** → *Edit the roles* → close a role, then open it again | Closed: it disappears from careers.paxofi.com. Opened: it is back, at the same address | |
+| CR10 | Agreement attached | Choose the *Selected* template and send without a file, then attach the agreement PDF and send | Without a file: *Attach the PIF Participant Agreement*. With it: the candidate receives the email with the PDF attached; the history shows *Attached: …* | |
 | CR8 | Privacy and erase | Read /privacy on the careers site; then **Erase application** | The notice states 12 months; the application and CV are gone | |
 | CR9 | Corporate links | On corporate.paxofi.com /careers, click *Explore opportunities* | Opens https://careers.paxofi.com | |
 

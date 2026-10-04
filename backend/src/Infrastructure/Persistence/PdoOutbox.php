@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Paxofi\CorporateWebsite\Infrastructure\Persistence;
 
+use Closure;
 use DateTimeImmutable;
+use Paxofi\CorporateWebsite\Application\Mail\Attachment;
 use Paxofi\CorporateWebsite\Application\Mail\Email;
 use Paxofi\CorporateWebsite\Application\Mail\Outbox;
 use Paxofi\CorporateWebsite\Infrastructure\Support\Uuid;
@@ -17,7 +19,8 @@ final class PdoOutbox implements Outbox
     /** Emails added through this instance (the API sends them right after the response). */
     private int $added = 0;
 
-    public function __construct(private readonly Database $database)
+    /** @param (Closure(): DateTimeImmutable)|null $clock the application's clock; the database's own time when null */
+    public function __construct(private readonly Database $database, private readonly ?Closure $clock = null)
     {
     }
 
@@ -30,9 +33,17 @@ final class PdoOutbox implements Outbox
     {
         $id = Uuid::v4();
         $this->write(
-            'INSERT INTO email_outbox (id, kind, recipients, reply_to, subject, body_text) VALUES (:id, :kind, :to, :reply, :subject, :body)',
-            ['id' => $id, 'kind' => mb_substr($email->kind, 0, 40), 'to' => implode(',', $email->to), 'reply' => $email->replyTo, 'subject' => $email->subject, 'body' => $email->text],
+            'INSERT INTO email_outbox (id, kind, recipients, reply_to, subject, body_text, created_at, next_attempt_at)
+             VALUES (:id, :kind, :to, :reply, :subject, :body, COALESCE(:now1, CURRENT_TIMESTAMP), COALESCE(:now2, CURRENT_TIMESTAMP))',
+            ['id' => $id, 'kind' => mb_substr($email->kind, 0, 40), 'to' => implode(',', $email->to), 'reply' => $email->replyTo, 'subject' => $email->subject, 'body' => $email->text, 'now1' => $now = $this->now(), 'now2' => $now],
         );
+
+        foreach ($email->attachments as $attachment) {
+            $this->write(
+                'INSERT INTO email_attachments (id, email_id, filename, media_type, content) VALUES (:id, :email, :name, :type, :content)',
+                ['id' => Uuid::v4(), 'email' => $id, 'name' => $attachment->filename, 'type' => $attachment->mediaType, 'content' => $attachment->content],
+            );
+        }
 
         $this->added++;
 
@@ -51,10 +62,10 @@ final class PdoOutbox implements Outbox
             ['now' => $now->format('Y-m-d H:i:s')],
         );
 
-        return array_map(static fn (array $row): array => [
+        return array_map(fn (array $row): array => [
             'id' => (string) $row['id'],
             'attempts' => (int) $row['attempts'],
-            'email' => new Email(explode(',', (string) $row['recipients']), (string) $row['subject'], (string) $row['body_text'], $row['reply_to'] === null ? null : (string) $row['reply_to'], (string) $row['kind']),
+            'email' => new Email(explode(',', (string) $row['recipients']), (string) $row['subject'], (string) $row['body_text'], $row['reply_to'] === null ? null : (string) $row['reply_to'], (string) $row['kind'], $this->attachments((string) $row['id'])),
         ], $rows);
     }
 
@@ -74,5 +85,20 @@ final class PdoOutbox implements Outbox
     public function failedSince(DateTimeImmutable $since): int
     {
         return (int) ($this->select("SELECT COUNT(*) AS n FROM email_outbox WHERE status = 'failed' AND created_at >= :since", ['since' => $since->format('Y-m-d H:i:s')])[0]['n'] ?? 0);
+    }
+
+    /** @return list<Attachment> */
+    private function attachments(string $emailId): array
+    {
+        return array_map(
+            static fn (array $row): Attachment => new Attachment((string) $row['filename'], (string) $row['media_type'], (string) $row['content']),
+            $this->select('SELECT filename, media_type, content FROM email_attachments WHERE email_id = :id ORDER BY created_at, id', ['id' => $emailId]),
+        );
+    }
+
+    /** Queued "now" on the same clock that later decides what is due. */
+    private function now(): ?string
+    {
+        return $this->clock === null ? null : ($this->clock)()->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
     }
 }
