@@ -218,3 +218,13 @@ Run after guide Step 10c, on staging first. About 20 minutes, plus a check the n
 | E6 | Nightly backup | Next morning, open the backup folder | A `paxofi-database-….sql.gz` (and media `.tar.gz` if uploads are on) from last night | |
 
 Record sign-off ("Phase 2.8 UAT passed") in Asana.
+
+## About and Careers refresh (D-017)
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| AC1 | About | Open /about | All sections show: who we are, our story, vision, mission, services, products, values, how we work, our people. The facts and milestones are correct (change them under Content → Page text if not) | |
+| AC2 | Careers | Open /careers | Why Paxofi, who can join, 7 role families, the fellowship panel, the journey, 7 recruitment steps, FAQ and equal opportunity all show | |
+| AC3 | Apply links | Click every *Explore opportunities* / *Apply* button | Each opens careers.paxofi.com | |
+| AC4 | Wording | Read the fellowship panel and the FAQ | No pay is promised; 15 hours/week minimum; rolling intake | |
+| AC5 | Phone | Open both pages on a phone | Nothing overflows sideways; FAQ answers open and close | |
