@@ -26,7 +26,7 @@ async function fakeApi(page) {
       cv: { filename: "Ada CV.pdf", size_bytes: 20480, media_type: "application/pdf" }, stage: "applied", stage_label: "Applied",
       stage_changed_at: "2026-10-04 08:00:00", closed_at: null, created_at: "2026-10-04 08:00:00", evidence: null, interview: null, notes: [],
       stages: STAGES, scorecards: { evidence: { label: "Gate 2: evidence review", pass: 21, criteria: CRITERIA }, interview: { label: "Gate 4: interview", pass: 24, criteria: INTERVIEW } },
-      email_templates: [{ key: "assessment_invitation", label: "Assessment invitation", subject: "Your role assessment: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nDeadline: [date and time, with time zone]\n\nPaxofi", stage: "assessment" }],
+      email_templates: [{ key: "selection", label: "Selected (with PIF Participant Agreement)", subject: "You have been selected: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nAttached is the PIF Participant Agreement.\n\nPaxofi", stage: "agreement_pending" }, { key: "assessment_invitation", label: "Assessment invitation", subject: "Your role assessment: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nDeadline: [date and time, with time zone]\n\nPaxofi", stage: "assessment" }],
       email_available: true,
     },
     roles: [{ id: "r1", slug: "software-engineer-fellow", code: "SE", title: "Software Engineer Fellow", family: "Technology and engineering", summary: "Build software.", purpose: "Build and test Paxofi software.", responsibilities: ["Write code"], deliverables: [], competencies: [], tools: [], evidence: "", assessment: "", interview: "", state: "published", sort_order: 40, published_at: "2026-10-04 08:00:00", updated_at: "2026-10-04 08:00:00" }],
@@ -63,8 +63,9 @@ async function fakeApi(page) {
       return reply(route, 200, app);
     }
     if (path === `/applications/${APP_ID}/emails`) {
+      if (body.template === "selection" && !body.attachment) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { attachment: "Attach the PIF Participant Agreement (PDF or Word) before sending." } } });
       if (/\[[^\]]{2,60}\]/.test(body.body)) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { body: "Replace the [placeholders] in square brackets before sending." } } });
-      note("email", `Email sent: ${body.subject}`);
+      note("email", `Email sent: ${body.subject}${body.attachment ? `\nAttached: ${body.attachment.filename}` : ""}`);
       return reply(route, 200, app);
     }
     if (path === `/applications/${APP_ID}/cv`) {
@@ -124,9 +125,18 @@ describe("recruitment", () => {
     await page.getByText("Email sent to ada@example.com.").waitFor();
     assert.ok(await page.getByText("Email sent: Your role assessment").isVisible(), "recorded in the history");
 
+    await page.getByLabel("Template").selectOption("selection");
+    await page.getByRole("button", { name: "Send email" }).click();
+    await page.getByText("Attach the PIF Participant Agreement (PDF or Word) before sending.").waitFor();
+    await page.getByLabel(/Attachment: the PIF Participant Agreement/).setInputFiles({ name: "PIF Agreement.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7\n%%EOF\n") });
+    await page.getByRole("button", { name: "Send email" }).click();
+    await page.getByText("Email sent to ada@example.com with PIF Agreement.pdf.").waitFor();
+    const withFile = state.calls.filter((c) => c.path.endsWith("/emails")).at(-1).body.attachment;
+    assert.deepEqual(withFile, { filename: "PIF Agreement.pdf", content_base64: Buffer.from("%PDF-1.7\n%%EOF\n").toString("base64") });
+
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Download Ada CV\.pdf/ }).click()]);
     assert.equal(download.suggestedFilename(), "CV-7KQ3MZ.pdf");
-    assert.deepEqual(state.calls.filter((c) => c.method !== "GET").map((c) => c.path), [`/applications/${APP_ID}`, `/applications/${APP_ID}/scores`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`]);
+    assert.deepEqual(state.calls.filter((c) => c.method !== "GET").map((c) => c.path), [`/applications/${APP_ID}`, `/applications/${APP_ID}/scores`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`]);
     await page.context().close();
   });
 

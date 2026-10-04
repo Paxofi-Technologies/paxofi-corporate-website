@@ -7,8 +7,9 @@ namespace Paxofi\CorporateWebsite\Application\Mail;
 use InvalidArgumentException;
 
 /**
- * A plain-text email (decision D-016). Header values are single lines, so
- * nothing a visitor types can add headers or recipients.
+ * A plain-text email (decision D-016), with optional file attachments
+ * (D-019). Header values are single lines, so nothing a visitor types can add
+ * headers or recipients.
  */
 final readonly class Email
 {
@@ -17,13 +18,17 @@ final readonly class Email
     public string $subject;
     public ?string $replyTo;
 
-    /** @param list<string> $to */
+    /**
+     * @param list<string> $to
+     * @param list<Attachment> $attachments
+     */
     public function __construct(
         array $to,
         string $subject,
         public string $text,
         ?string $replyTo = null,
         public string $kind = 'general',
+        public array $attachments = [],
     ) {
         $to = array_values(array_filter($to, static fn (string $address): bool => self::isAddress($address)));
         if ($to === []) {

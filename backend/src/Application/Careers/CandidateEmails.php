@@ -46,7 +46,7 @@ final class CandidateEmails
         'selection' => [
             'label' => 'Selected (with PIF Participant Agreement)',
             'subject' => 'You have been selected: {role} ({reference})',
-            'body' => "Hello {first_name},\n\nCongratulations! We are delighted to offer you a place in the Paxofi Innovation Fellowship as a {role}.\n\nAttached / linked is the PIF Participant Agreement. It sets out the fellowship terms: remote, at least 15 hours a week (20 is the normal target), a [3, 6 or 12]-month term, and no stipend, allowance or salary at this time.\n\nPlease read it carefully and return it signed by [date]. Reply with any questions.\n\nPaxofi Technologies — Recruitment",
+            'body' => "Hello {first_name},\n\nCongratulations! We are delighted to offer you a place in the Paxofi Innovation Fellowship as a {role}.\n\nAttached is the PIF Participant Agreement. It sets out the fellowship terms: remote, at least 15 hours a week (20 is the normal target), a [3, 6 or 12]-month term, and no stipend, allowance or salary at this time.\n\nPlease read it carefully and return it signed by [date]. Reply with any questions.\n\nPaxofi Technologies — Recruitment",
             'stage' => 'agreement_pending',
         ],
         'onboarding' => [
