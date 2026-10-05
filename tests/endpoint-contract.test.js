@@ -15,6 +15,7 @@ const routes = [
   ["GET", "/api/v1/navigation", "public"],
   ["GET", "/api/v1/products", "public"],
   ["GET", "/api/v1/services", "public"],
+  ["GET", "/api/v1/industries", "public"],
   ["GET", "/api/v1/careers", "public"],
   ["GET", "/api/v1/articles", "public"],
   ["GET", "/api/v1/articles/{slug}", "public"],
@@ -97,7 +98,7 @@ test("endpoint RTM has unique method/route entries", () => {
 });
 
 test("public release routes are represented", () => {
-  for (const route of ["/api/v1/health", "/api/v1/readiness", "/api/v1/content", "/api/v1/navigation", "/api/v1/products", "/api/v1/services", "/api/v1/careers"]) {
+  for (const route of ["/api/v1/health", "/api/v1/readiness", "/api/v1/content", "/api/v1/navigation", "/api/v1/products", "/api/v1/services", "/api/v1/industries", "/api/v1/careers"]) {
     assert.ok(routes.some((r) => r[1] === route && r[2] === "public"), route);
   }
 });

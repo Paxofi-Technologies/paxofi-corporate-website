@@ -8,6 +8,7 @@ return [
  ['GET','/api/v1/navigation','public','navigation'],
  ['GET','/api/v1/products','public','published products'],
  ['GET','/api/v1/services','public','published services'],
+ ['GET','/api/v1/industries','public','published industries with their related published products and services (slug filter; D-022)'],
  ['GET','/api/v1/careers','public','published careers'],
  ['GET','/api/v1/articles','public','published News & Insights articles, newest first (page, per_page, category; D-021)'],
  ['GET','/api/v1/articles/{slug}','public','one published article with its body'],

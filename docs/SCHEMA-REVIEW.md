@@ -57,6 +57,13 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
 | recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
+## Industries and product status (migration 018, D-022)
+
+| Table | Field | Type / constraint | Personal data | Review |
+|---|---|---|---|---|
+| products | status | VARCHAR(20) NULL; allowed values checked by the API | – | OK; NULL shows no label |
+| industries | id, slug (UNIQUE, never changes), name, label, icon, image_id / document_id FK → media_assets ON DELETE SET NULL, summary, description (TEXT, plain paragraphs), points JSON, related JSON (≤ 6 `product:`/`service:` slugs), sort_order, lifecycle_state, published_at, timestamps; index (lifecycle_state, published_at) | 018 | – | OK; drafts and history in catalog_revisions (item_type `industry`); public queries read only published, already-dated rows and link only published related items |
+
 ## News & Insights (migration 017, D-021)
 
 | Table | Field | Type / constraint | Personal data | Review |

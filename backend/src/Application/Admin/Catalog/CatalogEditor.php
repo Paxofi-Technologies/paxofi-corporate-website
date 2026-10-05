@@ -27,7 +27,8 @@ use Paxofi\CorporateWebsite\Application\RequestContext;
  *
  * An item may show a picture and offer a document from the media library
  * (D-012); both are part of the content, so they follow the same draft and
- * publish steps.
+ * publish steps. Products carry a status label and industries a description
+ * and links to related products and services (D-022).
  */
 final class CatalogEditor
 {
@@ -71,7 +72,7 @@ final class CatalogEditor
     /** Creates a hidden item; it appears on the website once shown. */
     public function create(CatalogKind $kind, array $input, AuthenticatedStaff $staff, RequestContext $context): array
     {
-        $content = $this->checkMedia(CatalogContent::fromInput($input));
+        $content = $this->checkRelated($this->checkMedia(CatalogContent::fromInput($input)->forKind($kind)));
         $slug = $this->uniqueSlug($kind, $content->name);
         $id = (string) $this->transactions->transaction(function () use ($kind, $slug, $content, $staff, $context): string {
             $id = $this->items->insert($kind, $slug, $content);
@@ -87,7 +88,7 @@ final class CatalogEditor
     public function saveDraft(CatalogKind $kind, string $id, array $input, AuthenticatedStaff $staff, RequestContext $context): array
     {
         $this->requireItem($kind, $id);
-        $content = $this->checkMedia(CatalogContent::fromInput($input));
+        $content = $this->checkRelated($this->checkMedia(CatalogContent::fromInput($input)->forKind($kind)));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->saveDraft($kind, $id, $content, $staff->user->id);
             $this->record('catalog.draft_saved', $kind, $id, $staff, $context);
@@ -116,7 +117,7 @@ final class CatalogEditor
         $this->requirePublisher($staff);
         $this->requireItem($kind, $id);
         $draft = $this->items->draft($kind, $id) ?? throw new Conflict('There are no draft changes to publish.');
-        $content = $this->withoutDeletedMedia(CatalogContent::fromStored($draft['data']));
+        $content = $this->withoutMissingLinks(CatalogContent::fromStored($draft['data'])->forKind($kind));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->updateLive($kind, $id, $content);
             $this->items->markDraftPublished($kind, $id, $staff->user->id);
@@ -147,7 +148,7 @@ final class CatalogEditor
     {
         $this->requireItem($kind, $id);
         $revision = $this->items->revision($kind, $id, $revisionId) ?? throw new ResourceNotFound('Version not found.');
-        $content = $this->withoutDeletedMedia(CatalogContent::fromStored($revision['data']));
+        $content = $this->withoutMissingLinks(CatalogContent::fromStored($revision['data'])->forKind($kind));
         $this->transactions->transaction(function () use ($kind, $id, $content, $staff, $context): void {
             $this->items->saveDraft($kind, $id, $content, $staff->user->id);
             $this->record('catalog.restored', $kind, $id, $staff, $context);
@@ -173,13 +174,32 @@ final class CatalogEditor
         return $content;
     }
 
-    /** An older version may name a file deleted since; it is left out rather than blocking the restore. */
-    private function withoutDeletedMedia(CatalogContent $content): CatalogContent
+    /** Related items must be existing products or services (shown or hidden; the website links only shown ones). */
+    private function checkRelated(CatalogContent $content): CatalogContent
+    {
+        foreach ($content->related as $reference) {
+            if (!$this->relatedExists($reference)) {
+                throw new ValidationFailed(['related' => 'One of the related items no longer exists. Choose again.'], 'Please correct the highlighted fields.');
+            }
+        }
+
+        return $content;
+    }
+
+    /** An older version may name a file or related item deleted since; it is left out rather than blocking the restore. */
+    private function withoutMissingLinks(CatalogContent $content): CatalogContent
     {
         return $content->withMedia(
             $content->imageId !== null && $this->isMedia($content->imageId, MediaKind::Image) ? $content->imageId : null,
             $content->documentId !== null && $this->isMedia($content->documentId, MediaKind::Document) ? $content->documentId : null,
-        );
+        )->withRelated(array_filter($content->related, $this->relatedExists(...)));
+    }
+
+    private function relatedExists(string $reference): bool
+    {
+        [$type, $slug] = explode(':', $reference, 2);
+
+        return $this->items->slugExists($type === 'product' ? CatalogKind::Products : CatalogKind::Services, $slug);
     }
 
     private function isMedia(string $id, MediaKind $kind): bool
@@ -234,6 +254,7 @@ final class CatalogEditor
             'visible' => $visible,
             'has_draft' => (bool) ($row['has_draft'] ?? false),
             'sort_order' => (int) ($row['sort_order'] ?? 100),
+            'status' => isset($row['status']) && is_string($row['status']) ? $row['status'] : null,
             'updated_at' => isset($row['updated_at']) ? (string) $row['updated_at'] : null,
         ];
     }

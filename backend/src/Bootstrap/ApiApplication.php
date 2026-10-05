@@ -121,6 +121,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/navigation'],
         ['GET', '/api/v1/products'],
         ['GET', '/api/v1/services'],
+        ['GET', '/api/v1/industries'],
         ['GET', '/api/v1/careers'],
         ['GET', '/api/v1/articles'],
         ['GET', '/api/v1/articles/{slug}'],

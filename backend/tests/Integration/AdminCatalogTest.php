@@ -15,7 +15,7 @@ use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Infrastructure\Security\NativeStaffPasswordHasher;
 use Paxofi\CorporateWebsite\Tests\Support\HttpRequests;
 
-/** Editing products and services from the staff area (decision D-011) against a real MariaDB. */
+/** Editing products, services and industries from the staff area (decisions D-011, D-022) against a real MariaDB. */
 final class AdminCatalogTest extends DatabaseTestCase
 {
     use HttpRequests;
@@ -31,7 +31,7 @@ final class AdminCatalogTest extends DatabaseTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        foreach (['products', 'services'] as $table) {
+        foreach (['products', 'services', 'industries'] as $table) {
             self::$seed[$table] = self::$pdo->query("SELECT * FROM {$table}")->fetchAll(\PDO::FETCH_ASSOC);
         }
     }
@@ -56,7 +56,8 @@ final class AdminCatalogTest extends DatabaseTestCase
     {
         $admin = $this->setupAdmin();
         $list = self::decode($this->call('GET', '/api/v1/admin/catalog/products', cookie: $admin));
-        self::assertSame(['Paxofi Pay', 'Paxofi Core Framework'], array_column($list['data'], 'name'));
+        self::assertSame(['Paxofi Pay', 'PaxofiCloud', 'Paxofi Core Framework'], array_column($list['data'], 'name'));
+        self::assertSame(['planned', 'in_development', 'available'], array_column($list['data'], 'status'));
         self::assertContains('shield-check', $list['meta']['icons']);
 
         $draft = $this->content(['summary' => 'Payments infrastructure with certainty, transparency and recovery built in.']);
@@ -140,6 +141,99 @@ final class AdminCatalogTest extends DatabaseTestCase
         self::assertSame(404, $this->call('GET', '/api/v1/admin/catalog/careers', cookie: $admin)->status());
         self::assertSame(404, $this->call('GET', '/api/v1/admin/catalog/products/00000000-0000-4000-8000-000000000000', cookie: $admin)->status());
         self::assertSame(404, $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/revisions/00000000-0000-4000-8000-000000000000/restore', cookie: $admin)->status());
+    }
+
+    public function testProductStatusIsPartOfTheContentAndOnlyProductsHaveOne(): void
+    {
+        $admin = $this->setupAdmin();
+        $bad = $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/draft', $this->content(['status' => 'launched']), cookie: $admin);
+        self::assertSame(422, $bad->status());
+        self::assertSame(['status'], array_keys(self::decode($bad)['error']['details']['fields']));
+
+        $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/draft', $this->content(['status' => 'pilot']), cookie: $admin);
+        self::assertSame('planned', $this->publicProduct('paxofi-pay')['status'], 'the draft is not public');
+        $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/publish', cookie: $admin);
+        self::assertSame('pilot', $this->publicProduct('paxofi-pay')['status']);
+
+        $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/draft', $this->content(['status' => '']), cookie: $admin);
+        $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/publish', cookie: $admin);
+        self::assertNull($this->publicProduct('paxofi-pay')['status'], 'no label');
+
+        $service = (string) self::scalar("SELECT id FROM services WHERE slug = 'digital-transformation'");
+        $saved = self::decode($this->call('POST', "/api/v1/admin/catalog/services/{$service}/draft", $this->content(['name' => 'Digital Transformation', 'status' => 'beta', 'description' => 'Not for services.', 'related' => ['product:paxofi-pay']]), cookie: $admin))['data'];
+        self::assertNull($saved['draft']['content']['status'], 'services have no status');
+        self::assertNull($saved['draft']['content']['description']);
+        self::assertSame([], $saved['draft']['content']['related']);
+    }
+
+    public function testIndustriesShowTheirPublishedRelatedProductsAndServices(): void
+    {
+        $industries = self::decode($this->app()->handle(self::request('GET', '/api/v1/industries')))['data'];
+        self::assertSame(
+            ['financial-services', 'education', 'healthcare', 'retail-commerce', 'logistics-transportation', 'government', 'agriculture', 'manufacturing', 'non-profit', 'startups-smes'],
+            array_column($industries, 'slug'),
+            'the ten SRS 4.6 sectors, in display order',
+        );
+        $finance = $industries[0];
+        self::assertSame(['slug', 'name', 'label', 'icon', 'summary', 'description', 'points', 'related', 'sort_order', 'published_at', 'image', 'document'], array_keys($finance));
+        self::assertStringContainsString("\n\n", $finance['description'], 'paragraphs kept');
+        self::assertSame(['product:paxofi-pay', 'service:api-platform-development', 'service:software-web-engineering', 'service:cloud-infrastructure-foundations'], array_map(static fn (array $r): string => $r['type'] . ':' . $r['slug'], $finance['related']));
+        self::assertSame(['type' => 'product', 'slug' => 'paxofi-pay', 'name' => 'Paxofi Pay', 'icon' => 'shield-check'], array_intersect_key($finance['related'][0], array_flip(['type', 'slug', 'name', 'icon'])));
+        self::assertSame('planned', $finance['related'][0]['status']);
+        self::assertSame('PaxofiCloud', end($industries[9]['related'])['name']);
+
+        $admin = $this->setupAdmin();
+        $this->call('POST', '/api/v1/admin/catalog/products/' . self::PAY . '/visibility', ['visible' => false], cookie: $admin);
+        $finance = self::decode($this->app()->handle(self::request('GET', '/api/v1/industries?slug=financial-services')))['data'][0];
+        self::assertNotContains('paxofi-pay', array_column($finance['related'], 'slug'), 'a hidden product is not linked');
+    }
+
+    public function testIndustriesAreCreatedAndEditedLikeOtherItems(): void
+    {
+        $admin = $this->setupAdmin();
+        $list = self::decode($this->call('GET', '/api/v1/admin/catalog/industries', cookie: $admin))['data'];
+        self::assertCount(10, $list);
+        self::assertContains('graduation-cap', self::decode($this->call('GET', '/api/v1/admin/catalog/industries', cookie: $admin))['meta']['icons']);
+
+        $unknown = $this->call('POST', '/api/v1/admin/catalog/industries', $this->industry(['related' => ['service:no-such-service']]), cookie: $admin);
+        self::assertSame(422, $unknown->status());
+        self::assertSame(['related'], array_keys(self::decode($unknown)['error']['details']['fields']));
+        $tooMany = $this->call('POST', '/api/v1/admin/catalog/industries', $this->industry(['related' => array_fill(0, 7, 'product:paxofi-pay'), 'description' => str_repeat('x', 1501)]), cookie: $admin);
+        self::assertEqualsCanonicalizing(['related', 'description'], array_keys(self::decode($tooMany)['error']['details']['fields']));
+
+        $created = $this->call('POST', '/api/v1/admin/catalog/industries', $this->industry(), cookie: $admin);
+        self::assertSame(201, $created->status(), $created->body());
+        $item = self::decode($created)['data'];
+        self::assertSame('energy-utilities', $item['item']['slug']);
+        self::assertFalse($item['item']['visible'], 'new industries start hidden');
+        self::assertSame("First paragraph about energy.\n\nSecond paragraph, trimmed.", $item['item']['content']['description']);
+        self::assertSame(['service:digital-transformation', 'product:paxoficloud'], $item['item']['content']['related'], 'duplicates dropped, order kept');
+        self::assertNull($item['item']['content']['status']);
+
+        $this->call('POST', "/api/v1/admin/catalog/industries/{$item['item']['id']}/visibility", ['visible' => true], cookie: $admin);
+        $public = self::decode($this->app()->handle(self::request('GET', '/api/v1/industries?slug=energy-utilities')))['data'][0];
+        self::assertSame(['Digital Transformation', 'PaxofiCloud'], array_column($public['related'], 'name'));
+        self::assertGreaterThan(0, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'catalog.created' AND target_type = 'industry'"));
+    }
+
+    /** @return array<string, mixed> */
+    private function industry(array $overrides = []): array
+    {
+        return $overrides + [
+            'name' => 'Energy & Utilities',
+            'icon' => 'lightbulb',
+            'summary' => 'Systems for metering, billing and field operations.',
+            'description' => "  First paragraph about energy.  \r\n\r\n\r\n\r\nSecond paragraph, trimmed.\u{0007}",
+            'points' => ['Metering and billing'],
+            'related' => ['service:digital-transformation', 'product:paxoficloud', 'service:digital-transformation'],
+            'sort_order' => 110,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function publicProduct(string $slug): array
+    {
+        return self::decode($this->app()->handle(self::request('GET', "/api/v1/products?slug={$slug}")))['data'][0];
     }
 
     /** @return array<string, mixed> */

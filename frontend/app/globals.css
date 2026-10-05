@@ -2469,3 +2469,135 @@ textarea:focus-visible {
   font-size: 34px;
   margin: 8px 0;
 }
+
+/* Product status labels and Industries (P3.3, P3.5, D-022) */
+.product-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.product-meta .product-label {
+  margin-top: 0;
+}
+/* Light text on the dark product card; the word carries the meaning, the colour only supports it. */
+.product-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+}
+.product-status[data-status="available"] {
+  color: #6ee7b7;
+}
+.product-status[data-status="in_development"],
+.product-status[data-status="pilot"],
+.product-status[data-status="beta"] {
+  color: #7dd3fc;
+}
+.product-status[data-status="planned"] {
+  color: #c4b5fd;
+}
+.product-status[data-status="limited"] {
+  color: #fcd34d;
+}
+/* On light cards (related items on an industry page). */
+.related-card .product-status {
+  color: var(--blue-strong);
+  background: #eef4ff;
+  border-color: #c7dbff;
+}
+.product-card[id],
+.icon-card[id] {
+  scroll-margin-top: 104px;
+}
+.industry-card,
+.related-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.card-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+.card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+}
+.industry-card:focus-within,
+.related-card:focus-within {
+  outline: 3px solid var(--paxofi-blue);
+  outline-offset: 2px;
+}
+.industry-card__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 16px;
+  color: var(--blue-strong);
+  font-weight: 600;
+}
+.industry-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.industry-points h2 {
+  margin-top: 0;
+  font-size: 22px;
+}
+.industry-points .check-list li {
+  color: var(--ink);
+}
+.related-grid {
+  list-style: none;
+  padding: 0;
+  margin: 28px 0 0;
+}
+.related-card__type {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.related-card h3 {
+  margin-top: 8px;
+}
+@media (max-width: 860px) {
+  .industry-detail {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+.section-title {
+  font-size: clamp(28px, 3.4vw, 40px);
+  letter-spacing: -0.02em;
+}
+.admin-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.admin-preview__text {
+  margin-top: 20px;
+}

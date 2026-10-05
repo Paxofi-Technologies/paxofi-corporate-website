@@ -69,7 +69,9 @@ final class PdoMediaRepository implements MediaRepository
         $live = $this->select(
             "SELECT 'product' AS item_type, name, image_id, document_id FROM products WHERE image_id IS NOT NULL OR document_id IS NOT NULL
              UNION ALL
-             SELECT 'service', name, image_id, document_id FROM services WHERE image_id IS NOT NULL OR document_id IS NOT NULL",
+             SELECT 'service', name, image_id, document_id FROM services WHERE image_id IS NOT NULL OR document_id IS NOT NULL
+             UNION ALL
+             SELECT 'industry', name, image_id, document_id FROM industries WHERE image_id IS NOT NULL OR document_id IS NOT NULL",
         );
         foreach ($live as $row) {
             $label = $row['name'] . ' (' . $row['item_type'] . ')';
@@ -78,12 +80,13 @@ final class PdoMediaRepository implements MediaRepository
         }
 
         $drafts = $this->select(
-            "SELECT r.item_type, COALESCE(p.name, s.name) AS name,
+            "SELECT r.item_type, COALESCE(p.name, s.name, i.name) AS name,
                     JSON_UNQUOTE(JSON_EXTRACT(r.data, '$.image_id')) AS image_id,
                     JSON_UNQUOTE(JSON_EXTRACT(r.data, '$.document_id')) AS document_id
              FROM catalog_revisions r
              LEFT JOIN products p ON r.item_type = 'product' AND p.id = r.item_id
              LEFT JOIN services s ON r.item_type = 'service' AND s.id = r.item_id
+             LEFT JOIN industries i ON r.item_type = 'industry' AND i.id = r.item_id
              WHERE r.state = 'draft'",
         );
         foreach ($drafts as $row) {

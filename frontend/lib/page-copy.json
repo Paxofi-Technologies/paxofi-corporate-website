@@ -173,6 +173,21 @@
         { "key": "cta_button", "group": "Blue band at the bottom", "label": "Button (to Contact)", "kind": "line", "max": 28, "default": "Start a conversation" }
       ]
     },
+    "industries": {
+      "label": "Industries",
+      "path": "/industries",
+      "fields": [
+        { "key": "meta_description", "group": "Search engines", "label": "Description in search results", "kind": "text", "max": 200, "default": "Software, platforms and automation for financial services, education, healthcare, retail, logistics, government and more, from Paxofi Technologies." },
+        { "key": "hero_eyebrow", "group": "Top of the page", "label": "Small heading", "kind": "line", "max": 40, "default": "Industries" },
+        { "key": "hero_title", "group": "Top of the page", "label": "Headline (the industry cards come from Content → Industries)", "kind": "line", "max": 70, "default": "Technology shaped around your sector." },
+        { "key": "hero_intro", "group": "Top of the page", "label": "Introduction", "kind": "text", "max": 300, "default": "Every sector has its own rules, users and pressures. These are the industries we build for, and the kinds of solutions we can deliver in each." },
+        { "key": "points_heading", "group": "Industry pages", "label": "Heading above the example solutions", "kind": "line", "max": 60, "default": "What we can build" },
+        { "key": "related_heading", "group": "Industry pages", "label": "Heading above the related services and products", "kind": "line", "max": 60, "default": "Related services and products" },
+        { "key": "cta_title", "group": "Blue band at the bottom", "label": "Heading", "kind": "line", "max": 60, "default": "Working in one of these sectors?" },
+        { "key": "cta_text", "group": "Blue band at the bottom", "label": "Text", "kind": "text", "max": 160, "default": "Tell us what you are trying to solve, and we will suggest a practical way forward." },
+        { "key": "cta_button", "group": "Blue band at the bottom", "label": "Button (to Contact)", "kind": "line", "max": 28, "default": "Talk to us" }
+      ]
+    },
     "careers": {
       "label": "Careers",
       "path": "/careers",
@@ -310,8 +325,8 @@
         { "key": "menu_4_link", "group": "Main menu", "label": "Menu item 4: link", "kind": "link", "max": 200, "default": "/careers", "optional": true, "pair": "menu_4_label" },
         { "key": "menu_5_label", "group": "Main menu", "label": "Menu item 5: name", "kind": "line", "max": 24, "default": "Insights", "optional": true, "pair": "menu_5_link" },
         { "key": "menu_5_link", "group": "Main menu", "label": "Menu item 5: link", "kind": "link", "max": 200, "default": "/insights", "optional": true, "pair": "menu_5_label" },
-        { "key": "menu_6_label", "group": "Main menu", "label": "Menu item 6: name", "kind": "line", "max": 24, "default": "", "optional": true, "pair": "menu_6_link" },
-        { "key": "menu_6_link", "group": "Main menu", "label": "Menu item 6: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "menu_6_label" },
+        { "key": "menu_6_label", "group": "Main menu", "label": "Menu item 6: name", "kind": "line", "max": 24, "default": "Industries", "optional": true, "pair": "menu_6_link" },
+        { "key": "menu_6_link", "group": "Main menu", "label": "Menu item 6: link", "kind": "link", "max": 200, "default": "/industries", "optional": true, "pair": "menu_6_label" },
         { "key": "menu_button_label", "group": "Main menu", "label": "Button: name", "kind": "line", "max": 24, "default": "Talk to us" },
         { "key": "menu_button_link", "group": "Main menu", "label": "Button: link", "kind": "link", "max": 200, "default": "/contact" },
         { "key": "footer_text", "group": "Footer", "label": "Text under the logo", "kind": "text", "max": 200, "default": "We build people, products and solutions that create real impact across Africa and beyond." },
