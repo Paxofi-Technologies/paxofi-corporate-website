@@ -259,3 +259,17 @@ Record sign-off ("Careers UAT passed") in Asana before any recruitment campaign 
 
 Then erase the test applications. Campaign links to use: see RB-19.
 
+## News & Insights (P3.2, D-021)
+
+Run as a Business Development user and as an Administrator. About 20 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| IN1 | Write | As Business Development: **Content → Articles → Write an article**. Fill everything in, choose a picture, use a heading, a list, **bold** and a link, then **Save draft** | Saved; **Preview** shows the formatting; the Publishing box says an administrator publishes it | |
+| IN2 | Not public yet | Open https://corporate.paxofi.com/insights | The draft is not listed | |
+| IN3 | Publish | As Administrator: open the article → **Publish** | It is listed on /insights and opens at /insights/<title-words>, with the picture, date and reading time | |
+| IN4 | Edit safely | Change the title, **Save draft**, reload the public page; then **Publish changes** | The public page changes only after publishing; the address stays the same | |
+| IN5 | Share | Paste the article link into LinkedIn's Post Inspector or a WhatsApp chat | The title, summary and picture appear | |
+| IN6 | Hide | **Hide from the website** | The article disappears from /insights and its address shows *Not found* | |
+| IN7 | Menu and phone | Open the site on a phone | *Insights* is in the menu (add it under Page text if your menu was customised); the list and article fit the screen | |
+

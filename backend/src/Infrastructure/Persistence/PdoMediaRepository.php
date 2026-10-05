@@ -92,6 +92,12 @@ final class PdoMediaRepository implements MediaRepository
             $add($row['document_id'], $label);
         }
 
+        // News & Insights articles (D-021): the live picture and any picture in a draft.
+        foreach ($this->select("SELECT title, image_id, JSON_UNQUOTE(JSON_EXTRACT(draft, '$.image_id')) AS draft_image FROM articles WHERE image_id IS NOT NULL OR draft IS NOT NULL") as $row) {
+            $add($row['image_id'], $row['title'] . ' (article)');
+            $add($row['draft_image'], $row['title'] . ' (article draft)');
+        }
+
         return $usage;
     }
 }

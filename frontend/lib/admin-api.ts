@@ -193,6 +193,14 @@ export type ApplicationDetail = {
   email_available: boolean;
 };
 
+/** News & Insights articles (D-021). */
+export type ArticleContentValues = { title: string; category: "news" | "insight" | "announcement"; summary: string; body: string; author_name: string | null; image_id: string | null };
+export type ArticleAdminSummary = { id: string; slug: string; path: string; title: string; category: string; state: "draft" | "published" | "hidden"; has_draft: boolean; published_at: string | null; updated_at: string };
+export type ArticleAdminDetail = ArticleAdminSummary & {
+  live: ArticleContentValues | null;
+  draft: { content: ArticleContentValues; saved_at: string; author_name: string | null } | null;
+};
+
 /** The recruitment report (P3.1): counts only. */
 export type RecruitmentReportData = {
   days: number | null;

@@ -52,5 +52,5 @@ test("menu links: only pages on this site or https:// addresses; empty optional 
   assert.equal(copy.menu_1_link, "/about", "an unsafe link keeps the built-in one");
   assert.equal(copy.menu_button_label, "Talk to us", "the button cannot be emptied");
   assert.equal(copy.footer_email, "hello@paxofi.com");
-  assert.deepEqual(siteLinks(copy).menu.map((l) => l.label), ["About", "Services", "Products"]);
+  assert.deepEqual(siteLinks(copy).menu.map((l) => l.label), ["About", "Services", "Products", "Insights"]);
 });

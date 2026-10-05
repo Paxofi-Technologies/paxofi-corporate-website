@@ -265,6 +265,10 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10e — News & Insights (no server change)
+
+From this release, articles are written under **Content → Articles** and appear at {{SITE_URL}}/insights (decision D-021, RB-20). *Insights* is in the default main menu. If you have published your own menu under **Content → Page text → Menu and footer**, add a menu item there: name *Insights*, link `/insights`, then publish.
+
 ## Step 10d — One time: open careers.paxofi.com and HR staff accounts (about 45 minutes)
 
 From this release, **careers.paxofi.com** lists the open Paxofi Innovation Fellowship roles and takes applications with a CV (PDF or Word, up to 5 MB) and a portfolio or LinkedIn link. Applications are reviewed in the staff area under **Recruitment**, by administrators and by **Human Resources** staff with their own logins (decisions D-018, D-019). Applications and CVs are deleted automatically 12 months after they close.
