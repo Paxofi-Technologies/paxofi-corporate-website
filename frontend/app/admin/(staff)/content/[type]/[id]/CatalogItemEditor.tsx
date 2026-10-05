@@ -8,7 +8,7 @@ import { CatalogForm, CatalogFormValues, toFormValues, toPayload, useMediaList }
 import { NoAccess } from "@/components/admin/StaffShell";
 import { AdminApiError, CATALOG_KINDS, CatalogDetail, formatDateTime } from "@/lib/admin-api";
 
-/** Edit a product or service: drafts, publishing, show/hide and earlier versions (D-011). */
+/** Edit a product, service or industry: drafts, publishing, show/hide and earlier versions (D-011, D-022). */
 export default function CatalogItemEditor({ type, id }: { type: string; id: string }) {
   const { user, request, apiBase } = useAdmin();
   const media = useMediaList();

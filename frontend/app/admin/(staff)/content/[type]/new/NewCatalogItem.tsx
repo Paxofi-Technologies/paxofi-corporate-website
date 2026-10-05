@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { can, useAdmin } from "@/components/admin/AdminContext";
 import { FormStatus } from "@/components/admin/AdminForm";
-import { CatalogForm, CatalogFormValues, toPayload, useMediaList } from "@/components/admin/CatalogForm";
+import { CatalogForm, CatalogFormValues, EMPTY_VALUES, toPayload, useMediaList } from "@/components/admin/CatalogForm";
 import { NoAccess } from "@/components/admin/StaffShell";
 import { AdminApiError, CATALOG_KINDS, CatalogDetail } from "@/lib/admin-api";
 
-/** Adds a product or service; it stays hidden until an administrator shows it. */
+/** Adds a product, service or industry; it stays hidden until an administrator shows it. */
 export default function NewCatalogItem({ type }: { type: string }) {
   const { user, request, apiBase } = useAdmin();
   const media = useMediaList();
   const router = useRouter();
   const kind = CATALOG_KINDS.find((k) => k.value === type);
-  const [values, setValues] = useState<CatalogFormValues>({ name: "", label: "", icon: "layers", summary: "", points: "", sort_order: "100", image_id: "", document_id: "" });
+  const [values, setValues] = useState<CatalogFormValues>({ ...EMPTY_VALUES, status: type === "products" ? "planned" : "" });
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,7 +45,7 @@ export default function NewCatalogItem({ type }: { type: string }) {
   return (
     <>
       <p><Link href="/admin/content">← Content</Link></p>
-      <h1 className="admin-title">Add a {kind.singular}</h1>
+      <h1 className="admin-title">Add {kind.a}</h1>
       <p className="admin-intro">New {kind.label.toLowerCase()} start hidden. An administrator shows them on the website when they are ready.</p>
       <CatalogForm kind={kind.value} values={values} onChange={setValues} fields={fields} onSubmit={submit} media={media} apiBase={apiBase}>
         <FormStatus state="error" message={error} />

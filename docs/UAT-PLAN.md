@@ -273,3 +273,16 @@ Run as a Business Development user and as an Administrator. About 20 minutes.
 | IN6 | Hide | **Hide from the website** | The article disappears from /insights and its address shows *Not found* | |
 | IN7 | Menu and phone | Open the site on a phone | *Insights* is in the menu (add it under Page text if your menu was customised); the list and article fit the screen | |
 
+## Industries and product status (P3.3, P3.5, D-022)
+
+Run as an Administrator, on staging first, then live. About 20 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| IS1 | Product status | Open https://corporate.paxofi.com/products | Paxofi Pay shows *Planned*, PaxofiCloud *In development*, Paxofi Core Framework *Available* | |
+| IS2 | Change a status | **Content → Products → Paxofi Pay**: choose another status, **Save draft**, reload /products; then **Publish changes**, reload again | The label changes only after publishing; set it back afterwards | |
+| IS3 | Industries list | Open /industries | The ten sectors, each with an icon and summary; each opens its own page | |
+| IS4 | Industry page | Open **Financial Services** | Description, *What we can build* list, and related services and products; Paxofi Pay shows *Planned*; each **View** opens the right card on /services or /products | |
+| IS5 | Edit an industry | **Content → Industries → Education**: change the summary and tick one more related service, **Save draft**, then **Publish changes** | The public page changes only after publishing, and the new related service appears | |
+| IS6 | Menu and phone | Open the site on a phone | *Industries* is in the menu (add it under Page text if your menu was customised); the pages fit the screen | |
+

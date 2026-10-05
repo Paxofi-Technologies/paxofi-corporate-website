@@ -39,7 +39,7 @@ final class PageCopyTest extends DatabaseTestCase
 
         $admin = $this->setupAdmin();
         $list = self::decode($this->call('GET', '/api/v1/admin/pages', cookie: $admin))['data'];
-        self::assertSame(['home', 'about', 'services', 'products', 'careers', 'contact', 'site'], array_column($list, 'page'));
+        self::assertSame(['home', 'about', 'services', 'products', 'industries', 'careers', 'contact', 'site'], array_column($list, 'page'));
         self::assertNull($list[0]['published_at']);
 
         $page = self::decode($this->call('GET', '/api/v1/admin/pages/home', cookie: $admin))['data'];
@@ -110,6 +110,7 @@ final class PageCopyTest extends DatabaseTestCase
             'menu_2_link' => '//evil.example',
             'menu_3_link' => 'http://plain.example',
             'menu_6_label' => 'Blog',
+            'menu_6_link' => '',
             'footer_email' => 'not an email',
             'menu_button_label' => '',
         ] + $fields], cookie: $admin);

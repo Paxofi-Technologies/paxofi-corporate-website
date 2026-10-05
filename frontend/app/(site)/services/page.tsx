@@ -23,7 +23,7 @@ export default async function Services() {
       <section className="section">
         <div className="container grid grid-3">
           {services.map((item) => (
-            <ServiceCard key={item.slug} item={item} />
+            <ServiceCard key={item.slug} item={item} anchor />
           ))}
         </div>
       </section>

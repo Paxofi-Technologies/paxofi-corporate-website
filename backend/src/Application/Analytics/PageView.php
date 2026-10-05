@@ -12,7 +12,7 @@ namespace Paxofi\CorporateWebsite\Application\Analytics;
 final readonly class PageView
 {
     /** The public pages; anything else is counted as "(other)" so the tables stay small. */
-    public const PAGES = ['/', '/about', '/services', '/products', '/careers', '/contact', '/privacy', '/terms', '/insights'];
+    public const PAGES = ['/', '/about', '/services', '/products', '/careers', '/contact', '/privacy', '/terms', '/insights', '/industries'];
     public const OTHER_PAGE = '(other)';
     public const DIRECT = '(direct)';
 
@@ -36,7 +36,7 @@ final readonly class PageView
             return null;
         }
         // Each News & Insights article (D-021) is counted on its own address.
-        $path = in_array($path, self::PAGES, true) || preg_match('~^/insights/[a-z0-9-]{1,170}$~', $path) === 1 ? $path : self::OTHER_PAGE;
+        $path = in_array($path, self::PAGES, true) || preg_match('~^/(insights/[a-z0-9-]{1,170}|industries/[a-z0-9-]{1,180})$~', $path) === 1 ? $path : self::OTHER_PAGE;
 
         $source = null;
         if (($input['entry'] ?? false) === true) {

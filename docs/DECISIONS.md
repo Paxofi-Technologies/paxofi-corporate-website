@@ -405,3 +405,26 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Menu:** *Insights* is the default fifth menu item. A site whose menu text was already published under **Content → Page text → Menu and footer** keeps its own menu; add *Insights* → `/insights` there.
 - **Editorial (SRS 14.11):** every article needs a purpose and an accountable owner (RB-20). The first pieces are owner task *[OWNER] Plan first Insights articles*.
 
+
+## D-022 — Product status labels and Industries pages (P3.3 and P3.5, 6 Oct 2026)
+
+**Decision (CTO; the owner asked on 5 Oct 2026 for industry pages from the PKDMS sector list and for product statuses from the PKDMS product records):**
+
+- **Product status (SRS 14.7):**
+  - Each product carries one label, shown on its card: *Planned*, *In development*, *Pilot*, *Beta*, *Available*, *Limited availability*, *Paused* or *Retired*. "No label" is allowed.
+  - It is part of the product's content, so it follows the same draft and publish steps (D-011). New products start as *Planned*.
+  - Starting values come from PKDMS on 5 Oct 2026 (migration 018), applied only where the status is still empty:
+    - **Paxofi Pay:** *Planned*. It is in programme design and non-production engineering preparation.
+    - **Paxofi Core Framework:** *Available*. v1.0.0 and v1.1.0 are published, and it runs this website's API.
+    - **PaxofiCloud:** *In development*. The master blueprint is approved and engineering Gate 3 is pending. It is added as a product unless staff already created it.
+- **Industries (SRS 4.6, 13.8; FR-SVC-005):**
+  - A third catalogue collection beside products and services, under **Content → Industries**. Drafts, publishing, versions, hide/show and pictures work as for products and services.
+  - Each industry has a name, icon, summary, description (paragraphs, up to 1,500 characters), up to 5 example solutions, and up to 6 related products and services.
+  - The website lists them at `/industries`. Each has its own page at `/industries/<name-words>`, whose address never changes.
+  - Each page links to its related published services and products, at their cards on /services and /products.
+  - Migration 018 seeds the ten target industries of SRS 4.6 with their example solutions: Financial Services, Education, Healthcare, Retail & Commerce, Logistics & Transportation, Government, Agriculture, Manufacturing, Non-Profit Organisations, Startups & SMEs.
+  - **Claims (SRS 13.8):** the wording says what Paxofi can build. It names no clients and implies no certifications or regulated status; staff keep it that way (RB-21).
+- **Page wording:** the Industries page heading, introduction, section headings and call to action are under **Content → Page text → Industries** (D-015).
+- **Menu:** *Industries* is the default sixth menu item. A site whose menu was already published adds *Industries* → `/industries` under **Page text → Menu and footer**.
+- **Built-in copy:** if the API cannot be read, the website shows the ten industries and the three products from its built-in copy. A test keeps that copy equal to migration 018.
+- **Not chosen:** a separate page builder for sector pages (layout risk), or sector pages written in code (staff could not edit them).

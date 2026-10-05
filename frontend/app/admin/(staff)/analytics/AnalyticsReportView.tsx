@@ -288,6 +288,7 @@ const PAGE_NAMES: Record<string, string> = {
   "/privacy": "Privacy",
   "/terms": "Terms",
   "/insights": "News & Insights",
+  "/industries": "Industries",
   "(other)": "Other pages",
 };
 

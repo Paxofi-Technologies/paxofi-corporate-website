@@ -1,13 +1,21 @@
 import { createElement } from "react";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowRight,
+  Banknote,
   Briefcase,
   Cloud,
   CodeXml,
   Cog,
   Database,
+  Factory,
   FileDown,
   Globe,
+  GraduationCap,
+  HandHeart,
+  HeartPulse,
+  Landmark,
   Layers,
   Lightbulb,
   Lock,
@@ -15,10 +23,14 @@ import {
   Network,
   Rocket,
   ShieldCheck,
+  ShoppingCart,
   Smartphone,
+  Sprout,
+  Store,
+  Truck,
   Workflow,
 } from "lucide-react";
-import { describeDownload, type CatalogItem } from "@/lib/catalog";
+import { PRODUCT_STATUSES, describeDownload, type CatalogItem, type ProductStatus } from "@/lib/catalog";
 
 const ICONS: Record<string, LucideIcon> = {
   "shield-check": ShieldCheck,
@@ -36,7 +48,28 @@ const ICONS: Record<string, LucideIcon> = {
   smartphone: Smartphone,
   database: Database,
   lock: Lock,
+  banknote: Banknote,
+  "graduation-cap": GraduationCap,
+  "heart-pulse": HeartPulse,
+  "shopping-cart": ShoppingCart,
+  truck: Truck,
+  landmark: Landmark,
+  sprout: Sprout,
+  factory: Factory,
+  "hand-heart": HandHeart,
+  store: Store,
 };
+
+/** Product maturity label (SRS 14.7, D-022), e.g. "In development". Text, not colour alone, carries the meaning. */
+export function StatusPill({ status }: { status: ProductStatus | null | undefined }) {
+  if (!status) return null;
+  return (
+    <span className="product-status" data-status={status}>
+      <span className="visually-hidden">Status: </span>
+      {PRODUCT_STATUSES[status]}
+    </span>
+  );
+}
 
 /** Draws one of the staff-selectable icons (unknown keys fall back to Layers). */
 export function CatalogIcon({ name, size }: { name: string; size: number }) {
@@ -91,13 +124,19 @@ export function ProductCard({
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <article
+      id={large ? item.slug : undefined}
       className={large ? "product-card product-card--large" : "product-card"}
     >
       <CardImage item={item} />
       <span className="product-icon" aria-hidden="true">
         <CatalogIcon name={item.icon} size={28} />
       </span>
-      {item.label && <span className="product-label">{item.label}</span>}
+      {(item.label || item.status) && (
+        <span className="product-meta">
+          {item.label && <span className="product-label">{item.label}</span>}
+          <StatusPill status={item.status} />
+        </span>
+      )}
       <Heading>{item.name}</Heading>
       <p>{item.summary}</p>
       {large && item.points.length > 0 && (
@@ -113,9 +152,9 @@ export function ProductCard({
 }
 
 /** Service card as on /services (also used for the staff-area preview). */
-export function ServiceCard({ item }: { item: CatalogItem }) {
+export function ServiceCard({ item, anchor = false }: { item: CatalogItem; anchor?: boolean }) {
   return (
-    <article className="icon-card">
+    <article id={anchor ? item.slug : undefined} className="icon-card">
       <CardImage item={item} />
       <span className="icon-badge icon-badge--blue" aria-hidden="true">
         <CatalogIcon name={item.icon} size={24} />
@@ -123,6 +162,26 @@ export function ServiceCard({ item }: { item: CatalogItem }) {
       <h3>{item.name}</h3>
       <p>{item.summary}</p>
       <CardDownload item={item} />
+    </article>
+  );
+}
+
+/** Industry card as on /industries: links to the industry's own page (D-022). */
+export function IndustryCard({ item, preview = false }: { item: CatalogItem; preview?: boolean }) {
+  const title = preview ? item.name : <Link href={`/industries/${item.slug}`} className="card-link">{item.name}</Link>;
+  return (
+    <article className="icon-card industry-card">
+      <CardImage item={item} />
+      <span className="icon-badge icon-badge--blue" aria-hidden="true">
+        <CatalogIcon name={item.icon} size={24} />
+      </span>
+      <h3>{title}</h3>
+      <p>{item.summary}</p>
+      {!preview && (
+        <span className="industry-card__more" aria-hidden="true">
+          Explore <ArrowRight size={16} strokeWidth={2} />
+        </span>
+      )}
     </article>
   );
 }

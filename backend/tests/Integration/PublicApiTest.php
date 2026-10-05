@@ -46,13 +46,14 @@ final class PublicApiTest extends DatabaseTestCase
     {
         $body = self::decode($this->app()->handle(self::request('GET', '/api/v1/products')));
 
-        self::assertSame(['paxofi-pay', 'paxofi-core-framework'], array_column($body['data'], 'slug'), 'in display order');
-        self::assertSame(['slug', 'name', 'label', 'icon', 'summary', 'points', 'sort_order', 'published_at', 'image', 'document'], array_keys($body['data'][0]));
+        self::assertSame(['paxofi-pay', 'paxoficloud', 'paxofi-core-framework'], array_column($body['data'], 'slug'), 'in display order');
+        self::assertSame(['planned', 'in_development', 'available'], array_column($body['data'], 'status'), 'status labels from PKDMS (D-022)');
+        self::assertSame(['slug', 'name', 'label', 'status', 'icon', 'summary', 'points', 'sort_order', 'published_at', 'image', 'document'], array_keys($body['data'][0]));
         self::assertNull($body['data'][0]['image'], 'no picture until one is chosen in the staff area');
         self::assertNull($body['data'][0]['document']);
         self::assertSame(['Transaction certainty', 'Transparency and traceability', 'Recovery built in'], $body['data'][0]['points']);
         self::assertSame('2026-09-18T00:00:00Z', $body['data'][0]['published_at']);
-        self::assertSame(2, $body['meta']['total']);
+        self::assertSame(3, $body['meta']['total']);
         self::assertTrue($body['meta']['published']);
     }
 
