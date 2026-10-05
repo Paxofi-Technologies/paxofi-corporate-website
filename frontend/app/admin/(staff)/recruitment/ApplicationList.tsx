@@ -58,6 +58,7 @@ export default function ApplicationList() {
       <h1 className="admin-title">Recruitment</h1>
       <p className="admin-intro">
         Applications from careers.paxofi.com. Acknowledge within 2 working days and finish screening within 2 weeks. Applications and CVs are deleted automatically 12 months after they close.
+        {" "}<Link href="/admin/recruitment/report">See the recruitment report</Link>.
         {can(user, "careers.edit") && <> <Link href="/admin/recruitment/roles">Edit the roles on careers.paxofi.com</Link>.</>}
       </p>
 

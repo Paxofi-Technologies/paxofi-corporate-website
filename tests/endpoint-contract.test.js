@@ -66,6 +66,7 @@ const routes = [
   ["POST", "/api/v1/admin/pages/{page}/publish", "admin"],
   ["POST", "/api/v1/admin/pages/{page}/revisions/{revision}/restore", "admin"],
   ["GET", "/api/v1/admin/applications", "admin"],
+  ["GET", "/api/v1/admin/applications/report", "admin"],
   ["GET", "/api/v1/admin/applications/{id}", "admin"],
   ["GET", "/api/v1/admin/applications/{id}/cv", "admin"],
   ["PATCH", "/api/v1/admin/applications/{id}", "admin"],

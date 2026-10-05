@@ -173,6 +173,8 @@ export default function ApplicationView({ id }: { id: string }) {
               <dt>Phone</dt><dd>{app.phone || "—"}</dd>
               <dt>Location</dt><dd>{app.location}</dd>
               <dt>Hours a week</dt><dd>{app.hours_per_week}</dd>
+              <dt>Heard about it</dt><dd>{app.source?.label ?? "Not given"}</dd>
+              <dt>Campaign link</dt><dd>{app.campaign ? [app.campaign.source, app.campaign.medium, app.campaign.campaign].filter(Boolean).join(" / ") : "—"}</dd>
               <dt>Portfolio</dt><dd>{app.portfolio_url ? <a href={app.portfolio_url} rel="noopener noreferrer" target="_blank">{app.portfolio_url}</a> : "—"}</dd>
               <dt>LinkedIn</dt><dd>{app.linkedin_url ? <a href={app.linkedin_url} rel="noopener noreferrer" target="_blank">{app.linkedin_url}</a> : "—"}</dd>
               <dt>CV</dt>

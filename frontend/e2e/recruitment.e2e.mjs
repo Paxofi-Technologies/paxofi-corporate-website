@@ -23,6 +23,7 @@ async function fakeApi(page) {
       id: APP_ID, reference: "PIF-7KQ3MZ", role: { id: "r1", title: "Software Engineer Fellow", slug: "software-engineer-fellow" },
       full_name: "Ada Lovelace", email: "ada@example.com", phone: null, location: "Lagos, Nigeria", hours_per_week: 20,
       portfolio_url: "https://github.com/ada", linkedin_url: null, motivation: "I want to build real products.", experience: "Payments dashboard in React.",
+      source: { value: "linkedin", label: "LinkedIn" }, campaign: { source: "linkedin", medium: "social", campaign: "pif-2026" },
       cv: { filename: "Ada CV.pdf", size_bytes: 20480, media_type: "application/pdf" }, stage: "applied", stage_label: "Applied",
       stage_changed_at: "2026-10-04 08:00:00", closed_at: null, created_at: "2026-10-04 08:00:00", evidence: null, interview: null, notes: [],
       stages: STAGES, scorecards: { evidence: { label: "Gate 2: evidence review", pass: 21, criteria: CRITERIA }, interview: { label: "Gate 4: interview", pass: 24, criteria: INTERVIEW } },
@@ -48,6 +49,17 @@ async function fakeApi(page) {
     if (path === "/applications" && method === "GET") {
       return reply(route, 200, [{ id: APP_ID, reference: app.reference, full_name: app.full_name, email: app.email, role_title: app.role.title, stage: app.stage, stage_label: app.stage_label, created_at: app.created_at, evidence_total: app.evidence?.total ?? null, interview_total: null, has_cv: true }],
         { page: 1, per_page: 25, total: 1, total_pages: 1, counts: { [app.stage]: 1 }, stages: STAGES, roles: [{ id: "r1", title: app.role.title }] });
+    }
+    if (path === "/applications/report") {
+      return reply(route, 200, {
+        days: 30, total: 3,
+        by_role: [{ key: "Software Engineer Fellow", label: "Software Engineer Fellow", count: 3 }],
+        by_stage: [{ key: "applied", label: "Applied", count: 2 }, { key: "screening", label: "Screening", count: 1 }],
+        by_source: [{ key: "linkedin", label: "LinkedIn", count: 2 }, { key: null, label: "Not given", count: 1 }],
+        by_campaign: [{ key: "linkedin / social / pif-2026", label: "linkedin / social / pif-2026", count: 2 }, { key: null, label: "No campaign link", count: 1 }],
+        by_day: [{ day: "2026-10-04", count: 1 }, { day: "2026-10-05", count: 2 }],
+        review: { target_working_days: 2, reviewed: 1, on_time: 1, waiting: 2, overdue: 0, median_hours: 3.5 },
+      });
     }
     if (path === `/applications/${APP_ID}` && method === "GET") return reply(route, 200, app);
     if (path === `/applications/${APP_ID}` && method === "PATCH") {
@@ -137,6 +149,19 @@ describe("recruitment", () => {
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Download Ada CV\.pdf/ }).click()]);
     assert.equal(download.suggestedFilename(), "CV-7KQ3MZ.pdf");
     assert.deepEqual(state.calls.filter((c) => c.method !== "GET").map((c) => c.path), [`/applications/${APP_ID}`, `/applications/${APP_ID}/scores`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`]);
+    await page.context().close();
+  });
+
+  test("the report shows channels, campaigns and review times", async () => {
+    const page = await newPage();
+    await fakeApi(page);
+    await page.goto(`${BASE}/admin/recruitment`);
+    await page.getByRole("link", { name: "See the recruitment report" }).click();
+    await page.getByRole("heading", { name: "Recruitment report" }).waitFor();
+    await page.getByText("100%").waitFor();
+    assert.ok(await page.getByRole("region", { name: "By channel" }).getByText("LinkedIn").isVisible());
+    assert.ok(await page.getByRole("region", { name: "By campaign link" }).getByText("linkedin / social / pif-2026").isVisible());
+    await assertAccessible(page, "recruitment report");
     await page.context().close();
   });
 

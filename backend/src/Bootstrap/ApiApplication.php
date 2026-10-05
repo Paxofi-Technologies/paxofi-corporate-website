@@ -171,6 +171,7 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/pages/{page}/publish'],
         ['POST', '/api/v1/admin/pages/{page}/revisions/{revision}/restore'],
         ['GET', '/api/v1/admin/applications'],
+        ['GET', '/api/v1/admin/applications/report'],
         ['GET', '/api/v1/admin/applications/{id}'],
         ['GET', '/api/v1/admin/applications/{id}/cv'],
         ['PATCH', '/api/v1/admin/applications/{id}'],
@@ -368,6 +369,7 @@ final class ApiApplication implements HttpHandler
 
         $recruitment = fn (): AdminRecruitmentController => new AdminRecruitmentController($this->recruitmentService(), $this->adminGuard());
         $router->get('/api/v1/admin/applications', static fn (HttpRequest $r): HttpResponse => $recruitment()->list($r));
+        $router->get('/api/v1/admin/applications/report', static fn (HttpRequest $r): HttpResponse => $recruitment()->report($r));
         $router->get('/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->show($r));
         $router->get('/api/v1/admin/applications/{id}/cv', static fn (HttpRequest $r): HttpResponse => $recruitment()->cv($r));
         $router->add('PATCH', '/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->stage($r));

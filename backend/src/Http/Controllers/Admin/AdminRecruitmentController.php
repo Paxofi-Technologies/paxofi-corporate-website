@@ -33,6 +33,13 @@ final class AdminRecruitmentController
         return ApiResponse::success($request, $result['items'], $result['meta']);
     }
 
+    public function report(HttpRequest $request): HttpResponse
+    {
+        $this->guard->require($request, Permission::RECRUITMENT_READ);
+
+        return ApiResponse::success($request, $this->recruitment->report($request->query()));
+    }
+
     public function show(HttpRequest $request): HttpResponse
     {
         $this->guard->require($request, Permission::RECRUITMENT_READ);

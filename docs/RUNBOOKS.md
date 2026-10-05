@@ -238,5 +238,12 @@ Applications from careers.paxofi.com are handled in the staff area under **Recru
 - **A candidate says they did not get the acknowledgement:** check the spam folder, then `email_outbox` in phpMyAdmin (RB-17). The reference is on the application in the staff area.
 - **Opening or closing a role:** **Recruitment** → *Edit the roles on careers.paxofi.com*. Closing hides the role; its applications stay.
 - **Careers site down:** `https://careers.paxofi.com` is its own Node.js app (`paxofi-careers-website`). Restart it in **Setup Node.js App**; check its `API_BASE_URL` and that `SITE_SECTION=careers`.
+- **Campaign links (D-020):** give every post its own link, so the report shows what works. Use lower-case words and dashes:
+  - LinkedIn post: `https://careers.paxofi.com/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026`
+  - X post: `…?utm_source=x&utm_medium=social&utm_campaign=pif-2026`
+  - WhatsApp groups: `…?utm_source=whatsapp&utm_medium=message&utm_campaign=pif-2026`
+  - A partner school: `…?utm_source=unilag&utm_medium=partner&utm_campaign=pif-2026`
+  Links to a role work the same way: `https://careers.paxofi.com/roles/software-engineer-fellow?utm_source=linkedin&utm_campaign=pif-2026`.
+- **Weekly:** open **Recruitment → See the recruitment report**. Applications waiting past 2 working days show as *overdue*; review them first.
 - **Never** forward CVs by email or save them to personal devices. Download a CV only to review it, then delete the downloaded copy.
 
