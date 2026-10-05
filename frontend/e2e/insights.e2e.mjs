@@ -68,6 +68,8 @@ describe("news and insights", () => {
     assert.equal(await page.evaluate(() => window.hacked), undefined);
     assert.equal(await page.locator('meta[property="og:type"]').getAttribute("content"), "article");
     assert.match(await page.locator('meta[property="og:image"]').getAttribute("content"), /launch\.png$/);
+    assert.equal(await page.locator('link[rel="preload"][href*="/api/v1/media/"]').count(), 0, "no cross-origin preload without integrity (ZAP 90003)");
+    assert.equal(await page.locator("img.article-image").getAttribute("loading"), "lazy");
     const blocks = (await page.locator('script[type="application/ld+json"]').allTextContents()).map((t) => JSON.parse(t));
     const jsonLd = blocks.find((b) => b.headline);
     assert.equal(jsonLd["@type"], "NewsArticle");
@@ -94,7 +96,7 @@ describe("news and insights", () => {
       if (path === "/session") return reply(route, 200, { id: "1", email: "ada@paxofi.com", display_name: "Ada Admin", status: "active", role: "administrator", role_label: "Administrator", permissions: ["content.edit", "content.publish"], two_factor_enabled: true });
       if (path === "/media") return reply(route, 200, [{ id: IMAGE_ID, kind: "image", filename: "launch.png", media_type: "image/png", format: "PNG", size_bytes: 100, width: 1200, height: 630, alt_text: "The PIF 2026 launch", title: null, path: `/api/v1/media/${IMAGE_ID}/launch.png`, uploaded_by: null, created_at: null, used_by: [] }]);
       if (path === "/articles" && request.method() === "POST") {
-        if (body.summary.length < 20) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { summary: "Write a summary of 20 to 300 characters. It shows on the list and in search results." } } });
+        if (body.summary.length < 20 || body.summary.length > 300) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { summary: "Write a summary of 20 to 300 characters. It shows on the list and in search results." } } });
         article = { id: "b2b2b2b2-0000-4000-8000-000000000002", slug: "our-first-insight", path: "/insights/our-first-insight", title: body.title, category: body.category, state: "draft", has_draft: true, published_at: null, updated_at: "2026-10-05 10:00:00", live: null, draft: { content: body, saved_at: "2026-10-05 10:00:00", author_name: "Ada Admin" } };
         return reply(route, 201, article);
       }
@@ -115,6 +117,10 @@ describe("news and insights", () => {
     await page.getByLabel("Article").fill("First paragraph.\n\n## A heading\n\n- One point\n- Another point");
     await page.getByRole("button", { name: "Save draft" }).click();
     await page.getByText("Write a summary of 20 to 300 characters.").first().waitFor();
+    // Pasted text longer than the limit is kept whole (no silent cut) and the count says how much to remove.
+    await page.getByLabel(/^Summary/).fill("x".repeat(320));
+    assert.equal((await page.getByLabel(/^Summary/).inputValue()).length, 320);
+    await page.getByText("320 of 300 characters: 20 too many.").waitFor();
     await page.getByLabel(/^Summary/).fill("What we learned shipping our first products in 2026.");
     await page.getByRole("button", { name: "Save draft" }).click();
     await page.waitForURL(/\/admin\/content\/articles\/b2b2b2b2/);
