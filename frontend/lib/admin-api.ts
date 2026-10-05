@@ -18,8 +18,8 @@ export type StaffUser = {
   two_factor_enrollment_required?: boolean;
 };
 
-/** Products and services edited in the staff area (D-011). */
-export type CatalogKind = "products" | "services";
+/** Products, services and industries edited in the staff area (D-011, D-022). */
+export type CatalogKind = "products" | "services" | "industries";
 export type CatalogContent = {
   name: string;
   label: string | null;
@@ -29,16 +29,23 @@ export type CatalogContent = {
   sort_order: number;
   image_id?: string | null;
   document_id?: string | null;
+  /** Products only (D-022). */
+  status?: string | null;
+  /** Industries only (D-022). */
+  description?: string | null;
+  /** Industries only: "product:<slug>" or "service:<slug>". */
+  related?: string[];
 };
-export type CatalogSummary = { id: string; slug: string; name: string; visible: boolean; has_draft: boolean; sort_order: number; updated_at: string | null };
+export type CatalogSummary = { id: string; slug: string; name: string; visible: boolean; has_draft: boolean; sort_order: number; status?: string | null; updated_at: string | null };
 export type CatalogDetail = {
   item: CatalogSummary & { content: CatalogContent };
   draft: { content: CatalogContent; saved_at: string; author_name: string | null } | null;
   revisions: { id: string; state: string; created_at: string; author_name: string | null; content: CatalogContent }[];
 };
-export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: string }[] = [
-  { value: "products", label: "Products", singular: "product" },
-  { value: "services", label: "Services", singular: "service" },
+export const CATALOG_KINDS: { value: CatalogKind; label: string; singular: string; a: string }[] = [
+  { value: "products", label: "Products", singular: "product", a: "a product" },
+  { value: "services", label: "Services", singular: "service", a: "a service" },
+  { value: "industries", label: "Industries", singular: "industry", a: "an industry" },
 ];
 
 /** Page text edited in the staff area (D-015). Fields come from page-copy.json via the API. */

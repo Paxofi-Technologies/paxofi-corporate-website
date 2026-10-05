@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { loadArticles } from "@/lib/articles";
 import { careersSiteUrl, isCareersSite, loadRoles } from "@/lib/careers";
+import { loadCatalog } from "@/lib/catalog";
 import { resolveApiBase } from "@/lib/contact";
 import { PUBLIC_ROUTES, siteUrl } from "@/lib/site";
 import { isStaging } from "@/lib/staging";
@@ -25,8 +26,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     articles.push(...result.items);
     if (page >= result.totalPages) break;
   }
+  // Industry pages (D-022); the built-in list if the API cannot be read, as the pages themselves show.
+  const industries = await loadCatalog("industries", resolveApiBase(process.env));
   return [
     ...PUBLIC_ROUTES.map((path) => ({ url: path === "/" ? base : base + path })),
+    ...industries.map((i) => ({ url: `${base}/industries/${i.slug}` })),
     ...articles.map((a) => ({ url: `${base}/insights/${a.slug}`, lastModified: a.updatedAt })),
   ];
 }

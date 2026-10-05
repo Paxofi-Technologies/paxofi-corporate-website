@@ -112,7 +112,10 @@ describe("catalogue pages", () => {
     const page = await newPage();
     const response = await page.goto(`${BASE}/products`);
     assert.equal(response.status(), 200);
-    assert.deepEqual(await page.locator(".product-card h2").allTextContents(), ["Paxofi Pay", "Paxofi Core Framework"]);
+    assert.deepEqual(await page.locator(".product-card h2").allTextContents(), ["Paxofi Pay", "PaxofiCloud", "Paxofi Core Framework"]);
+    assert.deepEqual((await page.locator(".product-card .product-status").allTextContents()).map((t) => t.replace("Status: ", "")), ["Planned", "In development", "Available"]);
+    await page.goto(`${BASE}/industries/education`);
+    assert.equal(await page.locator("h1").textContent(), "Education", "industries also have built-in copy");
     await page.goto(`${BASE}/services`);
     assert.equal(await page.locator(".icon-card h3").count(), 6);
     await page.context().close();
@@ -128,7 +131,7 @@ describe("page text (D-015)", () => {
     assert.equal((await page.locator("h1").textContent()).replace(/\s+/g, " ").trim(), "Edited headline from staff.");
     assert.equal(await page.locator('meta[name="description"]').getAttribute("content"), "Edited search description.");
     const menu = page.getByRole("navigation", { name: "Main" });
-    assert.deepEqual(await menu.getByRole("link").allTextContents(), ["About", "Services", "Products", "Blog", "Get in touch"], "Careers hidden, Blog added, button renamed");
+    assert.deepEqual(await menu.getByRole("link").allTextContents(), ["About", "Services", "Products", "Blog", "Industries", "Get in touch"], "Careers hidden, Blog added, button renamed");
     assert.equal(await menu.getByRole("link", { name: "Blog" }).getAttribute("href"), "https://blog.paxofi.com/");
     await page.getByText("Onwards, together.").waitFor();
     await page.goto(`${BASE}/contact`);

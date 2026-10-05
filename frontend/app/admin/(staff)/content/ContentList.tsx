@@ -9,6 +9,7 @@ import { NoAccess } from "@/components/admin/StaffShell";
 import ArticleList from "./ArticleList";
 import PageTextList from "./PageTextList";
 import { AdminApiError, CATALOG_KINDS, CatalogKind, CatalogSummary, formatDateTime } from "@/lib/admin-api";
+import { PRODUCT_STATUSES, isProductStatus } from "@/lib/catalog";
 
 type Tab = CatalogKind | "pages" | "articles";
 
@@ -16,7 +17,7 @@ type Tab = CatalogKind | "pages" | "articles";
 export default function ContentList() {
   const { user, request } = useAdmin();
   const initialTab = useSearchParams().get("tab");
-  const [tab, setTab] = useState<Tab>(initialTab === "pages" || initialTab === "services" || initialTab === "articles" ? initialTab : "products");
+  const [tab, setTab] = useState<Tab>(initialTab === "pages" || initialTab === "services" || initialTab === "industries" || initialTab === "articles" ? initialTab : "products");
   const kind: CatalogKind = tab === "pages" || tab === "articles" ? "products" : tab;
   const [rows, setRows] = useState<CatalogSummary[] | null>(null);
   const [error, setError] = useState("");
@@ -43,7 +44,7 @@ export default function ContentList() {
     <>
       <h1 className="admin-title">Content</h1>
       <p className="admin-intro">
-        The products and services shown on the website, News &amp; Insights articles, and the wording of each page. Changes are saved as drafts and appear on the
+        The products, services and industries shown on the website, News &amp; Insights articles, and the wording of each page. Changes are saved as drafts and appear on the
         site only when an administrator publishes them.
       </p>
       <div className="admin-toolbar">
@@ -67,7 +68,7 @@ export default function ContentList() {
           <Link className="button button--primary" href="/admin/content/articles/new">Write an article</Link>
         ) : tab !== "pages" && (
           <Link className="button button--primary" href={`/admin/content/${kind}/new`}>
-            Add a {current.singular}
+            Add {current.a}
           </Link>
         )}
       </div>
@@ -88,6 +89,7 @@ export default function ContentList() {
               <tr>
                 <th scope="col">Name</th>
                 <th scope="col">On the website</th>
+                {kind === "products" && <th scope="col">Status</th>}
                 <th scope="col">Draft</th>
                 <th scope="col">Order</th>
                 <th scope="col">Last changed</th>
@@ -100,6 +102,7 @@ export default function ContentList() {
                     <Link href={`/admin/content/${kind}/${row.id}`} className="admin-strong-link">{row.name}</Link>
                   </td>
                   <td><span className="status-pill" data-status={row.visible ? "active" : "disabled"}>{row.visible ? "Shown" : "Hidden"}</span></td>
+                  {kind === "products" && <td>{isProductStatus(row.status) ? PRODUCT_STATUSES[row.status] : "—"}</td>}
                   <td>{row.has_draft ? <span className="status-pill" data-status="in_progress">Unpublished changes</span> : "—"}</td>
                   <td>{row.sort_order}</td>
                   <td>{formatDateTime(row.updated_at)}</td>
