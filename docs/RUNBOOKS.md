@@ -262,3 +262,19 @@ Articles are written under **Content → Articles** (D-021).
 - **Sharing:** the article's picture and summary appear when the link is shared on LinkedIn, X or WhatsApp. Wide pictures (1200 × 630) look best.
 - **Menu:** if *Insights* is missing from the main menu, add it under **Content → Page text → Menu and footer** (name *Insights*, link `/insights`) and publish.
 
+## RB-21 Industries and product status
+
+Industries and product statuses are edited under **Content** (D-022).
+
+- **Product status:** open the product under **Content → Products**, choose a **Status**, then **Save draft**. An Administrator publishes it. Change it whenever the product moves on, for example from *In development* to *Pilot*, and record the evidence in the product's PKDMS page. Use *Available* only for a product customers can actually get today.
+- **Industries:**
+  - **Add:** **Content → Industries → Add an industry**. Give it a name, icon, summary, description and example solutions, then tick up to 6 related products and services. New industries start hidden; an Administrator publishes and shows them.
+  - **Related items:** ticked items appear on the industry's page in the order you ticked them. Hidden or deleted products and services are left out automatically.
+  - **Remove:** **Hide from the website** takes an industry down. Its address (`/industries/<name-words>`) never changes, so hide an industry rather than renaming it to a different sector.
+- **Wording rules (SRS 13.8), checked before publishing:**
+  - Describe what Paxofi can build or does build.
+  - Do not name clients, show results or claim partnerships without written approval and evidence.
+  - Do not imply certifications, licences or regulated status.
+- **Page text:** the heading, introduction and call to action of the Industries pages are under **Content → Page text → Industries**.
+- **Menu:** if *Industries* is missing from the main menu, add it under **Content → Page text → Menu and footer** (name *Industries*, link `/industries`) and publish.
+

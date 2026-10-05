@@ -265,6 +265,12 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10f — Industries and product status (no server change)
+
+From this release, the website has an **Industries** section at {{SITE_URL}}/industries, with the ten sectors from the SRS. Each product now shows its status, such as *Planned*, *In development* or *Available* (decision D-022, RB-21). Both are edited under **Content**.
+
+The database upgrade (migration 018) sets the starting statuses and adds PaxofiCloud. *Industries* is in the default main menu. If you have published your own menu under **Content → Page text → Menu and footer**, add a menu item there (item 6: name *Industries*, link `/industries`), then publish.
+
 ## Step 10e — News & Insights (no server change)
 
 From this release, articles are written under **Content → Articles** and appear at {{SITE_URL}}/insights (decision D-021, RB-20). *Insights* is in the default main menu. If you have published your own menu under **Content → Page text → Menu and footer**, add a menu item there: name *Insights*, link `/insights`, then publish.
