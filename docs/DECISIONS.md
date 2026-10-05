@@ -379,3 +379,29 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Data:** migration 016 adds the columns to `job_applications`, so they are deleted with the application (12 months). The applicant privacy notice now names them (version 2026-10-05).
 - **Not chosen:** page-view tracking on the careers site. Applications per channel answer the campaign question with less data, and the corporate analytics (D-014) stays as it is.
 
+## D-021 — News & Insights (P3.2, 5 Oct 2026)
+
+**Decision (CTO; SRS chapter 14 lists "blog articles and insights" and "news and announcements"):** the corporate website gets a **News & Insights** section at `/insights`, written in the staff area.
+
+- **Articles:**
+  - Each has a title, a category (*News*, *Insight* or *Announcement*), a summary (shown on the list, in search results and when shared), an optional author, an optional picture from the Media library, and the article text.
+  - The address (`/insights/<title-words>`) is set from the first title and never changes.
+- **Text format:**
+  - The text is plain, with a few formatting marks: blank lines between paragraphs, `##` headings, `-` and `1.` lists, `**bold**`, and `[links](https://…)`.
+  - The website builds the HTML itself and escapes every word, so no HTML or script from an article can run. Links must be https, http, mailto or a page on the site.
+  - Not chosen: a rich-text (WYSIWYG) editor. It needs HTML sanitising, adds a large script to the staff area, and pasted Word formatting breaks the brand styles.
+- **Workflow (same as products and services, D-011):**
+  - Staff with `content.edit` (Business Development) write and save drafts, with a preview.
+  - An Administrator (`content.publish`) publishes, publishes later changes, hides or deletes.
+  - Saving never changes what the website shows.
+  - Every step is audited (`article.*`).
+  - A picture an article uses cannot be deleted from the Media library.
+- **Search and sharing:**
+  - Each article has its own title, description and canonical address.
+  - Shared links show the article's picture (`og:type article`).
+  - Each page carries NewsArticle or BlogPosting structured data.
+  - The sitemap lists published articles.
+  - Analytics counts `/insights` and each article page (D-014).
+- **Menu:** *Insights* is the default fifth menu item. A site whose menu text was already published under **Content → Page text → Menu and footer** keeps its own menu; add *Insights* → `/insights` there.
+- **Editorial (SRS 14.11):** every article needs a purpose and an accountable owner (RB-20). The first pieces are owner task *[OWNER] Plan first Insights articles*.
+

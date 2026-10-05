@@ -109,15 +109,15 @@ final class PageCopyTest extends DatabaseTestCase
             'menu_1_link' => 'javascript:alert(1)',
             'menu_2_link' => '//evil.example',
             'menu_3_link' => 'http://plain.example',
-            'menu_5_label' => 'Blog',
+            'menu_6_label' => 'Blog',
             'footer_email' => 'not an email',
             'menu_button_label' => '',
         ] + $fields], cookie: $admin);
         self::assertSame(422, $bad->status());
         $errors = self::decode($bad)['error']['details']['fields'];
-        self::assertEqualsCanonicalizing(['menu_1_link', 'menu_2_link', 'menu_3_link', 'menu_button_label', 'menu_5_link', 'footer_email'], array_keys($errors));
+        self::assertEqualsCanonicalizing(['menu_1_link', 'menu_2_link', 'menu_3_link', 'menu_button_label', 'menu_6_link', 'footer_email'], array_keys($errors));
         self::assertStringContainsString('https://', $errors['menu_1_link']);
-        self::assertSame('Fill in both the name and the link, or leave both empty.', $errors['menu_5_link']);
+        self::assertSame('Fill in both the name and the link, or leave both empty.', $errors['menu_6_link']);
         self::assertSame('Enter some text.', $errors['menu_button_label'], 'the button is always shown');
 
         // Hide Careers, add a Blog link to an outside site, change the footer email.

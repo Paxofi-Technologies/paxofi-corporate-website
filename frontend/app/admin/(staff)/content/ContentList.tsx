@@ -6,22 +6,23 @@ import { useEffect, useState } from "react";
 import { can, useAdmin } from "@/components/admin/AdminContext";
 import { FormStatus } from "@/components/admin/AdminForm";
 import { NoAccess } from "@/components/admin/StaffShell";
+import ArticleList from "./ArticleList";
 import PageTextList from "./PageTextList";
 import { AdminApiError, CATALOG_KINDS, CatalogKind, CatalogSummary, formatDateTime } from "@/lib/admin-api";
 
-type Tab = CatalogKind | "pages";
+type Tab = CatalogKind | "pages" | "articles";
 
 /** Products and services on the website (D-011) and the wording of each page (D-015). */
 export default function ContentList() {
   const { user, request } = useAdmin();
   const initialTab = useSearchParams().get("tab");
-  const [tab, setTab] = useState<Tab>(initialTab === "pages" || initialTab === "services" ? initialTab : "products");
-  const kind: CatalogKind = tab === "pages" ? "products" : tab;
+  const [tab, setTab] = useState<Tab>(initialTab === "pages" || initialTab === "services" || initialTab === "articles" ? initialTab : "products");
+  const kind: CatalogKind = tab === "pages" || tab === "articles" ? "products" : tab;
   const [rows, setRows] = useState<CatalogSummary[] | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!can(user, "content.edit") || tab === "pages") return;
+    if (!can(user, "content.edit") || tab === "pages" || tab === "articles") return;
     let cancelled = false;
     request<CatalogSummary[]>(`/catalog/${kind}`)
       .then((result) => {
@@ -42,12 +43,12 @@ export default function ContentList() {
     <>
       <h1 className="admin-title">Content</h1>
       <p className="admin-intro">
-        The products and services shown on the website, and the wording of each page. Changes are saved as drafts and appear on the
+        The products and services shown on the website, News &amp; Insights articles, and the wording of each page. Changes are saved as drafts and appear on the
         site only when an administrator publishes them.
       </p>
       <div className="admin-toolbar">
         <div className="admin-tabs" role="group" aria-label="Collection">
-          {[...CATALOG_KINDS, { value: "pages" as const, label: "Page text" }].map((option) => (
+          {[...CATALOG_KINDS, { value: "articles" as const, label: "Articles" }, { value: "pages" as const, label: "Page text" }].map((option) => (
             <button
               key={option.value}
               type="button"
@@ -62,7 +63,9 @@ export default function ContentList() {
             </button>
           ))}
         </div>
-        {tab !== "pages" && (
+        {tab === "articles" ? (
+          <Link className="button button--primary" href="/admin/content/articles/new">Write an article</Link>
+        ) : tab !== "pages" && (
           <Link className="button button--primary" href={`/admin/content/${kind}/new`}>
             Add a {current.singular}
           </Link>
@@ -71,6 +74,8 @@ export default function ContentList() {
       <FormStatus state="error" message={error} />
       {tab === "pages" ? (
         <PageTextList />
+      ) : tab === "articles" ? (
+        <ArticleList />
       ) : rows === null ? (
         <p role="status">Loading…</p>
       ) : rows.length === 0 ? (

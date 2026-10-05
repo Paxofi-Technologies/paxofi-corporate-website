@@ -155,17 +155,21 @@ describe("visit counting (D-014)", () => {
   test("each page view is sent once, without cookies; the source only on the first page", async () => {
     mode.value = "ok";
     pageviews.length = 0;
-    const page = await newPage();
+    // A width no other test uses: a view from an earlier test's page can still arrive late
+    // (Firefox sends it after the context closes), so only this visit's views are counted.
+    const WIDTH = 1111;
+    const page = await newPage({ viewport: { width: WIDTH, height: 800 } });
     await page.goto(`${BASE}/products`, { referer: "https://www.google.com/" });
     await page.waitForFunction(() => document.readyState === "complete");
     await page.getByRole("navigation", { name: /main/i }).getByRole("link", { name: "Services" }).click();
     await page.waitForURL(`${BASE}/services`);
     await page.waitForTimeout(500);
+    const views = pageviews.filter((v) => v.body.width === WIDTH);
 
-    assert.deepEqual(pageviews.map((v) => [v.body.path, v.body.entry]), [["/products", true], ["/services", false]]);
-    assert.match(pageviews[0].body.referrer, /google\.com/, "the first page says where the visit came from");
-    assert.equal(pageviews[1].body.referrer, "", "later pages of the visit carry no referrer");
-    assert.ok(pageviews.every((v) => v.cookie === null && /^text\/plain/.test(v.contentType ?? "")), "a simple request with no cookies");
+    assert.deepEqual(views.map((v) => [v.body.path, v.body.entry]), [["/products", true], ["/services", false]]);
+    assert.match(views[0].body.referrer, /google\.com/, "the first page says where the visit came from");
+    assert.equal(views[1].body.referrer, "", "later pages of the visit carry no referrer");
+    assert.ok(views.every((v) => v.cookie === null && /^text\/plain/.test(v.contentType ?? "")), "a simple request with no cookies");
     assert.ok(pageviews.every((v) => typeof v.body.width === "number"));
     assert.deepEqual(await page.context().cookies(), [], "nothing is stored in the browser");
     await page.context().close();

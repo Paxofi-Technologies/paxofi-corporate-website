@@ -57,6 +57,12 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
 | recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
+## News & Insights (migration 017, D-021)
+
+| Table | Field | Type / constraint | Personal data | Review |
+|---|---|---|---|---|
+| articles | id, slug (UNIQUE, never changes), state (draft/published/hidden), category, title, summary, body (MEDIUMTEXT, plain text), author_name, image_id FK → media_assets, published_at (first publication), draft JSON, draft_saved_at, draft_author_id, created_by, timestamps; index (state, published_at) | 017 | author name (public by design) | OK; public queries read only published, already-dated rows |
+
 ## Recruitment tables (migration 014, D-019)
 
 | Table | Field | Type / constraint | Personal data | Review |

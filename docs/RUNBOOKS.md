@@ -247,3 +247,18 @@ Applications from careers.paxofi.com are handled in the staff area under **Recru
 - **Weekly:** open **Recruitment → See the recruitment report**. Applications waiting past 2 working days show as *overdue*; review them first.
 - **Never** forward CVs by email or save them to personal devices. Download a CV only to review it, then delete the downloaded copy.
 
+## RB-20 News & Insights articles
+
+Articles are written under **Content → Articles** (D-021).
+
+- **Write:** **Write an article**. Fill in the title, category, summary and text, and choose a picture uploaded under **Media**. Then **Save draft** and check **Preview**. The address is made from the first title, so get the title right before the first save.
+- **Publish:** an Administrator opens the article and clicks **Publish**. Later edits stay in the draft until **Publish changes**.
+- **Remove:** **Hide from the website** takes an article down while keeping it; **Delete article** removes it for good.
+- **Before publishing, check:**
+  - the facts and figures are correct and approved;
+  - there are no customer names or results without written permission;
+  - the picture has a description (alt text) in **Media**;
+  - every link opens.
+- **Sharing:** the article's picture and summary appear when the link is shared on LinkedIn, X or WhatsApp. Wide pictures (1200 × 630) look best.
+- **Menu:** if *Insights* is missing from the main menu, add it under **Content → Page text → Menu and footer** (name *Insights*, link `/insights`) and publish.
+
