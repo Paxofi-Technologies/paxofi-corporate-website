@@ -233,6 +233,8 @@ describe("navigation", () => {
     await faq.click();
     await page.getByText("does not offer a stipend, allowance or salary", { exact: false }).waitFor();
     assert.equal(await page.getByRole("link", { name: "hr@paxofi.com" }).getAttribute("href"), "mailto:hr@paxofi.com");
+    // After an in-app navigation Next.js sets the new <title> a moment after the content (seen in WebKit).
+    await page.waitForFunction(() => document.title.startsWith("Careers"));
     await assertAccessible(page, "on careers with an open answer");
     await page.context().close();
   });

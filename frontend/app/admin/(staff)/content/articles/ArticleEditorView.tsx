@@ -14,6 +14,11 @@ import { ARTICLE_CATEGORIES, readingMinutes } from "@/lib/articles";
 type Values = { title: string; category: ArticleContentValues["category"]; summary: string; body: string; author_name: string; image_id: string };
 const EMPTY: Values = { title: "", category: "insight", summary: "", body: "", author_name: "", image_id: "" };
 const toValues = (c: ArticleContentValues): Values => ({ ...c, author_name: c.author_name ?? "", image_id: c.image_id ?? "" });
+// No maxLength on the inputs: the browser would silently cut pasted text. The count says when it is too long and the API refuses it.
+const lengthNote = (text: string, max: number) => {
+  const length = [...text.trim()].length;
+  return length > max ? `${length} of ${max} characters: ${length - max} too many.` : `${length} of ${max} characters.`;
+};
 
 /** Write, preview, save and publish one News & Insights article (D-021). */
 export default function ArticleEditorView({ id }: { id: string | null }) {
@@ -146,8 +151,8 @@ export default function ArticleEditorView({ id }: { id: string | null }) {
         </section>
       ) : (
         <form className="contact-form form-card admin-panel-gap" onSubmit={save} noValidate>
-          <FieldShell label="Title" hint="5 to 160 characters. The web address is made from the first title and never changes." error={fields.title}>
-            {(props) => <input name="title" value={values.title} onChange={set("title")} maxLength={160} required {...props} />}
+          <FieldShell label="Title" hint={`${lengthNote(values.title, 160)} At least 5. The web address is made from the first title and never changes.`} error={fields.title}>
+            {(props) => <input name="title" value={values.title} onChange={set("title")} required {...props} />}
           </FieldShell>
           <div className="admin-row3">
             <FieldShell label="Category" error={fields.category}>
@@ -157,12 +162,12 @@ export default function ArticleEditorView({ id }: { id: string | null }) {
                 </select>
               )}
             </FieldShell>
-            <FieldShell label="Author (optional)" hint="Shown as “By …”." error={fields.author_name}>
-              {(props) => <input name="author_name" value={values.author_name} onChange={set("author_name")} maxLength={80} {...props} />}
+            <FieldShell label="Author (optional)" hint={`Shown as “By …”. ${lengthNote(values.author_name, 80)}`} error={fields.author_name}>
+              {(props) => <input name="author_name" value={values.author_name} onChange={set("author_name")} {...props} />}
             </FieldShell>
           </div>
-          <FieldShell label="Summary" hint={`${values.summary.length}/300. Shown on the list, in search results and when the link is shared.`} error={fields.summary}>
-            {(props) => <textarea name="summary" rows={3} value={values.summary} onChange={set("summary")} maxLength={300} required {...props} />}
+          <FieldShell label="Summary" hint={`${lengthNote(values.summary, 300)} Shown on the list, in search results and when the link is shared.`} error={fields.summary}>
+            {(props) => <textarea name="summary" rows={3} value={values.summary} onChange={set("summary")} required {...props} />}
           </FieldShell>
           <FieldShell label="Picture (optional)" hint={images.length === 0 && media !== null ? "No pictures yet: upload one under Media." : "Shown at the top of the article and when it is shared. Wide pictures (1200 × 630) work best."} error={fields.image_id}>
             {(props) => (
@@ -178,7 +183,7 @@ export default function ArticleEditorView({ id }: { id: string | null }) {
             hint="Leave a blank line between paragraphs. ## starts a heading, - a bullet, 1. a numbered item. **bold**, [link text](https://…). No HTML."
             error={fields.body}
           >
-            {(props) => <textarea name="body" rows={18} value={values.body} onChange={set("body")} maxLength={30000} required {...props} />}
+            {(props) => <textarea name="body" rows={18} value={values.body} onChange={set("body")} required {...props} />}
           </FieldShell>
           <div className="admin-actions">
             <button className="button button--primary" type="submit" disabled={busy !== ""}>{busy === "save" ? "Saving…" : "Save draft"}</button>
