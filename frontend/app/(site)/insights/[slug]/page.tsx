@@ -72,8 +72,10 @@ export default async function ArticlePage({ params }: Props) {
       <section className="section">
         <div className="container article-layout">
           {found.image && (
+            // Lazy: the picture sits below the title and summary, and an eager <img> makes React add a cross-origin
+            // <link rel="preload"> that cannot carry an integrity hash (ZAP 90003). Width and height keep the space reserved.
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="article-image" src={found.image.src} alt={found.image.alt} width={found.image.width} height={found.image.height} decoding="async" />
+            <img className="article-image" src={found.image.src} alt={found.image.alt} width={found.image.width} height={found.image.height} loading="lazy" decoding="async" />
           )}
           <ArticleBody body={found.body} />
           <p className="article-end"><Link href="/insights">More news and insights</Link> · <Link href="/contact">Talk to us</Link></p>

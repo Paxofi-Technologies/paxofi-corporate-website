@@ -68,6 +68,8 @@ describe("news and insights", () => {
     assert.equal(await page.evaluate(() => window.hacked), undefined);
     assert.equal(await page.locator('meta[property="og:type"]').getAttribute("content"), "article");
     assert.match(await page.locator('meta[property="og:image"]').getAttribute("content"), /launch\.png$/);
+    assert.equal(await page.locator('link[rel="preload"][href*="/api/v1/media/"]').count(), 0, "no cross-origin preload without integrity (ZAP 90003)");
+    assert.equal(await page.locator("img.article-image").getAttribute("loading"), "lazy");
     const blocks = (await page.locator('script[type="application/ld+json"]').allTextContents()).map((t) => JSON.parse(t));
     const jsonLd = blocks.find((b) => b.headline);
     assert.equal(jsonLd["@type"], "NewsArticle");
