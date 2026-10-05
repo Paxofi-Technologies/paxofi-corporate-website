@@ -50,7 +50,7 @@ test("the logo mark is decorative and its gradient ids are unique per instance",
 test("the header lists every main section and the contact call to action", () => {
   const markup = html(<SiteHeader />);
   const { menu } = siteLinks(defaultCopy("site"));
-  assert.deepEqual(menu.map((l) => l.label), ["About", "Services", "Products", "Careers"]);
+  assert.deepEqual(menu.map((l) => l.label), ["About", "Services", "Products", "Careers", "Insights"]);
   for (const { href, label } of menu) assert.match(markup, new RegExp(`href="${href}"[^>]*>${label}<`));
   assert.match(markup, /class="nav-cta"[^>]*>Talk to us</);
   assert.match(markup, /aria-expanded="false"/);

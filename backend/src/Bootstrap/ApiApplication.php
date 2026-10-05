@@ -31,6 +31,8 @@ use Paxofi\CorporateWebsite\Application\Mail\OutboxSender;
 use Paxofi\CorporateWebsite\Application\Admin\StaffAdminService;
 use Paxofi\CorporateWebsite\Application\Admin\TwoFactor\TwoFactorService;
 use Paxofi\CorporateWebsite\Application\Analytics\Analytics;
+use Paxofi\CorporateWebsite\Application\Articles\ArticleEditor;
+use Paxofi\CorporateWebsite\Application\Articles\ArticleService;
 use Paxofi\CorporateWebsite\Application\Careers\CareerRoleEditor;
 use Paxofi\CorporateWebsite\Application\Careers\CareersService;
 use Paxofi\CorporateWebsite\Application\Careers\RecruitmentService;
@@ -44,6 +46,7 @@ use Paxofi\CorporateWebsite\Application\Media\MediaLibrary;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminArticlesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareerRolesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
@@ -56,6 +59,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
 use Paxofi\CorporateWebsite\Http\Controllers\AnalyticsController;
+use Paxofi\CorporateWebsite\Http\Controllers\ArticlesController;
 use Paxofi\CorporateWebsite\Http\Controllers\CareersController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
@@ -77,6 +81,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoOutbox;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPasswordResets;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoArticles;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\LazyTransactionManager;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
@@ -117,6 +122,8 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/products'],
         ['GET', '/api/v1/services'],
         ['GET', '/api/v1/careers'],
+        ['GET', '/api/v1/articles'],
+        ['GET', '/api/v1/articles/{slug}'],
         ['GET', '/api/v1/careers/roles'],
         ['GET', '/api/v1/careers/roles/{slug}'],
         ['POST', '/api/v1/careers/cv'],
@@ -179,6 +186,14 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/applications/{id}/notes'],
         ['POST', '/api/v1/admin/applications/{id}/emails'],
         ['DELETE', '/api/v1/admin/applications/{id}'],
+        ['GET', '/api/v1/admin/articles'],
+        ['POST', '/api/v1/admin/articles'],
+        ['GET', '/api/v1/admin/articles/{id}'],
+        ['POST', '/api/v1/admin/articles/{id}/draft'],
+        ['DELETE', '/api/v1/admin/articles/{id}/draft'],
+        ['POST', '/api/v1/admin/articles/{id}/publish'],
+        ['POST', '/api/v1/admin/articles/{id}/visibility'],
+        ['DELETE', '/api/v1/admin/articles/{id}'],
         ['GET', '/api/v1/admin/career-roles'],
         ['POST', '/api/v1/admin/career-roles'],
         ['GET', '/api/v1/admin/career-roles/{id}'],
@@ -285,6 +300,10 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
         $router->get('/api/v1/pages/{page}', $this->lazy(fn (): Controller => new PageCopyController($this->pageCopyEditor())));
+        $articles = fn (): ArticlesController => new ArticlesController(new ArticleService(new PdoArticles($this->database), $this->clock));
+        $router->get('/api/v1/articles', static fn (HttpRequest $r): HttpResponse => $articles()->list($r));
+        $router->get('/api/v1/articles/{slug}', static fn (HttpRequest $r): HttpResponse => $articles()->show($r));
+
         $careers = fn (): CareersController => new CareersController($this->careersService());
         $router->get('/api/v1/careers/roles', static fn (HttpRequest $r): HttpResponse => $careers()->roles($r));
         $router->get('/api/v1/careers/roles/{slug}', static fn (HttpRequest $r): HttpResponse => $careers()->role($r));
@@ -377,6 +396,19 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/admin/applications/{id}/notes', static fn (HttpRequest $r): HttpResponse => $recruitment()->note($r));
         $router->post('/api/v1/admin/applications/{id}/emails', static fn (HttpRequest $r): HttpResponse => $recruitment()->email($r));
         $router->add('DELETE', '/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->delete($r));
+
+        $articleEditor = fn (): AdminArticlesController => new AdminArticlesController(
+            new ArticleEditor(new PdoArticles($this->database), new PdoMediaRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), $this->clock, Uuid::v4(...)),
+            $this->adminGuard(),
+        );
+        $router->get('/api/v1/admin/articles', static fn (HttpRequest $r): HttpResponse => $articleEditor()->list($r));
+        $router->post('/api/v1/admin/articles', static fn (HttpRequest $r): HttpResponse => $articleEditor()->create($r));
+        $router->get('/api/v1/admin/articles/{id}', static fn (HttpRequest $r): HttpResponse => $articleEditor()->show($r));
+        $router->post('/api/v1/admin/articles/{id}/draft', static fn (HttpRequest $r): HttpResponse => $articleEditor()->saveDraft($r));
+        $router->add('DELETE', '/api/v1/admin/articles/{id}/draft', static fn (HttpRequest $r): HttpResponse => $articleEditor()->discardDraft($r));
+        $router->post('/api/v1/admin/articles/{id}/publish', static fn (HttpRequest $r): HttpResponse => $articleEditor()->publish($r));
+        $router->post('/api/v1/admin/articles/{id}/visibility', static fn (HttpRequest $r): HttpResponse => $articleEditor()->visibility($r));
+        $router->add('DELETE', '/api/v1/admin/articles/{id}', static fn (HttpRequest $r): HttpResponse => $articleEditor()->delete($r));
 
         $roles = fn (): AdminCareerRolesController => new AdminCareerRolesController(
             new CareerRoleEditor(new PdoCareerRoles($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), Uuid::v4(...)),
