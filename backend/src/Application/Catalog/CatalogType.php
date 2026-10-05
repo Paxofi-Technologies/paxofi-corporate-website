@@ -9,5 +9,6 @@ enum CatalogType: string
 {
     case Products = 'products';
     case Services = 'services';
+    case Industries = 'industries';
     case Careers = 'careers';
 }

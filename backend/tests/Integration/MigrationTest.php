@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets', 'job_applications', 'application_notes', 'application_uploads', 'email_attachments', 'articles'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets', 'job_applications', 'application_notes', 'application_uploads', 'email_attachments', 'articles', 'industries'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {
@@ -96,7 +96,7 @@ final class MigrationTest extends DatabaseTestCase
         $seed = array_values(array_filter(self::migrationFiles(), static fn (string $f): bool => str_contains($f, 'seed_published_catalog')))[0];
         self::applySqlFile($seed);
 
-        self::assertSame(2, (int) self::scalar('SELECT COUNT(*) FROM products'));
+        self::assertSame(3, (int) self::scalar('SELECT COUNT(*) FROM products'), '2 from 004, PaxofiCloud from 018');
         self::assertSame(6, (int) self::scalar('SELECT COUNT(*) FROM services'), '4 from 004, 2 more from 009');
     }
 
@@ -107,7 +107,7 @@ final class MigrationTest extends DatabaseTestCase
         self::applySqlFile($file);
 
         self::assertSame('Edited by staff.', self::scalar("SELECT summary FROM services WHERE slug = 'digital-transformation'"), 'a re-import keeps edits');
-        self::assertSame(['shield-check', 'cog'], self::$pdo->query('SELECT icon FROM products ORDER BY sort_order')->fetchAll(PDO::FETCH_COLUMN));
+        self::assertSame(['shield-check', 'cloud', 'cog'], self::$pdo->query('SELECT icon FROM products ORDER BY sort_order')->fetchAll(PDO::FETCH_COLUMN));
         self::assertSame('Software & Web Engineering', self::scalar('SELECT name FROM services ORDER BY sort_order LIMIT 1'));
         self::assertSame(['Transaction certainty', 'Transparency and traceability', 'Recovery built in'], json_decode((string) self::scalar("SELECT points FROM products WHERE slug = 'paxofi-pay'"), true));
         self::assertSame(['content.edit'], self::$pdo->query("SELECT p.name FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id JOIN roles r ON r.id = rp.role_id WHERE r.name = 'business_development' AND p.name LIKE 'content.%'")->fetchAll(PDO::FETCH_COLUMN));
@@ -155,6 +155,6 @@ final class MigrationTest extends DatabaseTestCase
         }
 
         $foreignKeys = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()')->fetchColumn();
-        self::assertSame(19, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010), password_resets.user_id (013), job_applications.opportunity_id and application_notes.application_id (014), email_attachments.email_id (015), articles.image_id (017)');
+        self::assertSame(21, $foreignKeys, 'foreign keys: 8 declared in 001, recovery_codes.user_id (008), media uploader and product/service image and document (010), password_resets.user_id (013), job_applications.opportunity_id and application_notes.application_id (014), email_attachments.email_id (015), articles.image_id (017), industries image and document (018)');
     }
 }

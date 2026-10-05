@@ -10,14 +10,17 @@ use Paxofi\CorporateWebsite\Application\Admin\Catalog\CatalogKind;
 use Paxofi\CorporateWebsite\Infrastructure\Support\Uuid;
 
 /**
- * Live rows in `products` / `services`; drafts and history in `catalog_revisions`
- * (state 'draft' — at most one per item — 'published' or 'created').
+ * Live rows in `products` / `services` / `industries`; drafts and history in
+ * `catalog_revisions` (state 'draft' — at most one per item — 'published' or
+ * 'created'). Products also store a status, industries a description and
+ * related items (D-022).
  */
 final class PdoCatalogEditorRepository implements CatalogEditorRepository
 {
     use GuardedQueries;
 
     private const COLUMNS = 'id, slug, name, label, icon, image_id, document_id, summary, points, sort_order, lifecycle_state, published_at, updated_at';
+    private const EXTRA = ['products' => ['status'], 'services' => [], 'industries' => ['description', 'related']];
 
     public function __construct(private readonly Database $database)
     {
@@ -31,9 +34,10 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
     public function all(CatalogKind $kind): array
     {
         $table = self::table($kind);
+        $status = $kind === CatalogKind::Products ? 't.status, ' : '';
 
         return array_map(self::decode(...), $this->select(
-            "SELECT t.id, t.slug, t.name, t.label, t.icon, t.summary, t.points, t.sort_order, t.lifecycle_state, t.published_at, t.updated_at,
+            "SELECT t.id, t.slug, t.name, t.label, {$status}t.icon, t.summary, t.points, t.sort_order, t.lifecycle_state, t.published_at, t.updated_at,
                     EXISTS(SELECT 1 FROM catalog_revisions r WHERE r.item_type = :type AND r.item_id = t.id AND r.state = 'draft') AS has_draft
              FROM {$table} t ORDER BY t.sort_order, t.name",
             ['type' => $kind->singular()],
@@ -42,7 +46,7 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
 
     public function find(CatalogKind $kind, string $id): ?array
     {
-        $row = $this->select('SELECT ' . self::COLUMNS . ' FROM ' . self::table($kind) . ' WHERE id = :id', ['id' => $id])[0] ?? null;
+        $row = $this->select('SELECT ' . self::selectColumns($kind) . ' FROM ' . self::table($kind) . ' WHERE id = :id', ['id' => $id])[0] ?? null;
 
         return $row === null ? null : self::decode($row);
     }
@@ -55,10 +59,12 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
     public function insert(CatalogKind $kind, string $slug, CatalogContent $content): string
     {
         $id = Uuid::v4();
+        $values = self::columns($kind, $content);
+        $names = implode(', ', array_keys($values));
         $this->write(
-            'INSERT INTO ' . self::table($kind) . " (id, slug, name, label, icon, image_id, document_id, summary, points, sort_order, lifecycle_state, published_at)
-             VALUES (:id, :slug, :name, :label, :icon, :image_id, :document_id, :summary, :points, :sort_order, 'draft', NULL)",
-            ['id' => $id, 'slug' => $slug] + self::columns($content),
+            'INSERT INTO ' . self::table($kind) . " (id, slug, {$names}, lifecycle_state, published_at)
+             VALUES (:id, :slug, :" . implode(', :', array_keys($values)) . ", 'draft', NULL)",
+            ['id' => $id, 'slug' => $slug] + $values,
         );
 
         return $id;
@@ -66,9 +72,10 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
 
     public function updateLive(CatalogKind $kind, string $id, CatalogContent $content): void
     {
+        $values = self::columns($kind, $content);
         $this->write(
-            'UPDATE ' . self::table($kind) . ' SET name = :name, label = :label, icon = :icon, image_id = :image_id, document_id = :document_id, summary = :summary, points = :points, sort_order = :sort_order WHERE id = :id',
-            ['id' => $id] + self::columns($content),
+            'UPDATE ' . self::table($kind) . ' SET ' . implode(', ', array_map(static fn (string $c): string => "{$c} = :{$c}", array_keys($values))) . ' WHERE id = :id',
+            ['id' => $id] + $values,
         );
     }
 
@@ -169,13 +176,29 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
         return match ($kind) {
             CatalogKind::Products => 'products',
             CatalogKind::Services => 'services',
+            CatalogKind::Industries => 'industries',
         };
     }
 
-    /** @return array<string, mixed> */
-    private static function columns(CatalogContent $content): array
+    private static function selectColumns(CatalogKind $kind): string
     {
-        return [
+        return implode(', ', array_merge([self::COLUMNS], self::EXTRA[$kind->value]));
+    }
+
+    /**
+     * Column => value for the live row; column names are fixed here, never user input.
+     *
+     * @return array<string, mixed>
+     */
+    private static function columns(CatalogKind $kind, CatalogContent $content): array
+    {
+        $extra = [
+            'status' => $content->status,
+            'description' => $content->description,
+            'related' => json_encode($content->related, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+        ];
+
+        return array_intersect_key($extra, array_flip(self::EXTRA[$kind->value])) + [
             'name' => $content->name,
             'label' => $content->label,
             'icon' => $content->icon,
@@ -194,6 +217,9 @@ final class PdoCatalogEditorRepository implements CatalogEditorRepository
     private static function decode(array $row): array
     {
         $row['points'] = self::json($row['points'] ?? null);
+        if (array_key_exists('related', $row)) {
+            $row['related'] = self::json($row['related']);
+        }
         $row['has_draft'] = (bool) ($row['has_draft'] ?? false);
 
         return $row;

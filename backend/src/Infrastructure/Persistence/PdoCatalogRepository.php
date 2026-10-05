@@ -18,8 +18,9 @@ final class PdoCatalogRepository implements CatalogRepository
 
     /** Table and public column projection per catalog type. Identifiers are fixed, never user input. */
     private const SOURCES = [
-        'products' => ['table' => 'products', 'columns' => 'slug, name, label, icon, image_id, document_id, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
+        'products' => ['table' => 'products', 'columns' => 'slug, name, label, status, icon, image_id, document_id, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
         'services' => ['table' => 'services', 'columns' => 'slug, name, label, icon, image_id, document_id, summary, points, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
+        'industries' => ['table' => 'industries', 'columns' => 'slug, name, label, icon, image_id, document_id, summary, description, points, related, sort_order, published_at', 'order' => 'sort_order ASC, name ASC'],
         'careers' => ['table' => 'career_opportunities', 'columns' => 'slug, title, description, published_at', 'order' => 'published_at DESC, slug ASC'],
     ];
 
@@ -32,7 +33,56 @@ final class PdoCatalogRepository implements CatalogRepository
         $source = self::SOURCES[$type->value];
         $page = $this->publishedPage($this->database, $source['table'], $source['columns'], $pagination, $slug === null ? [] : ['slug' => $slug], $source['order']);
 
-        return $type === CatalogType::Careers ? $page : ['items' => $this->withMedia($page['items']), 'total' => $page['total']];
+        if ($type === CatalogType::Careers) {
+            return $page;
+        }
+        $items = $this->withMedia($page['items']);
+
+        return ['items' => $type === CatalogType::Industries ? $this->withRelated($items) : $items, 'total' => $page['total']];
+    }
+
+    /**
+     * Replaces each industry's related references with the published products
+     * and services they name (D-022), in the order staff chose; hidden or
+     * deleted ones are left out.
+     *
+     * @param list<array<string, mixed>> $items
+     * @return list<array<string, mixed>>
+     */
+    private function withRelated(array $items): array
+    {
+        $published = [];
+        try {
+            foreach (['product' => 'products', 'service' => 'services'] as $type => $table) {
+                $status = $type === 'product' ? 'status' : 'NULL AS status';
+                $rows = $this->database->reader()->fetchAll(
+                    "SELECT slug, name, icon, summary, {$status} FROM {$table}
+                     WHERE lifecycle_state = 'published' AND published_at IS NOT NULL AND published_at <= CURRENT_TIMESTAMP",
+                );
+                foreach ($rows as $row) {
+                    $published[$type . ':' . $row['slug']] = [
+                        'type' => $type,
+                        'slug' => (string) $row['slug'],
+                        'name' => (string) $row['name'],
+                        'icon' => $row['icon'] ?? null,
+                        'summary' => (string) $row['summary'],
+                        'status' => $row['status'] ?? null,
+                    ];
+                }
+            }
+        } catch (PersistenceException $exception) {
+            throw new DependencyUnavailable(previous: $exception);
+        }
+
+        return array_map(static function (array $item) use ($published): array {
+            $references = is_string($item['related'] ?? null) ? json_decode($item['related'], true) : null;
+            $item['related'] = array_values(array_filter(array_map(
+                static fn (mixed $reference): ?array => is_string($reference) ? ($published[$reference] ?? null) : null,
+                is_array($references) ? $references : [],
+            )));
+
+            return $item;
+        }, $items);
     }
 
     /**
