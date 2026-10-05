@@ -226,6 +226,43 @@ final class CareersTest extends DatabaseTestCase
         self::assertSame(0, (int) self::scalar('SELECT COUNT(*) FROM email_attachments'), 'attachments go with their email');
     }
 
+    public function testTheReportShowsChannelsCampaignsAndReviewTimes(): void
+    {
+        $app = $this->app();
+        $app->handle($this->apply('software-engineer-fellow', ['source' => 'linkedin', 'utm_source' => 'LinkedIn', 'utm_medium' => 'social', 'utm_campaign' => 'pif-2026']));
+        $app->handle($this->apply('hr-officer-fellow', ['source' => 'made-up', 'utm_campaign' => '<script>'], email: 'grace@example.com', ip: '198.51.100.30'));
+        $first = (string) self::scalar("SELECT id FROM job_applications WHERE email = 'ada@example.com'");
+        self::assertSame(['linkedin', 'linkedin', 'social', 'pif-2026'], array_values(self::$pdo->query("SELECT source, utm_source, utm_medium, utm_campaign FROM job_applications WHERE id = '{$first}'")->fetch(\PDO::FETCH_NUM)));
+        self::assertSame([null, null], array_values(self::$pdo->query("SELECT source, utm_campaign FROM job_applications WHERE email = 'grace@example.com'")->fetch(\PDO::FETCH_NUM)), 'unknown values are dropped, not stored');
+
+        $admin = $this->setupAdmin();
+        self::assertSame(200, $this->call('PATCH', "/api/v1/admin/applications/{$first}", ['stage' => 'screening'], $admin)->status());
+        $reviewedAt = self::scalar("SELECT first_reviewed_at FROM job_applications WHERE id = '{$first}'");
+        self::assertNotNull($reviewedAt);
+        $this->call('PATCH', "/api/v1/admin/applications/{$first}", ['stage' => 'shortlisted'], $admin);
+        self::assertSame($reviewedAt, self::scalar("SELECT first_reviewed_at FROM job_applications WHERE id = '{$first}'"), 'only the first review counts');
+
+        $detail = self::decode($this->call('GET', "/api/v1/admin/applications/{$first}", cookie: $admin))['data'];
+        self::assertSame('LinkedIn', $detail['source']['label']);
+        self::assertSame('pif-2026', $detail['campaign']['campaign']);
+
+        $report = $this->call('GET', '/api/v1/admin/applications/report?days=30', cookie: $admin);
+        self::assertSame(200, $report->status(), $report->body());
+        $data = self::decode($report)['data'];
+        self::assertSame(2, $data['total']);
+        self::assertEqualsCanonicalizing(['LinkedIn', 'Not given'], array_column($data['by_source'], 'label'));
+        self::assertEqualsCanonicalizing(['linkedin / social / pif-2026', 'No campaign link'], array_column($data['by_campaign'], 'label'));
+        self::assertEqualsCanonicalizing(['Shortlisted', 'Applied'], array_column($data['by_stage'], 'label'));
+        self::assertSame(['reviewed' => 1, 'on_time' => 1, 'waiting' => 1, 'overdue' => 0], array_intersect_key($data['review'], array_flip(['reviewed', 'on_time', 'waiting', 'overdue'])));
+        self::assertStringNotContainsString('ada@example.com', $report->body(), 'counts only, no personal data');
+    }
+
+    public function testWorkingDaysSkipWeekends(): void
+    {
+        $friday = new \DateTimeImmutable('2026-10-02 15:00:00', new \DateTimeZone('UTC'));
+        self::assertSame('2026-10-06', \Paxofi\CorporateWebsite\Application\Careers\RecruitmentService::addWorkingDays($friday, 2)->format('Y-m-d'), 'Friday + 2 working days = Tuesday');
+    }
+
     public function testRolesAreDraftedPublishedAndClosedInTheStaffArea(): void
     {
         $admin = $this->setupAdmin();

@@ -213,7 +213,7 @@ function DailyChart({ daily }: { daily: AnalyticsReport["daily"] }) {
   );
 }
 
-function RankTable({
+export function RankTable({
   title,
   rows,
   valueLabel,

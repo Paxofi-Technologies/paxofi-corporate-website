@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-/** Applicant privacy notice (D-019). Version 2026-10-04: keep in step with ApplicationInput::PRIVACY_VERSION. */
+/** Applicant privacy notice (D-019). Version 2026-10-05: keep in step with ApplicationInput::PRIVACY_VERSION. */
 export default function ApplicantPrivacy() {
   return (
     <>
@@ -27,7 +27,7 @@ export default function ApplicantPrivacy() {
         <div className="container prose">
           <p>
             This notice covers applications made on careers.paxofi.com to {"Paxofi Technologies LTD"} (“Paxofi”, “we”),
-            including the Paxofi Innovation Fellowship. Version of 4 October 2026.
+            including the Paxofi Innovation Fellowship. Version of 5 October 2026.
           </p>
 
           <h2>What we collect</h2>
@@ -36,6 +36,7 @@ export default function ApplicantPrivacy() {
             <li>the role you apply for and the hours a week you can commit;</li>
             <li>your CV (if you upload one), portfolio and LinkedIn links, and what you tell us about your motivation and experience;</li>
             <li>your confirmation that you are 18 or older and that you have read this notice;</li>
+            <li>if you tell us, how you heard about the role, and the campaign name in the link you followed (for example a LinkedIn post), so we know which channels reach good candidates;</li>
             <li>your IP address and browser user-agent, to protect the form against spam and abuse.</li>
           </ul>
           <p>

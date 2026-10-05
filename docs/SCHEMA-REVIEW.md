@@ -67,6 +67,7 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | | cv_reference, cv_filename, cv_media_type, cv_size | file name in `MEDIA_STORAGE_PATH/applications` | yes (the CV) | File deleted with the row (retention and erase) |
 | | privacy_version, stage, stage_changed_at, closed_at, evidence_scores JSON, interview_scores JSON | | – | OK; indexes (stage, created_at), (closed_at), (email, created_at) |
 | | source_ip, user_agent | VARCHAR(45) / VARCHAR(255) NULL | yes | Cleared after 90 days |
+| | source, utm_source, utm_medium, utm_campaign, first_reviewed_at (016) | VARCHAR(32) / VARCHAR(80) NULL / TIMESTAMP NULL | – (channel and campaign names) | Deleted with the application; index (created_at) for the report |
 | application_notes | id, application_id FK ON DELETE CASCADE, author_id, kind (note/stage/score/email), body, created_at | | yes (may mention the candidate) | Deleted with the application |
 | application_uploads | token_hash CHAR(64) PK (SHA-256), file_reference, filename, media_type, size_bytes, source_ip, created_at, claimed_at | | yes (until claimed) | Unclaimed files deleted after a day; rows a day after claiming |
 | email_attachments (015) | id, email_id FK → email_outbox ON DELETE CASCADE, filename, media_type, content MEDIUMBLOB, created_at | | yes (e.g. a signed agreement) | Deleted with its email: 30 days after sending, 90 after failing |

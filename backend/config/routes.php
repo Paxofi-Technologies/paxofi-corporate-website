@@ -59,6 +59,7 @@ return [
  ['POST','/api/v1/admin/pages/{page}/publish','admin','put the page draft live','content.publish'],
  ['POST','/api/v1/admin/pages/{page}/revisions/{revision}/restore','admin','copy an earlier page version into the draft','content.edit'],
  ['GET','/api/v1/admin/applications','admin','applications by stage, role or search (D-019)','recruitment.read'],
+ ['GET','/api/v1/admin/applications/report','admin','recruitment report: applications by role, stage, channel and campaign; review times (counts only, P3.1)','recruitment.read'],
  ['GET','/api/v1/admin/applications/{id}','admin','application with scorecards, notes and email templates','recruitment.read'],
  ['GET','/api/v1/admin/applications/{id}/cv','admin','download the CV (audited)','recruitment.read'],
  ['PATCH','/api/v1/admin/applications/{id}','admin','move to another stage','recruitment.manage'],

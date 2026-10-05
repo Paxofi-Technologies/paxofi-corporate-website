@@ -80,6 +80,81 @@ final class RecruitmentService
         ];
     }
 
+    /** Acknowledge (move on from "Applied") within 2 working days (RB-19). */
+    public const REVIEW_TARGET_WORKING_DAYS = 2;
+    private const REPORT_PERIODS = [7, 30, 90];
+
+    /**
+     * The recruitment report (P3.1): applications by role, stage, channel and
+     * campaign, and how quickly new applications are reviewed. Counts only.
+     *
+     * @param array<string, mixed> $query
+     * @return array<string, mixed>
+     */
+    public function report(array $query): array
+    {
+        $days = (int) ($query['days'] ?? 30);
+        $days = in_array($days, self::REPORT_PERIODS, true) ? $days : 0;
+        $now = ($this->clock)();
+        $data = $this->applications->report($days === 0 ? null : $now->modify("-{$days} days"));
+        $stageLabel = static fn (?string $key): string => ($key !== null ? ApplicationStage::tryFrom($key)?->label() : null) ?? (string) $key;
+        $sourceLabel = static fn (?string $key): string => $key === null ? 'Not given' : (ApplicationInput::SOURCES[$key] ?? $key);
+        $label = static fn (array $rows, Closure $name): array => array_map(static fn (array $row): array => ['key' => $row['key'], 'label' => $name($row['key']), 'count' => $row['count']], $rows);
+
+        $reviewed = 0;
+        $onTime = 0;
+        $waiting = 0;
+        $overdue = 0;
+        $hours = [];
+        foreach ($data['review_times'] as $times) {
+            $created = new DateTimeImmutable($times['created_at'], new \DateTimeZone('UTC'));
+            $due = self::addWorkingDays($created, self::REVIEW_TARGET_WORKING_DAYS);
+            if ($times['first_reviewed_at'] === null) {
+                $waiting++;
+                $overdue += $now > $due ? 1 : 0;
+                continue;
+            }
+            $reviewedAt = new DateTimeImmutable($times['first_reviewed_at'], new \DateTimeZone('UTC'));
+            $reviewed++;
+            $onTime += $reviewedAt <= $due ? 1 : 0;
+            $hours[] = max(0, ($reviewedAt->getTimestamp() - $created->getTimestamp()) / 3600);
+        }
+        sort($hours);
+        $median = $hours === [] ? null : (count($hours) % 2 === 1 ? $hours[intdiv(count($hours), 2)] : ($hours[count($hours) / 2 - 1] + $hours[count($hours) / 2]) / 2);
+
+        return [
+            'days' => $days === 0 ? null : $days,
+            'total' => $data['total'],
+            'by_role' => $label($data['by_role'], static fn (?string $k): string => (string) $k),
+            'by_stage' => $label($data['by_stage'], $stageLabel),
+            'by_source' => $label($data['by_source'], $sourceLabel),
+            'by_campaign' => $label($data['by_campaign'], static fn (?string $k): string => $k ?? 'No campaign link'),
+            'by_day' => array_values(array_map(static fn (array $row): array => ['day' => (string) $row['key'], 'count' => $row['count']], array_reverse($data['by_day']))),
+            'review' => [
+                'target_working_days' => self::REVIEW_TARGET_WORKING_DAYS,
+                'reviewed' => $reviewed,
+                'on_time' => $onTime,
+                'waiting' => $waiting,
+                'overdue' => $overdue,
+                'median_hours' => $median === null ? null : round($median, 1),
+            ],
+        ];
+    }
+
+    /** The moment N working days (Monday to Friday, Lagos time) after the given one. */
+    public static function addWorkingDays(DateTimeImmutable $from, int $days): DateTimeImmutable
+    {
+        $at = $from->setTimezone(new \DateTimeZone('Africa/Lagos'));
+        while ($days > 0) {
+            $at = $at->modify('+1 day');
+            if ((int) $at->format('N') <= 5) {
+                $days--;
+            }
+        }
+
+        return $at;
+    }
+
     /** @return array<string, mixed> */
     public function get(string $id): array
     {
@@ -99,6 +174,8 @@ final class RecruitmentService
             'linkedin_url' => $row['linkedin_url'],
             'motivation' => $row['motivation'],
             'experience' => $row['experience'],
+            'source' => $row['source'] === null ? null : ['value' => $row['source'], 'label' => ApplicationInput::SOURCES[$row['source']] ?? $row['source']],
+            'campaign' => $row['utm_source'] === null && $row['utm_campaign'] === null ? null : ['source' => $row['utm_source'], 'medium' => $row['utm_medium'], 'campaign' => $row['utm_campaign']],
             'cv' => $row['cv_reference'] === null ? null : ['filename' => $row['cv_filename'], 'size_bytes' => (int) $row['cv_size'], 'media_type' => $row['cv_media_type']],
             'stage' => $stage->value,
             'stage_label' => $stage->label(),

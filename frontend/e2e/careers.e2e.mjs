@@ -95,12 +95,16 @@ describe("careers site", () => {
   test("a candidate applies with a CV and gets a reference", async () => {
     const page = await newPage();
     const seen = await mockApplyApi(page, { apply: () => ({ status: 201, body: { data: { reference: "PIF-7KQ3MZ", role: ROLE.title } } }) });
-    await page.goto(`${BASE}/roles/${ROLE.slug}`);
+    // Arrives from a tagged campaign link on the home page, then opens the role.
+    await page.goto(`${BASE}/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026`);
+    await page.getByRole("link", { name: ROLE.title }).click();
+    await page.waitForURL(`**/roles/${ROLE.slug}`);
     assert.equal(await page.locator("h1").textContent(), ROLE.title);
     assert.ok(await page.getByText("Unpaid fellowship: no stipend or salary").isVisible());
     await assertAccessible(page, "role page");
 
     await fillApplication(page);
+    await page.getByLabel("How did you hear about this role? (optional)").selectOption("linkedin");
     await page.getByLabel(/^CV/).setInputFiles({ name: "Ada CV.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7\n%%EOF\n") });
     await page.getByRole("button", { name: "Submit application" }).click();
     await page.getByRole("heading", { name: "Application received" }).waitFor();
@@ -113,6 +117,8 @@ describe("careers site", () => {
     assert.equal(seen.apply.privacy_consent, true);
     assert.equal(seen.apply.hours_per_week, 20);
     assert.equal(seen.apply.website, "", "honeypot left empty");
+    assert.equal(seen.apply.source, "linkedin");
+    assert.deepEqual([seen.apply.utm_source, seen.apply.utm_medium, seen.apply.utm_campaign], ["linkedin", "social", "pif-2026"], "the campaign of the landing link is kept");
     await assertAccessible(page, "confirmation");
     await page.context().close();
   });

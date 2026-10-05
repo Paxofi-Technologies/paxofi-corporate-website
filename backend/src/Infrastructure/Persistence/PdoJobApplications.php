@@ -28,9 +28,9 @@ final class PdoJobApplications implements JobApplications
     {
         $this->write(
             'INSERT INTO job_applications (id, reference, opportunity_id, full_name, email, phone, location, hours_per_week, portfolio_url, linkedin_url, motivation, experience,
-                 cv_reference, cv_filename, cv_media_type, cv_size, privacy_version, source_ip, user_agent)
+                 cv_reference, cv_filename, cv_media_type, cv_size, privacy_version, source_ip, user_agent, source, utm_source, utm_medium, utm_campaign)
              VALUES (:id, :reference, :role, :name, :email, :phone, :location, :hours, :portfolio, :linkedin, :motivation, :experience,
-                 :cv, :cv_name, :cv_type, :cv_size, :privacy, :ip, :ua)',
+                 :cv, :cv_name, :cv_type, :cv_size, :privacy, :ip, :ua, :source, :utm_source, :utm_medium, :utm_campaign)',
             [
                 'id' => $id, 'reference' => $reference, 'role' => $roleId, 'name' => $values['full_name'], 'email' => $values['email'],
                 'phone' => $values['phone'], 'location' => $values['location'], 'hours' => $values['hours_per_week'],
@@ -38,6 +38,7 @@ final class PdoJobApplications implements JobApplications
                 'cv' => $cv['file_reference'] ?? null, 'cv_name' => $cv['filename'] ?? null, 'cv_type' => $cv['media_type'] ?? null, 'cv_size' => $cv['size_bytes'] ?? null,
                 'privacy' => \Paxofi\CorporateWebsite\Application\Careers\ApplicationInput::PRIVACY_VERSION,
                 'ip' => $context->clientIp, 'ua' => $context->userAgent === null ? null : mb_substr($context->userAgent, 0, 255),
+                'source' => $values['source'] ?? null, 'utm_source' => $values['utm_source'] ?? null, 'utm_medium' => $values['utm_medium'] ?? null, 'utm_campaign' => $values['utm_campaign'] ?? null,
             ],
         );
     }
@@ -142,8 +143,10 @@ final class PdoJobApplications implements JobApplications
     public function setStage(string $id, ApplicationStage $stage, DateTimeImmutable $now): void
     {
         $this->write(
-            'UPDATE job_applications SET stage = :stage, stage_changed_at = :now, closed_at = :closed WHERE id = :id',
-            ['id' => $id, 'stage' => $stage->value, 'now' => $now->format('Y-m-d H:i:s'), 'closed' => $stage->isClosed() ? $now->format('Y-m-d H:i:s') : null],
+            "UPDATE job_applications SET stage = :stage, stage_changed_at = :now, closed_at = :closed,
+                first_reviewed_at = CASE WHEN first_reviewed_at IS NULL AND :stage2 <> 'applied' THEN :now2 ELSE first_reviewed_at END
+             WHERE id = :id",
+            ['id' => $id, 'stage' => $stage->value, 'stage2' => $stage->value, 'now' => $now->format('Y-m-d H:i:s'), 'now2' => $now->format('Y-m-d H:i:s'), 'closed' => $stage->isClosed() ? $now->format('Y-m-d H:i:s') : null],
         );
     }
 
@@ -192,5 +195,28 @@ final class PdoJobApplications implements JobApplications
         }
 
         return $row;
+    }
+
+    public function report(?DateTimeImmutable $since): array
+    {
+        $where = $since === null ? '1 = 1' : 'a.created_at >= :since';
+        $parameters = $since === null ? [] : ['since' => $since->format('Y-m-d H:i:s')];
+        $group = fn (string $expression): array => array_map(
+            static fn (array $row): array => ['key' => $row['k'] === null ? null : (string) $row['k'], 'count' => (int) $row['n']],
+            $this->select("SELECT {$expression} AS k, COUNT(*) AS n FROM job_applications a JOIN career_opportunities o ON o.id = a.opportunity_id WHERE {$where} GROUP BY k ORDER BY n DESC, k", $parameters),
+        );
+
+        return [
+            'total' => (int) ($this->select("SELECT COUNT(*) AS n FROM job_applications a WHERE {$where}", $parameters)[0]['n'] ?? 0),
+            'by_role' => $group('o.title'),
+            'by_stage' => $group('a.stage'),
+            'by_source' => $group('a.source'),
+            'by_campaign' => $group("CASE WHEN a.utm_source IS NULL AND a.utm_campaign IS NULL THEN NULL ELSE CONCAT_WS(' / ', a.utm_source, a.utm_medium, a.utm_campaign) END"),
+            'by_day' => $group('DATE(a.created_at)'),
+            'review_times' => array_map(
+                static fn (array $row): array => ['created_at' => (string) $row['created_at'], 'first_reviewed_at' => $row['first_reviewed_at'] === null ? null : (string) $row['first_reviewed_at']],
+                $this->select("SELECT a.created_at, a.first_reviewed_at FROM job_applications a WHERE {$where}", $parameters),
+            ),
+        ];
     }
 }

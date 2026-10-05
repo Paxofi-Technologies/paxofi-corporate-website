@@ -176,6 +176,8 @@ export type ApplicationDetail = {
   linkedin_url: string | null;
   motivation: string;
   experience: string;
+  source: { value: string; label: string } | null;
+  campaign: { source: string | null; medium: string | null; campaign: string | null } | null;
   cv: { filename: string; size_bytes: number; media_type: string } | null;
   stage: string;
   stage_label: string;
@@ -189,6 +191,18 @@ export type ApplicationDetail = {
   scorecards: Record<"evidence" | "interview", ScorecardDefinition>;
   email_templates: EmailTemplate[];
   email_available: boolean;
+};
+
+/** The recruitment report (P3.1): counts only. */
+export type RecruitmentReportData = {
+  days: number | null;
+  total: number;
+  by_role: { key: string | null; label: string; count: number }[];
+  by_stage: { key: string | null; label: string; count: number }[];
+  by_source: { key: string | null; label: string; count: number }[];
+  by_campaign: { key: string | null; label: string; count: number }[];
+  by_day: { day: string; count: number }[];
+  review: { target_working_days: number; reviewed: number; on_time: number; waiting: number; overdue: number; median_hours: number | null };
 };
 
 /** Roles on careers.paxofi.com (D-018). */

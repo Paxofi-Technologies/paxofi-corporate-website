@@ -14,6 +14,36 @@ export const CV_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlform
 export const HOURS_OPTIONS = [15, 20, 25, 30, 35, 40] as const;
 export const RECRUITMENT_EMAIL = "hr@paxofi.com";
 
+/** "How did you hear about this role?" (P3.1); the API keeps the same keys (ApplicationInput::SOURCES). */
+export const SOURCE_OPTIONS = [
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "x", label: "X (Twitter)" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "referral", label: "A friend or colleague" },
+  { value: "school", label: "University, school or bootcamp" },
+  { value: "job_board", label: "A job board" },
+  { value: "paxofi_website", label: "The Paxofi website" },
+  { value: "search", label: "A search engine" },
+  { value: "other", label: "Somewhere else" },
+] as const;
+
+export type Campaign = { utm_source?: string; utm_medium?: string; utm_campaign?: string };
+export const CAMPAIGN_STORAGE_KEY = "paxofi.careers.campaign";
+const CAMPAIGN_KEYS = ["utm_source", "utm_medium", "utm_campaign"] as const;
+
+/** Campaign tags from a link such as ?utm_source=linkedin&utm_campaign=pif-2026; only safe characters are kept. */
+export function campaignFrom(search: string): Campaign | null {
+  const params = new URLSearchParams(search);
+  const campaign: Campaign = {};
+  for (const key of CAMPAIGN_KEYS) {
+    const value = (params.get(key) ?? "").trim().toLowerCase();
+    if (/^[a-z0-9._-]{1,80}$/.test(value)) campaign[key] = value;
+  }
+  return Object.keys(campaign).length > 0 ? campaign : null;
+}
+
 export type CareerRole = {
   slug: string;
   code: string;

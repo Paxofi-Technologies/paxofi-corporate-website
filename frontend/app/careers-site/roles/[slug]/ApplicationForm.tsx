@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
-import { CV_ACCEPT, HOURS_OPTIONS, RECRUITMENT_EMAIL, applyUrl, checkCvFile, cvUploadUrl, describeApplicationFailure } from "@/lib/careers";
+import { CAMPAIGN_STORAGE_KEY, CV_ACCEPT, type Campaign, HOURS_OPTIONS, RECRUITMENT_EMAIL, SOURCE_OPTIONS, applyUrl, campaignFrom, checkCvFile, cvUploadUrl, describeApplicationFailure } from "@/lib/careers";
+
+/** The campaign of the link this visit started from (CampaignCapture), or of this page's own address. */
+function currentCampaign(): Campaign {
+  try {
+    const stored = sessionStorage.getItem(CAMPAIGN_STORAGE_KEY);
+    if (stored) return campaignFrom(new URLSearchParams(JSON.parse(stored) as Record<string, string>).toString()) ?? {};
+  } catch {
+    // Storage blocked or unreadable.
+  }
+  return campaignFrom(window.location.search) ?? {};
+}
 
 type Props = { apiBase?: string; slug: string; roleTitle: string; evidenceHint: string };
 type Status = "idle" | "uploading" | "sending" | "error";
@@ -73,6 +84,8 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
       age_confirmed: data.get("age_confirmed") === "yes",
       privacy_consent: data.get("privacy_consent") === "yes",
       website: text("website"),
+      source: text("source"),
+      ...currentCampaign(),
     };
     try {
       const response = await fetch(applyUrl(apiBase, slug), {
@@ -155,6 +168,17 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
           <textarea name="experience" rows={5} minLength={50} maxLength={3000} required aria-invalid={invalid("experience")} aria-describedby={describedBy("experience", true)} />
           <span id="experience-hint" className="form-note">Projects, coursework, volunteering or jobs that show you can do this role. 50 to 3,000 characters.</span>
           {errorText("experience")}
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>One more thing</legend>
+        <label>
+          How did you hear about this role? (optional)
+          <select name="source" defaultValue="">
+            <option value="">Choose one</option>
+            {SOURCE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
         </label>
       </fieldset>
 

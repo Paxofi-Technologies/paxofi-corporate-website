@@ -47,4 +47,12 @@ interface JobApplications
     public function notes(string $applicationId): array;
 
     public function delete(string $id): void;
+
+    /**
+     * Counts for the recruitment report (P3.1), for applications received
+     * since the time given (all when null). No personal data.
+     *
+     * @return array{total: int, by_role: list<array{key: ?string, count: int}>, by_stage: list<array{key: ?string, count: int}>, by_source: list<array{key: ?string, count: int}>, by_campaign: list<array{key: ?string, count: int}>, by_day: list<array{key: ?string, count: int}>, review_times: list<array{created_at: string, first_reviewed_at: ?string}>}
+     */
+    public function report(?DateTimeImmutable $since): array;
 }
