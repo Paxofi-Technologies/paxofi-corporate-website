@@ -53,3 +53,10 @@ test("application errors and CV checks", () => {
   assert.match(checkCvFile("cv.doc", 1000) ?? "", /PDF or Word/);
   assert.match(checkCvFile("cv.pdf", 6 * 1024 * 1024) ?? "", /5 MB/);
 });
+
+test("campaign tags are read from links, and anything unsafe is dropped", async () => {
+  const { campaignFrom } = await import("../lib/careers.ts");
+  assert.deepEqual(campaignFrom("?utm_source=LinkedIn&utm_medium=social&utm_campaign=pif-2026&ref=x"), { utm_source: "linkedin", utm_medium: "social", utm_campaign: "pif-2026" });
+  assert.deepEqual(campaignFrom("?utm_campaign=%3Cscript%3E&utm_source=whatsapp"), { utm_source: "whatsapp" });
+  assert.equal(campaignFrom(""), null);
+});

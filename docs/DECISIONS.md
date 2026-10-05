@@ -362,3 +362,20 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - The application's history records the file name, not the file.
 - Queued emails now use the application's clock for their send time, so the outbox and the sender always agree on what is due.
 
+## D-020 — Recruitment campaign tracking and report (P3.1, 5 Oct 2026)
+
+**Decision (CTO; Phase 3 started on the owner's go-ahead, 5 Oct 2026):** before the PIF 2026 campaign, recruitment can see which channels and campaign links bring applicants, and whether new applications are reviewed within the 2-working-day target.
+
+- **Channel:** an optional question on the application form: *How did you hear about this role?* There are 11 fixed answers, from LinkedIn to "Somewhere else". Unknown values are dropped.
+- **Campaign:** tags on careers links, `utm_source`, `utm_medium` and `utm_campaign`, for example `https://careers.paxofi.com/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026`.
+  - The careers site remembers them for the browser tab (sessionStorage, no cookie), so an application made a few pages later still records the campaign.
+  - Only lower-case letters, digits, `.`, `_` and `-` are kept, up to 80 characters.
+- **Review time:** `first_reviewed_at` is set the first time an application leaves *Applied*. The target is 2 working days, Monday to Friday, Lagos time.
+- **Report** (staff area → **Recruitment → See the recruitment report**; `recruitment.read`):
+  - applications for the last 7, 30 or 90 days, or all;
+  - broken down by channel, campaign link, role, current stage and day;
+  - the share reviewed on time, the median hours to first review, and how many are waiting or overdue.
+  - It shows counts only, with no names or contact details.
+- **Data:** migration 016 adds the columns to `job_applications`, so they are deleted with the application (12 months). The applicant privacy notice now names them (version 2026-10-05).
+- **Not chosen:** page-view tracking on the careers site. Applications per channel answer the campaign question with less data, and the corporate analytics (D-014) stays as it is.
+

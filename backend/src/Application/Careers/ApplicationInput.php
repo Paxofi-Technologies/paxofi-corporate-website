@@ -14,9 +14,23 @@ use Paxofi\CorporateWebsite\Application\Mail\Email;
  */
 final class ApplicationInput
 {
-    public const PRIVACY_VERSION = '2026-10-04';
+    public const PRIVACY_VERSION = '2026-10-05';
     public const HONEYPOT_FIELD = 'website';
     public const HOURS = [15, 20, 25, 30, 35, 40];
+    /** "How did you hear about this role?" (optional; P3.1). */
+    public const SOURCES = [
+        'linkedin' => 'LinkedIn',
+        'x' => 'X (Twitter)',
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'whatsapp' => 'WhatsApp',
+        'referral' => 'A friend or colleague',
+        'school' => 'University, school or bootcamp',
+        'job_board' => 'A job board',
+        'paxofi_website' => 'The Paxofi website',
+        'search' => 'A search engine',
+        'other' => 'Somewhere else',
+    ];
 
     /** @return array<string, mixed> */
     public static function validate(mixed $input): array
@@ -81,12 +95,25 @@ final class ApplicationInput
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
         }
+        $source = is_string($input['source'] ?? null) ? $input['source'] : '';
+        $values['source'] = isset(self::SOURCES[$source]) ? $source : null;
+        foreach (['utm_source', 'utm_medium', 'utm_campaign'] as $tag) {
+            $values[$tag] = self::campaignTag($input[$tag] ?? null);
+        }
         foreach (['phone', 'portfolio_url', 'linkedin_url', 'cv_token'] as $optional) {
             $values[$optional] = $values[$optional] === '' ? null : $values[$optional];
         }
         $values['likely_spam'] = trim((string) ($input[self::HONEYPOT_FIELD] ?? '')) !== '';
 
         return $values;
+    }
+
+    /** A campaign tag from the link the candidate followed: lower-case letters, digits, "-", "_" and ".", up to 80; anything else is dropped. */
+    public static function campaignTag(mixed $value): ?string
+    {
+        $value = is_string($value) ? strtolower(trim($value)) : '';
+
+        return preg_match('/^[a-z0-9._-]{1,80}$/', $value) === 1 ? $value : null;
     }
 
     private static function isWebAddress(string $value): bool

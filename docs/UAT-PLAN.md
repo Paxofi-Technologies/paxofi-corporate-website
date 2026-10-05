@@ -248,3 +248,14 @@ Run after guide Step 10d. About 30 minutes. Use your own email address as the ca
 
 Record sign-off ("Careers UAT passed") in Asana before any recruitment campaign goes out.
 
+## Recruitment campaign tracking (P3.1, D-020)
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| RT1 | Campaign link | Open `https://careers.paxofi.com/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026`, open a role and apply, choosing *LinkedIn* under *How did you hear about this role?* | The application in **Recruitment** shows *Heard about it: LinkedIn* and *Campaign link: linkedin / social / pif-2026* | |
+| RT2 | Report | **Recruitment → See the recruitment report** | The application counts under *By channel*, *By campaign link*, *By role* and *By stage now*; *Waiting for review* is 1 | |
+| RT3 | Review time | Move the application to *Screening*, then reopen the report | *Reviewed within 2 working days* shows 100%; *Waiting for review* goes down by 1 | |
+| RT4 | No campaign | Apply from `https://careers.paxofi.com` without tags and without choosing a channel | Counted as *No campaign link* and *Not given* | |
+
+Then erase the test applications. Campaign links to use: see RB-19.
+

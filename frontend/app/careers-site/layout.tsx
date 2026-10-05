@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { ArrowUpRight, Mail } from "lucide-react";
 import Logo from "@/components/Logo";
+import CampaignCapture from "./CampaignCapture";
 import { RECRUITMENT_EMAIL, careersSiteUrl } from "@/lib/careers";
 import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
 import { isStaging } from "@/lib/staging";
@@ -47,6 +48,7 @@ export default async function CareersLayout({ children }: { children: React.Reac
         </div>
       </header>
       <main id="main" tabIndex={-1}>{children}</main>
+      <CampaignCapture />
       <footer className="footer">
         <div className="container careers-footer">
           <div>
