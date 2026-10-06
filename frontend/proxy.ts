@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isCareersSite, sectionPath } from "@/lib/careers";
 import { resolveApiBase } from "@/lib/contact";
 import { contentSecurityPolicy, createNonce } from "@/lib/csp";
+import { loadRedirects, redirectTarget } from "@/lib/redirects";
 import { isStaging, stagingGate } from "@/lib/staging";
 
 // Sets the Content-Security-Policy on every page response, per request:
@@ -10,13 +11,27 @@ import { isStaging, stagingGate } from "@/lib/staging";
 // - connect-src from the runtime API_BASE_URL, which next.config.ts headers
 //   cannot read after the build.
 // The development server needs eval for hot reloading, so CSP is production-only.
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Staging copy (D-013): password first, for every path, before anything else.
   const gate = stagingGate(request.headers.get("authorization"));
   if (gate) return new NextResponse(gate.body, { status: gate.status, headers: gate.headers });
-  const response = route(request);
+  const response = (await retired(request)) ?? route(request);
   // Staging is never indexed, whatever the page says.
   if (isStaging()) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+// Retired or renamed pages (D-025): a permanent redirect to their replacement.
+// Corporate site only; the staff area, API and Next's own files are never redirected.
+async function retired(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname, search } = request.nextUrl;
+  if (isCareersSite() || (request.method !== "GET" && request.method !== "HEAD") || /^\/(admin|api|_next)(\/|$)/.test(pathname)) return null;
+  const apiBase = resolveApiBase(process.env);
+  if (!apiBase) return null;
+  const to = redirectTarget(await loadRedirects(apiBase), pathname, search);
+  if (!to) return null;
+  const response = NextResponse.redirect(new URL(to, request.url), 301);
+  response.headers.set("Content-Type", "text/plain; charset=utf-8");
   return response;
 }
 

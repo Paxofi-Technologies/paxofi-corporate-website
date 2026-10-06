@@ -211,6 +211,39 @@ export type ArticleAdminDetail = ArticleAdminSummary & {
 };
 
 /** The recruitment report (P3.1): counts only. */
+/** Content review dates (D-025). */
+export type ReviewStatus = "overdue" | "due" | "none" | "ok";
+export type ReviewItem = {
+  type: "page" | "product" | "service" | "industry" | "article" | "resource";
+  type_label: string;
+  key: string;
+  title: string;
+  path: string | null;
+  changed_at: string | null;
+  review_by: string | null;
+  last_reviewed_at: string | null;
+  last_reviewed_by: string | null;
+  note: string | null;
+  status: ReviewStatus;
+};
+export const REVIEW_STATUSES: Record<ReviewStatus, { label: string; pill: string }> = {
+  overdue: { label: "Overdue", pill: "failure" },
+  due: { label: "Due soon", pill: "in_progress" },
+  none: { label: "No date", pill: "draft" },
+  ok: { label: "Up to date", pill: "active" },
+};
+
+/** Redirects for retired pages (D-025). */
+export type RedirectItem = { id: string; from: string; to: string; note: string | null; created_by: string | null; created_at: string; updated_at: string };
+
+/** "2027-04-30" as "30 Apr 2027". */
+export function formatDay(value: string | null | undefined): string {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(Date.UTC(+match[1], +match[2] - 1, +match[3])));
+}
+
 export type RecruitmentReportData = {
   days: number | null;
   total: number;
