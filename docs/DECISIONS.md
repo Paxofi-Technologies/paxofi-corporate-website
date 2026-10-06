@@ -453,3 +453,25 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **DNS:** `corporate`, `www.corporate`, `careers`, `staging.corporate` and `api-staging` are *DNS only*. Two-level names such as `www.corporate` and `staging.corporate` must stay DNS only: Cloudflare's free certificate covers one level only. `api` may be proxied, with SSL/TLS mode **Full (strict)**.
 - **Privacy:** the website privacy page has a *Network protection* section, and the applicant privacy notice (version 2026-10-06) says requests pass through Cloudflare.
 - **Not chosen:** trusting `X-Forwarded-For` from anyone (can be forged), or a setting to switch the rule off (nothing to gain: the header is only believed from Cloudflare).
+
+## D-025 — Content freshness and retirement (P3.6, 6 Oct 2026)
+
+**Decision (CTO; the owner said "build P3.6" on 6 Oct 2026; SRS 14.19 content review and 14.24 retirement):** the staff area tracks when each piece of public content should next be checked, and keeps old addresses working when a page is retired or renamed.
+
+- **Reviews (Content → Reviews):**
+  - Lists everything live on the website: the text of each page (including the menu and footer), published products, services, industries and articles, and documents on the Resources page.
+  - Each item shows its review date and a status: *Overdue*, *Due soon* (within 30 days), *No date* or *Up to date*. Overdue items come first.
+  - **Mark reviewed** records who checked it and moves the next date 3, 6 or 12 months on (6 by default). A date and a short note can also be set by hand, from today up to three years ahead.
+  - Who: anyone who edits content (Administrator, Business Development). Audited `content_review.*`.
+  - Dates are Lagos calendar days.
+- **Reminder:** administrators get one email a week while anything is overdue or due within 14 days. It is sent by the existing `bin/send-mail.php` cron job, so there is nothing new to schedule. No email is sent when nothing is due or email is not set up.
+- **Redirects (Content → Redirects):**
+  - An administrator adds *old address → new address*. The new address is another page on the site or a full `https://` link.
+  - The website answers the old address with a permanent redirect (301) and keeps any campaign tags. It reads the list from the API at most once a minute, so a change takes effect within a minute. If the API cannot be read, the last list is kept.
+  - Refused: built-in pages (/about, /contact, …), the staff area and API, live industry and article pages, redirects to themselves, and chains (a redirect pointing at another redirect). Up to 500 redirects. Corporate site only.
+  - Editors can see redirects; only administrators add or delete them. Audited `redirect.*`.
+- **Retiring a page:** hide it (or take it off the Resources page), then add a redirect from its address to the closest replacement (RB-24).
+- **Data:** migration 020 adds `content_reviews` and `redirects`. No personal data beyond the staff member who reviewed or added an item.
+- **Not chosen:**
+  - Retiring content automatically on its review date: a missed review should prompt a person, not take a page down.
+  - Redirects in the web server (.htaccess): they would need file access for every change and be lost when moving to the VPS.

@@ -43,6 +43,9 @@ use Paxofi\CorporateWebsite\Application\Contact\EnquiryValidator;
 use Paxofi\CorporateWebsite\Application\Content\ContentService;
 use Paxofi\CorporateWebsite\Application\Media\ImageProcessor;
 use Paxofi\CorporateWebsite\Application\Media\MediaLibrary;
+use Paxofi\CorporateWebsite\Application\Freshness\ContentReviewReminder;
+use Paxofi\CorporateWebsite\Application\Freshness\ContentReviews;
+use Paxofi\CorporateWebsite\Application\Freshness\Redirects;
 use Paxofi\CorporateWebsite\Database\Connection;
 use Paxofi\CorporateWebsite\Http\AdminGuard;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
@@ -52,6 +55,8 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareerRolesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRedirectsController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminReviewsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPagesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPasswordResetController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRecruitmentController;
@@ -66,6 +71,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
 use Paxofi\CorporateWebsite\Http\Controllers\HealthController;
 use Paxofi\CorporateWebsite\Http\Controllers\MediaController;
+use Paxofi\CorporateWebsite\Http\Controllers\RedirectsController;
 use Paxofi\CorporateWebsite\Http\Controllers\ResourcesController;
 use Paxofi\CorporateWebsite\Http\Controllers\NavigationController;
 use Paxofi\CorporateWebsite\Http\Controllers\PageCopyController;
@@ -98,6 +104,8 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoMediaRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPageCopyRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoSessionStore;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoStaffRepository;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentReviews;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoRedirects;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoTwoFactorStore;
 use Paxofi\CorporateWebsite\Infrastructure\Security\NativeStaffPasswordHasher;
 use Paxofi\CorporateWebsite\Infrastructure\Security\OpenSslSecretEncryption;
@@ -133,6 +141,7 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
         ['GET', '/api/v1/resources'],
+        ['GET', '/api/v1/redirects'],
         ['POST', '/api/v1/analytics/pageview'],
         ['GET', '/api/v1/pages/{page}'],
     ];
@@ -198,6 +207,12 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/articles/{id}/publish'],
         ['POST', '/api/v1/admin/articles/{id}/visibility'],
         ['DELETE', '/api/v1/admin/articles/{id}'],
+        ['GET', '/api/v1/admin/reviews'],
+        ['POST', '/api/v1/admin/reviews/{type}/{key}'],
+        ['GET', '/api/v1/admin/redirects'],
+        ['POST', '/api/v1/admin/redirects'],
+        ['PATCH', '/api/v1/admin/redirects/{id}'],
+        ['DELETE', '/api/v1/admin/redirects/{id}'],
         ['GET', '/api/v1/admin/career-roles'],
         ['POST', '/api/v1/admin/career-roles'],
         ['GET', '/api/v1/admin/career-roles/{id}'],
@@ -304,6 +319,7 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
         $router->get('/api/v1/resources', $this->lazy(fn (): Controller => new ResourcesController($this->mediaLibrary())));
+        $router->get('/api/v1/redirects', $this->lazy(fn (): Controller => new RedirectsController($this->redirects())));
         $router->get('/api/v1/pages/{page}', $this->lazy(fn (): Controller => new PageCopyController($this->pageCopyEditor())));
         $articles = fn (): ArticlesController => new ArticlesController(new ArticleService(new PdoArticles($this->database), $this->clock));
         $router->get('/api/v1/articles', static fn (HttpRequest $r): HttpResponse => $articles()->list($r));
@@ -416,6 +432,16 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/admin/articles/{id}/visibility', static fn (HttpRequest $r): HttpResponse => $articleEditor()->visibility($r));
         $router->add('DELETE', '/api/v1/admin/articles/{id}', static fn (HttpRequest $r): HttpResponse => $articleEditor()->delete($r));
 
+        $reviews = fn (): AdminReviewsController => new AdminReviewsController($this->contentReviews(), $this->adminGuard());
+        $router->get('/api/v1/admin/reviews', static fn (HttpRequest $r): HttpResponse => $reviews()->list($r));
+        $router->post('/api/v1/admin/reviews/{type}/{key}', static fn (HttpRequest $r): HttpResponse => $reviews()->update($r));
+
+        $redirects = fn (): AdminRedirectsController => new AdminRedirectsController($this->redirects(), $this->adminGuard());
+        $router->get('/api/v1/admin/redirects', static fn (HttpRequest $r): HttpResponse => $redirects()->list($r));
+        $router->post('/api/v1/admin/redirects', static fn (HttpRequest $r): HttpResponse => $redirects()->create($r));
+        $router->add('PATCH', '/api/v1/admin/redirects/{id}', static fn (HttpRequest $r): HttpResponse => $redirects()->update($r));
+        $router->add('DELETE', '/api/v1/admin/redirects/{id}', static fn (HttpRequest $r): HttpResponse => $redirects()->delete($r));
+
         $roles = fn (): AdminCareerRolesController => new AdminCareerRolesController(
             new CareerRoleEditor(new PdoCareerRoles($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), Uuid::v4(...)),
             $this->adminGuard(),
@@ -519,6 +545,23 @@ final class ApiApplication implements HttpHandler
             new LazyTransactionManager($this->database),
             Uuid::v4(...),
         );
+    }
+
+    /** Content review dates (D-025). */
+    private function contentReviews(): ContentReviews
+    {
+        return new ContentReviews(new PdoContentReviews($this->database), PageCopySchema::default(), new PdoAuditRecorder($this->database), $this->clock);
+    }
+
+    /** The weekly "due for review" email, run by bin/send-mail.php (D-025). */
+    public function contentReviewReminder(): ContentReviewReminder
+    {
+        return new ContentReviewReminder($this->contentReviews(), new PdoContentReviews($this->database), $this->outbox, new PdoAuditRecorder($this->database), $this->mail, $this->clock);
+    }
+
+    private function redirects(): Redirects
+    {
+        return new Redirects(new PdoRedirects($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), Uuid::v4(...));
     }
 
     private function adminGuard(): AdminGuard

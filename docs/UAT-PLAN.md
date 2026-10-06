@@ -286,6 +286,20 @@ Run as an Administrator, on staging first, then live. About 20 minutes.
 | IS5 | Edit an industry | **Content → Industries → Education**: change the summary and tick one more related service, **Save draft**, then **Publish changes** | The public page changes only after publishing, and the new related service appears | |
 | IS6 | Menu and phone | Open the site on a phone | *Industries* is in the menu (add it under Page text if your menu was customised); the pages fit the screen | |
 
+## Content reviews and redirects (P3.6, D-025)
+
+Run as an Administrator, on staging first, then live. About 15 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| CR1 | List | **Content → Reviews** | Every page, product, service, industry, published article and Resources document is listed, with *No date* | |
+| CR2 | Mark reviewed | On **Home**: choose *Next in 6 months*, **Mark reviewed** | Status *Up to date*, date six months ahead, *Last reviewed* shows you | |
+| CR3 | Set a date | On **Contact**: **Set a date or note**, pick a date within the next two weeks, add a note, **Save** | Status *Due soon*; the counts at the top change | |
+| CR4 | Reminder | Wait up to a few minutes after CR3 | One email to administrators: "1 website item due for review", with a link to Reviews; no second email the same week | |
+| CR5 | Redirect | **Content → Redirects**: from `/old-test-page` to `/about`, **Add redirect**; after a minute open `https://corporate.paxofi.com/old-test-page` | The About page opens | |
+| CR6 | Refused | Try a redirect from `/about` | Refused: it is a page the website needs | |
+| CR7 | Delete | Delete the test redirect; after a minute open `/old-test-page` | *Page not found* | |
+
 ## Cloudflare visitor addresses (D-024)
 
 Run as an Administrator after deploying, with `api.paxofi.com` proxied (orange cloud). About 5 minutes.

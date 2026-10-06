@@ -265,6 +265,10 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10i — Content reviews and redirects (no server change)
+
+From this release, **Content → Reviews** shows when each page, product, service, industry, article and Resources document should next be checked, and **Content → Redirects** keeps old addresses working when a page is retired (decision D-025, RB-24). The database upgrade (migration 020) adds the two tables it needs. Administrators get a weekly email while anything is due, sent by the existing `send-mail.php` cron job: there is nothing new to schedule. Start by marking the main pages reviewed, so each has a date.
+
 ## Step 10h — Cloudflare (no server change)
 
 From this release the API sees each visitor's own address when `api.paxofi.com` is proxied by Cloudflare (decision D-024, RB-23). Nothing to configure. In Cloudflare, keep `corporate`, `www.corporate`, `careers`, `staging.corporate` and `api-staging` as **DNS only**, and set **SSL/TLS → Full (strict)** if any name is proxied. To check, send a test enquiry and open it under **Enquiries**: its *IP address* should be your own, not Cloudflare's.

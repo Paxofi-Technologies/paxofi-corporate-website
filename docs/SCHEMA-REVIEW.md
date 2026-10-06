@@ -57,6 +57,13 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
 | recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
+## Content freshness (migration 020, D-025)
+
+| Table | Field | Type / constraint | Personal data | Review |
+|---|---|---|---|---|
+| content_reviews | item_type + item_key (PRIMARY KEY), review_by DATE NULL, last_reviewed_at, last_reviewed_by FK → users ON DELETE SET NULL, note VARCHAR(300), updated_at; index (review_by) | 020 | staff member who reviewed | OK; item_type checked by the API (page, product, service, industry, article, resource); rows for deleted items are ignored |
+| redirects | id, from_path VARCHAR(255) UNIQUE (lower-case, no trailing slash), to_path VARCHAR(500), note, created_by FK → users ON DELETE SET NULL, timestamps | 020 | staff member who added it | OK; paths validated by the API (no built-in, staff or live pages, no chains, https only for external links); public endpoint returns only from/to |
+
 ## Resources page (migration 019, D-023)
 
 | Table | Field | Type / constraint | Personal data | Review |
