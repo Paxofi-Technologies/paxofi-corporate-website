@@ -57,6 +57,12 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 | sessions (008) | mfa_pending | TINYINT(1) DEFAULT 0 | – | OK; pending sessions last 5 minutes |
 | recovery_codes (008) | id PK, user_id FK ON DELETE CASCADE, code_hash CHAR(64) (UNIQUE per user), used_at, created_at | 008 | – | OK; SHA-256 only, 50-bit codes; replaced as a set |
 
+## Resources page (migration 019, D-023)
+
+| Table | Field | Type / constraint | Personal data | Review |
+|---|---|---|---|---|
+| media_assets | resource_category, resource_summary, resource_listed_at | VARCHAR(20) NULL / VARCHAR(300) NULL / TIMESTAMP NULL; index (resource_listed_at); category values checked by the API | – | OK; listed while resource_listed_at is set; public query reads only active documents that are listed |
+
 ## Industries and product status (migration 018, D-022)
 
 | Table | Field | Type / constraint | Personal data | Review |
