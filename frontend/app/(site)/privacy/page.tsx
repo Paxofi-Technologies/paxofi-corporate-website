@@ -50,7 +50,7 @@ export default function Privacy() {
           <h2>Counting visits</h2>
           <p>
             To understand which pages are useful, our own server counts page views. Nothing is stored on your device and
-            no other company is involved. For each page view we use only:
+            no analytics company is involved. For each page view we use only:
           </p>
           <ul>
             <li>which page of this website you opened;</li>
@@ -63,6 +63,13 @@ export default function Privacy() {
             deleted at the end of the day, so we cannot recognise you on another day or link a visit to you. We keep
             only daily totals, for 25 months. If your browser sends a Do Not Track or Global Privacy Control signal,
             your visits are not counted at all.
+          </p>
+
+          <h2>Network protection</h2>
+          <p>
+            Requests to our server pass through Cloudflare, a network provider that protects it against attacks and
+            abuse. Cloudflare handles your IP address and each request only to deliver it to us and keep the service
+            secure. It sets no cookies on this website and does not track you for us.
           </p>
 
           <h2>Job applications</h2>
