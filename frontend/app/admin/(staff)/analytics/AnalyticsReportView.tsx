@@ -289,6 +289,7 @@ const PAGE_NAMES: Record<string, string> = {
   "/terms": "Terms",
   "/insights": "News & Insights",
   "/industries": "Industries",
+  "/resources": "Resources",
   "(other)": "Other pages",
 };
 

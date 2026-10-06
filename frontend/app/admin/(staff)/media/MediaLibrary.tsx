@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { can, useAdmin } from "@/components/admin/AdminContext";
 import { FieldShell, FormStatus } from "@/components/admin/AdminForm";
 import { NoAccess } from "@/components/admin/StaffShell";
+import { RESOURCE_CATEGORIES } from "@/lib/resources";
 import {
   AdminApiError,
   MEDIA_ACCEPT,
@@ -58,8 +59,9 @@ export default function MediaLibrary() {
     <>
       <h1 className="admin-title">Media</h1>
       <p className="admin-intro">
-        Pictures and documents for the website. Choose them for a product or service under <strong>Content</strong>. Anyone with a
-        file&apos;s link can open it, so upload only material meant for the public.
+        Pictures and documents for the website. Choose them for a product, service, industry or article under <strong>Content</strong>, or
+        list a document on the public <strong>Resources</strong> page. Anyone with a file&apos;s link can open it, so upload only material
+        meant for the public.
       </p>
       <FormStatus state="success" message={notice} />
       <FormStatus state="error" message={error} />
@@ -323,6 +325,80 @@ function MediaCard({
         ))}
       {canDelete && item.used_by.length > 0 && <span className="form-note">Remove it from the item and publish before deleting it.</span>}
       <FormStatus state="error" message={error} />
+      {!image && <ResourceListing item={item} canPublish={canDelete} onSaved={onSaved} />}
     </li>
+  );
+}
+
+/** A document's place on the public Resources page (D-023): administrators list it with a category and a short description. */
+function ResourceListing({ item, canPublish, onSaved }: { item: MediaItem; canPublish: boolean; onSaved: (item: MediaItem) => void }) {
+  const { request } = useAdmin();
+  const listed = item.resource?.listed ?? false;
+  const [category, setCategory] = useState(item.resource?.category ?? "");
+  const [summary, setSummary] = useState(item.resource?.summary ?? "");
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const status = listed
+    ? `On the Resources page under ${RESOURCE_CATEGORIES[category as keyof typeof RESOURCE_CATEGORIES] ?? "Other documents"}.`
+    : "Not on the Resources page.";
+
+  async function send(nextListed: boolean) {
+    setBusy(true);
+    setFields({});
+    setError("");
+    try {
+      const result = await request<MediaItem>(`/media/${item.id}/resource`, { method: "POST", body: { listed: nextListed, category, summary } });
+      onSaved(result.data);
+    } catch (e) {
+      if (e instanceof AdminApiError) {
+        setFields(e.fields);
+        setError(Object.keys(e.fields).length > 0 ? "" : e.message);
+      } else {
+        setError("It could not be saved.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!canPublish) return <span className="admin-sub">{status} An administrator lists documents there.</span>;
+
+  return (
+    <details className="media-resource" open={listed || undefined}>
+      <summary>Resources page: {listed ? "listed" : "not listed"}</summary>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void send(true);
+        }}
+        noValidate
+      >
+        <FieldShell label="Category" error={fields.category}>
+          {(props) => (
+            <select value={category} onChange={(e) => setCategory(e.target.value)} {...props}>
+              <option value="">Choose…</option>
+              {Object.entries(RESOURCE_CATEGORIES).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          )}
+        </FieldShell>
+        <FieldShell label="Short description" hint={`${[...summary.trim()].length} of 300 characters. At least 10. Shown under the title.`} error={fields.summary}>
+          {(props) => <textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} {...props} />}
+        </FieldShell>
+        <FormStatus state="error" message={error} />
+        <div className="actions">
+          <button className="button button--primary" type="submit" disabled={busy}>
+            {listed ? "Save changes" : "List on the Resources page"}
+          </button>
+          {listed && (
+            <button className="button button--outline" type="button" onClick={() => void send(false)} disabled={busy}>
+              Take off the Resources page
+            </button>
+          )}
+        </div>
+      </form>
+    </details>
   );
 }

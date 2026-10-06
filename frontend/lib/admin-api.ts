@@ -77,6 +77,8 @@ export type MediaItem = {
   uploaded_by: string | null;
   created_at: string | null;
   used_by: string[];
+  /** Documents on the public Resources page (D-023). */
+  resource?: { listed: boolean; category: string | null; summary: string | null; listed_at: string | null };
 };
 export type MediaCapabilities = { uploads: boolean; images: boolean; image_max_bytes: number; document_max_bytes: number; server_max_bytes: number | null };
 

@@ -9,7 +9,7 @@
  */
 import schema from "./page-copy.json";
 
-export type PageKey = "home" | "about" | "services" | "products" | "industries" | "careers" | "contact" | "site";
+export type PageKey = "home" | "about" | "services" | "products" | "industries" | "resources" | "careers" | "contact" | "site";
 export type PageField = {
   key: string;
   group: string;

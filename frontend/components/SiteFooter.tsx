@@ -3,7 +3,7 @@ import Logo from "@/components/Logo";
 import { type PageCopy, type SiteLink, defaultCopy, siteLinks } from "@/lib/page-copy";
 import { SITE } from "@/lib/site";
 
-/** The footer; its wording and links come from the staff area (Menu and footer, D-015). Privacy and Terms stay fixed. */
+/** The footer; its wording and links come from the staff area (Menu and footer, D-015). Resources, Privacy and Terms stay fixed. */
 export default function SiteFooter({ copy = defaultCopy("site") }: { copy?: PageCopy }) {
   const { menu, contact } = siteLinks(copy);
   return (
@@ -39,6 +39,9 @@ export default function SiteFooter({ copy = defaultCopy("site") }: { copy?: Page
         <div>
           <h2 className="footer-heading">{copy.footer_company_heading}</h2>
           <ul>
+            <li>
+              <Link href="/resources">Resources</Link>
+            </li>
             <li>
               <Link href="/privacy">Privacy</Link>
             </li>
