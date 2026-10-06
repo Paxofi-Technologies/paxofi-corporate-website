@@ -300,3 +300,21 @@ paxofi.com's DNS is managed in Cloudflare (D-024). The cPanel server's address i
 - **Visitor addresses:** the API reads the visitor's address from Cloudflare only for connections from Cloudflare's ranges. Once a year, compare https://www.cloudflare.com/ips/ with `RANGES` in `backend/src/Http/CloudflareClientIp.php` and update it in a release if they differ.
 - **Check:** send a test enquiry from the contact form, then open it under **Enquiries**: *IP address* should be your own (search “what is my IP”), not a Cloudflare one (Cloudflare addresses start with 104., 172.64–172.71., 162.158–162.159., 141.101., 108.162., 173.245., 188.114., 190.93., 197.234., 198.41., 103.21/22/31., 131.0.72. or 2400:cb00, 2606:4700, …).
 - **Site cannot be reached (DNS_PROBE_FINISHED_NXDOMAIN):** the name has no record in Cloudflare. Add it as above.
+
+## RB-24 Content reviews and redirects
+
+Keeping the website current (D-025).
+
+- **Monthly (or when the reminder email arrives):** open **Content → Reviews** and choose *Overdue or due soon*. For each item, click **View**, check it is still correct (facts, product status, prices, contact details, dates), fix it under Content if needed, then **Mark reviewed** and choose when it should next be checked:
+  - **3 months:** fast-changing items, such as product status, careers and announcements;
+  - **6 months:** most pages;
+  - **12 months:** stable text, such as About and industry descriptions.
+- **No date yet:** start with the home page, products and contact details. The reminder only covers items that have a date.
+- **Retire or rename a page:**
+  1. Hide the item (Content), unpublish the article, or take the document off the Resources page.
+  2. **Content → Redirects → Add a redirect**: the old address (for example `/insights/old-article`) and the closest replacement (for example `/insights`). The redirect takes effect within a minute.
+  3. Open the old address in a private window to check it lands on the new page.
+- **Rules the form enforces:** you cannot redirect a built-in page (/about, /contact, …) or a page that is still live; hide or retire it first. A redirect may not point to another redirect: change the first one to the final address instead.
+- **Clean-up:** a redirect can stay for years. Delete it only when the old address no longer gets visits (Analytics shows visits by page).
+- **The reminder email did not arrive:** it goes to active administrators once a week, only while something is overdue or due within 14 days, and needs email to be set up (RB-17).
+

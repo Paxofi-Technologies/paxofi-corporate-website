@@ -8,22 +8,28 @@ import { FormStatus } from "@/components/admin/AdminForm";
 import { NoAccess } from "@/components/admin/StaffShell";
 import ArticleList from "./ArticleList";
 import PageTextList from "./PageTextList";
+import RedirectList from "./RedirectList";
+import ReviewList from "./ReviewList";
 import { AdminApiError, CATALOG_KINDS, CatalogKind, CatalogSummary, formatDateTime } from "@/lib/admin-api";
 import { PRODUCT_STATUSES, isProductStatus } from "@/lib/catalog";
 
-type Tab = CatalogKind | "pages" | "articles";
+type Tab = CatalogKind | "pages" | "articles" | "reviews" | "redirects";
+const OTHER_TABS = ["pages", "articles", "reviews", "redirects"] as const;
+const isOther = (tab: Tab): tab is (typeof OTHER_TABS)[number] => (OTHER_TABS as readonly string[]).includes(tab);
 
 /** Products and services on the website (D-011) and the wording of each page (D-015). */
 export default function ContentList() {
   const { user, request } = useAdmin();
   const initialTab = useSearchParams().get("tab");
-  const [tab, setTab] = useState<Tab>(initialTab === "pages" || initialTab === "services" || initialTab === "industries" || initialTab === "articles" ? initialTab : "products");
-  const kind: CatalogKind = tab === "pages" || tab === "articles" ? "products" : tab;
+  const [tab, setTab] = useState<Tab>(
+    initialTab === "services" || initialTab === "industries" || (OTHER_TABS as readonly (string | null)[]).includes(initialTab) ? (initialTab as Tab) : "products",
+  );
+  const kind: CatalogKind = isOther(tab) ? "products" : tab;
   const [rows, setRows] = useState<CatalogSummary[] | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!can(user, "content.edit") || tab === "pages" || tab === "articles") return;
+    if (!can(user, "content.edit") || isOther(tab)) return;
     let cancelled = false;
     request<CatalogSummary[]>(`/catalog/${kind}`)
       .then((result) => {
@@ -45,11 +51,17 @@ export default function ContentList() {
       <h1 className="admin-title">Content</h1>
       <p className="admin-intro">
         The products, services and industries shown on the website, News &amp; Insights articles, and the wording of each page. Changes are saved as drafts and appear on the
-        site only when an administrator publishes them.
+        site only when an administrator publishes them. <strong>Reviews</strong> shows when each item is next due a check; <strong>Redirects</strong> keeps old addresses working.
       </p>
       <div className="admin-toolbar">
         <div className="admin-tabs" role="group" aria-label="Collection">
-          {[...CATALOG_KINDS, { value: "articles" as const, label: "Articles" }, { value: "pages" as const, label: "Page text" }].map((option) => (
+          {[
+            ...CATALOG_KINDS,
+            { value: "articles" as const, label: "Articles" },
+            { value: "pages" as const, label: "Page text" },
+            { value: "reviews" as const, label: "Reviews" },
+            { value: "redirects" as const, label: "Redirects" },
+          ].map((option) => (
             <button
               key={option.value}
               type="button"
@@ -66,7 +78,7 @@ export default function ContentList() {
         </div>
         {tab === "articles" ? (
           <Link className="button button--primary" href="/admin/content/articles/new">Write an article</Link>
-        ) : tab !== "pages" && (
+        ) : !isOther(tab) && (
           <Link className="button button--primary" href={`/admin/content/${kind}/new`}>
             Add {current.a}
           </Link>
@@ -75,6 +87,10 @@ export default function ContentList() {
       <FormStatus state="error" message={error} />
       {tab === "pages" ? (
         <PageTextList />
+      ) : tab === "reviews" ? (
+        <ReviewList />
+      ) : tab === "redirects" ? (
+        <RedirectList />
       ) : tab === "articles" ? (
         <ArticleList />
       ) : rows === null ? (

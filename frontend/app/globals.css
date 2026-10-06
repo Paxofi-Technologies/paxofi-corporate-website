@@ -2654,3 +2654,114 @@ textarea:focus-visible {
   cursor: pointer;
   font-weight: 600;
 }
+
+/* Content freshness (D-025): review dates and redirects */
+.button--small {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+.admin-strong {
+  display: block;
+  font-weight: 700;
+}
+.review-summary {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.review-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.review-filter select,
+.review-mark select,
+.review-date input {
+  font: inherit;
+  font-size: 15px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+}
+.review-actions {
+  min-width: 250px;
+}
+.review-mark {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.review-actions summary {
+  cursor: pointer;
+  color: var(--blue-strong);
+  font-weight: 600;
+  min-height: 32px;
+  padding-top: 4px;
+}
+.review-date {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  justify-items: start;
+}
+.review-date label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.redirect-form {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  display: grid;
+  gap: 4px;
+  max-width: 640px;
+}
+.redirect-form .admin-card-title {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+.redirect-form .button {
+  justify-self: start;
+  margin-top: 8px;
+}
+/* Phones: each review becomes a card, so the actions stay on screen. */
+@media (max-width: 640px) {
+  .review-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .review-table,
+  .review-table tbody,
+  .review-table tr,
+  .review-table td {
+    display: block;
+  }
+  .review-table tr {
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+  }
+  .review-table td {
+    border-bottom: 0;
+    padding: 6px 16px;
+  }
+  .review-actions {
+    min-width: 0;
+  }
+}
