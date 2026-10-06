@@ -66,6 +66,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
 use Paxofi\CorporateWebsite\Http\Controllers\HealthController;
 use Paxofi\CorporateWebsite\Http\Controllers\MediaController;
+use Paxofi\CorporateWebsite\Http\Controllers\ResourcesController;
 use Paxofi\CorporateWebsite\Http\Controllers\NavigationController;
 use Paxofi\CorporateWebsite\Http\Controllers\PageCopyController;
 use Paxofi\CorporateWebsite\Http\Controllers\ReadinessController;
@@ -131,6 +132,7 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/careers/roles/{slug}/apply'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
+        ['GET', '/api/v1/resources'],
         ['POST', '/api/v1/analytics/pageview'],
         ['GET', '/api/v1/pages/{page}'],
     ];
@@ -170,6 +172,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/admin/media'],
         ['POST', '/api/v1/admin/media'],
         ['PATCH', '/api/v1/admin/media/{id}'],
+        ['POST', '/api/v1/admin/media/{id}/resource'],
         ['DELETE', '/api/v1/admin/media/{id}'],
         ['GET', '/api/v1/admin/analytics'],
         ['GET', '/api/v1/admin/pages'],
@@ -300,6 +303,7 @@ final class ApiApplication implements HttpHandler
 
         $router->post('/api/v1/forms/{form_key}/submit', $this->lazy(fn (): Controller => new FormSubmissionController($this->contactService())));
         $router->get('/api/v1/media/{id}/{filename}', $this->lazy(fn (): Controller => new MediaController($this->mediaLibrary())));
+        $router->get('/api/v1/resources', $this->lazy(fn (): Controller => new ResourcesController($this->mediaLibrary())));
         $router->get('/api/v1/pages/{page}', $this->lazy(fn (): Controller => new PageCopyController($this->pageCopyEditor())));
         $articles = fn (): ArticlesController => new ArticlesController(new ArticleService(new PdoArticles($this->database), $this->clock));
         $router->get('/api/v1/articles', static fn (HttpRequest $r): HttpResponse => $articles()->list($r));
@@ -377,6 +381,7 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/admin/media', static fn (HttpRequest $r): HttpResponse => $media()->list($r));
         $router->post('/api/v1/admin/media', static fn (HttpRequest $r): HttpResponse => $media()->upload($r));
         $router->add('PATCH', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->update($r));
+        $router->post('/api/v1/admin/media/{id}/resource', static fn (HttpRequest $r): HttpResponse => $media()->resource($r));
         $router->add('DELETE', '/api/v1/admin/media/{id}', static fn (HttpRequest $r): HttpResponse => $media()->delete($r));
 
         $pages = fn (): AdminPagesController => new AdminPagesController($this->pageCopyEditor(), $this->adminGuard());

@@ -63,6 +63,14 @@ final class AdminMediaController
         return ApiResponse::success($request, $this->library->update(self::id($request), RequestBody::parse($request), $staff, RequestContexts::from($request)));
     }
 
+    /** POST /api/v1/admin/media/{id}/resource: list a document on the Resources page or take it off (D-023). */
+    public function resource(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::CONTENT_PUBLISH);
+
+        return ApiResponse::success($request, $this->library->setResource(self::id($request), RequestBody::parse($request), $staff, RequestContexts::from($request)));
+    }
+
     public function delete(HttpRequest $request): HttpResponse
     {
         $staff = $this->guard->require($request, Permission::CONTENT_PUBLISH);

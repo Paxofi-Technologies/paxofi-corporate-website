@@ -278,3 +278,16 @@ Industries and product statuses are edited under **Content** (D-022).
 - **Page text:** the heading, introduction and call to action of the Industries pages are under **Content → Page text → Industries**.
 - **Menu:** if *Industries* is missing from the main menu, add it under **Content → Page text → Menu and footer** (name *Industries*, link `/industries`) and publish.
 
+## RB-22 Resources page
+
+Documents on the public Resources page (/resources) come from the media library (D-023).
+
+- **List a document:** an Administrator uploads it under **Media** with a clear title, then opens **Resources page** on its card. Choose a category, write a short description (10–300 characters) and click **List on the Resources page**.
+- **Change or remove:** edit the category or description and **Save changes**, or click **Take off the Resources page**. A listed document cannot be deleted until it is taken off.
+- **Before listing, check:**
+  - the document is meant for the public (anyone with the link can download it);
+  - it has no personal data and nothing confidential;
+  - the title says what it is;
+  - it is the current version. To replace a file, upload the new one, list it, then take the old one off and delete it.
+- **Page text:** the heading, introduction, empty message and call to action are under **Content → Page text → Resources**.
+

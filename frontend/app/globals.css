@@ -2601,3 +2601,56 @@ textarea:focus-visible {
 .admin-preview__text {
   margin-top: 20px;
 }
+
+/* Resources page (P3.4, D-023) */
+.resource-groups {
+  display: grid;
+  gap: 56px;
+}
+.resource-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: grid;
+  gap: 16px;
+}
+.resource-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.resource-item h3 {
+  margin: 0;
+  font-size: 19px;
+}
+.resource-item p {
+  margin: 6px 0 0;
+}
+.resource-item__meta {
+  font-weight: 400;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .resource-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .resource-item__download {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+.media-resource {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.media-resource summary {
+  cursor: pointer;
+  font-weight: 600;
+}

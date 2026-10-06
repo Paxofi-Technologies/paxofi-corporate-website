@@ -24,10 +24,16 @@ use Throwable;
  *   a description for screen readers.
  * - Documents are stored as uploaded, after their type is checked, and are
  *   always downloaded rather than opened in the browser.
- * - A file used by a product or service (live or draft) cannot be deleted.
+ * - A file used by a product, service, industry or article (live or draft)
+ *   cannot be deleted, nor a document listed on the Resources page.
+ * - An administrator lists documents on the public Resources page (D-023),
+ *   each with a category and a short description.
  */
 final class MediaLibrary
 {
+    /** Resources page categories (D-023), in display order; frontend lib/resources.ts keeps the same list. */
+    public const RESOURCE_CATEGORIES = ['brochure' => 'Brochures', 'guide' => 'Guides', 'whitepaper' => 'Whitepapers', 'policy' => 'Policies', 'other' => 'Other documents'];
+
     public const NOT_CONFIGURED = 'File uploads are not set up on the server yet (MEDIA_STORAGE_PATH).';
     public const NO_IMAGE_PROCESSING = 'The server cannot process images (the PHP "gd" extension is off). Documents can still be uploaded.';
 
@@ -136,6 +142,71 @@ final class MediaLibrary
         return $this->get($id);
     }
 
+    /**
+     * Lists a document on the Resources page or takes it off (needs content.publish, checked by the controller).
+     *
+     * @param array<string, mixed> $input {listed: bool, category: string, summary: string}
+     * @return array<string, mixed>
+     */
+    public function setResource(string $id, array $input, AuthenticatedStaff $staff, RequestContext $context): array
+    {
+        $file = $this->requireFile($id);
+        if ($file['kind'] !== MediaKind::Document->value) {
+            throw new ValidationFailed(['listed' => 'Only documents can be listed on the Resources page.'], 'Only documents can be listed on the Resources page.');
+        }
+        $listed = $input['listed'] ?? null;
+        if (!is_bool($listed)) {
+            throw new ValidationFailed(['listed' => 'Choose listed or not listed.'], 'Please choose listed or not listed.');
+        }
+        $errors = [];
+        $category = $input['category'] ?? null;
+        if ($category === '' || $category === null) {
+            $category = null;
+        } elseif (!is_string($category) || !array_key_exists($category, self::RESOURCE_CATEGORIES)) {
+            $errors['category'] = 'Choose one of the categories.';
+            $category = null;
+        }
+        $summary = self::clean($input['summary'] ?? null);
+        $length = mb_strlen($summary);
+        if ($length > 300 || ($length > 0 && $length < 10)) {
+            $errors['summary'] = 'Describe the document in 10 to 300 characters.';
+        }
+        if ($listed && $category === null && !isset($errors['category'])) {
+            $errors['category'] = 'Choose a category for the Resources page.';
+        }
+        if ($listed && $summary === '' && !isset($errors['summary'])) {
+            $errors['summary'] = 'Describe the document in 10 to 300 characters.';
+        }
+        if ($errors !== []) {
+            throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
+        }
+        $this->transactions->transaction(function () use ($id, $category, $summary, $listed, $staff, $context): void {
+            $this->media->setResource($id, $category, $summary === '' ? null : $summary, $listed);
+            $this->record($listed ? 'media.resource_listed' : 'media.resource_unlisted', $id, $staff, $context);
+        });
+
+        return $this->get($id);
+    }
+
+    /**
+     * The public Resources page (D-023): listed documents with what the website needs to offer them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function resources(): array
+    {
+        return array_map(static fn (array $row): array => [
+            'title' => (string) $row['title'],
+            'summary' => (string) ($row['resource_summary'] ?? ''),
+            'category' => (string) $row['resource_category'],
+            'category_label' => self::RESOURCE_CATEGORIES[(string) $row['resource_category']] ?? self::RESOURCE_CATEGORIES['other'],
+            'format' => MediaRules::formatLabel((string) $row['media_type']),
+            'size_bytes' => (int) ($row['size_bytes'] ?? 0),
+            'path' => MediaPath::for((string) $row['id'], (string) $row['filename']),
+            'listed_at' => str_replace(' ', 'T', (string) $row['resource_listed_at']) . 'Z',
+        ], array_values(array_filter($this->media->listedResources(), static fn (array $row): bool => array_key_exists((string) $row['resource_category'], self::RESOURCE_CATEGORIES))));
+    }
+
     public function delete(string $id, AuthenticatedStaff $staff, RequestContext $context): void
     {
         $file = $this->requireFile($id);
@@ -237,6 +308,12 @@ final class MediaLibrary
             'uploaded_by' => $row['uploader_name'] ?? null,
             'created_at' => isset($row['created_at']) ? (string) $row['created_at'] : null,
             'used_by' => $usedBy,
+            'resource' => [
+                'listed' => ($row['resource_listed_at'] ?? null) !== null,
+                'category' => $row['resource_category'] ?? null,
+                'summary' => $row['resource_summary'] ?? null,
+                'listed_at' => isset($row['resource_listed_at']) ? (string) $row['resource_listed_at'] : null,
+            ],
         ];
     }
 }

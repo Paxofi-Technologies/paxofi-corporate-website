@@ -286,3 +286,15 @@ Run as an Administrator, on staging first, then live. About 20 minutes.
 | IS5 | Edit an industry | **Content → Industries → Education**: change the summary and tick one more related service, **Save draft**, then **Publish changes** | The public page changes only after publishing, and the new related service appears | |
 | IS6 | Menu and phone | Open the site on a phone | *Industries* is in the menu (add it under Page text if your menu was customised); the pages fit the screen | |
 
+## Resources page (P3.4, D-023)
+
+Run as an Administrator, on staging first, then live. About 10 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| RS1 | Empty page | Open https://corporate.paxofi.com/resources before listing anything | The page says no documents are listed yet; *Resources* is in the footer | |
+| RS2 | List | **Media**: upload a PDF brochure with a title; open **Resources page** on its card, choose *Brochures*, write a description, **List on the Resources page** | /resources shows it under Brochures with its description and *Download (PDF, …)* | |
+| RS3 | Download | Click **Download** | The file downloads with its name | |
+| RS4 | Cannot delete | Try **Delete** on the listed document | Delete is not available; the card says it is used by the Resources page | |
+| RS5 | Take off | **Take off the Resources page** | It disappears from /resources; it can now be deleted | |
+

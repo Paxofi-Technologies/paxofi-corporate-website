@@ -428,3 +428,17 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Menu:** *Industries* is the default sixth menu item. A site whose menu was already published adds *Industries* → `/industries` under **Page text → Menu and footer**.
 - **Built-in copy:** if the API cannot be read, the website shows the ten industries and the three products from its built-in copy. A test keeps that copy equal to migration 018.
 - **Not chosen:** a separate page builder for sector pages (layout risk), or sector pages written in code (staff could not edit them).
+
+## D-023 — Resources page (P3.4, 6 Oct 2026)
+
+**Decision (CTO; the owner said "build it" on 6 Oct 2026; SRS 14.4 "Resources and knowledge materials"):** the corporate website gets a public **Resources** page at `/resources` listing downloadable documents.
+
+- **Source:** documents already in the media library (D-012). Pictures are not listed.
+- **Listing:** an Administrator (`content.publish`) opens the document under **Media → Resources page**, chooses a category and writes a 10–300 character description, then lists it. **Take off the Resources page** removes it again; the category and description are kept for next time. Business Development sees whether a document is listed. Every change is audited (`media.resource_listed` / `media.resource_unlisted`).
+- **Categories:** Brochures, Guides, Whitepapers, Policies, Other documents, shown in that order.
+- **Page:** groups by category, newest listing first. Each document shows its title, its description and a download link with format and size, e.g. "PDF, 1.2 MB".
+  - If nothing is listed, the page says so. If the API cannot be read, the page shows a message and the contact email.
+  - The page wording is under **Page text → Resources**. A *Resources* link is fixed in the footer, under Company.
+- **Safety:** a listed document counts as in use, so it cannot be deleted until it is taken off. Files stay public by link, as before (D-012), so list only material meant for the public.
+- **Data:** migration 019 adds `resource_category`, `resource_summary` and `resource_listed_at` to `media_assets`.
+- **Not chosen:** gated downloads behind an email form. That would collect personal data and need consent and retention rules; reconsider when there is a marketing need.
