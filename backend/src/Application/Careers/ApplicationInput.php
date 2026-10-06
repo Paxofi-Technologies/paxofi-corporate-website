@@ -14,7 +14,7 @@ use Paxofi\CorporateWebsite\Application\Mail\Email;
  */
 final class ApplicationInput
 {
-    public const PRIVACY_VERSION = '2026-10-05';
+    public const PRIVACY_VERSION = '2026-10-06';
     public const HONEYPOT_FIELD = 'website';
     public const HOURS = [15, 20, 25, 30, 35, 40];
     /** "How did you hear about this role?" (optional; P3.1). */
