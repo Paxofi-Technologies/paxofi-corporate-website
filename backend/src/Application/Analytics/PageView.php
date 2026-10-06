@@ -12,7 +12,7 @@ namespace Paxofi\CorporateWebsite\Application\Analytics;
 final readonly class PageView
 {
     /** The public pages; anything else is counted as "(other)" so the tables stay small. */
-    public const PAGES = ['/', '/about', '/services', '/products', '/careers', '/contact', '/privacy', '/terms', '/insights', '/industries'];
+    public const PAGES = ['/', '/about', '/services', '/products', '/careers', '/contact', '/privacy', '/terms', '/insights', '/industries', '/resources'];
     public const OTHER_PAGE = '(other)';
     public const DIRECT = '(direct)';
 

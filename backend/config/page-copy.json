@@ -188,6 +188,20 @@
         { "key": "cta_button", "group": "Blue band at the bottom", "label": "Button (to Contact)", "kind": "line", "max": 28, "default": "Talk to us" }
       ]
     },
+    "resources": {
+      "label": "Resources",
+      "path": "/resources",
+      "fields": [
+        { "key": "meta_description", "group": "Search engines", "label": "Description in search results", "kind": "text", "max": 200, "default": "Brochures, guides and documents from Paxofi Technologies, free to download." },
+        { "key": "hero_eyebrow", "group": "Top of the page", "label": "Small heading", "kind": "line", "max": 40, "default": "Resources" },
+        { "key": "hero_title", "group": "Top of the page", "label": "Headline (the documents are listed under Media)", "kind": "line", "max": 70, "default": "Guides, brochures and documents." },
+        { "key": "hero_intro", "group": "Top of the page", "label": "Introduction", "kind": "text", "max": 300, "default": "Download our brochures, guides and other documents. Everything here is free and needs no sign-up." },
+        { "key": "empty_text", "group": "Document list", "label": "Shown when no documents are listed", "kind": "text", "max": 200, "default": "No documents are listed yet. Please check back soon, or ask us for what you need." },
+        { "key": "cta_title", "group": "Blue band at the bottom", "label": "Heading", "kind": "line", "max": 60, "default": "Can't find what you need?" },
+        { "key": "cta_text", "group": "Blue band at the bottom", "label": "Text", "kind": "text", "max": 160, "default": "Ask us for product details, case material or anything else that would help." },
+        { "key": "cta_button", "group": "Blue band at the bottom", "label": "Button (to Contact)", "kind": "line", "max": 28, "default": "Ask us" }
+      ]
+    },
     "careers": {
       "label": "Careers",
       "path": "/careers",

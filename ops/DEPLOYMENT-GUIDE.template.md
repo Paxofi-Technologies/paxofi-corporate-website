@@ -265,6 +265,10 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10g — Resources page (no server change)
+
+From this release the website has a **Resources** page at {{SITE_URL}}/resources, linked from the footer, for brochures, guides and other documents (decision D-023, RB-22). The database upgrade (migration 019) adds the columns it needs. To list a document, go to **Media**, open **Resources page** on the document's card, choose a category, write a short description and click **List on the Resources page**.
+
 ## Step 10f — Industries and product status (no server change)
 
 From this release, the website has an **Industries** section at {{SITE_URL}}/industries, with the ten sectors from the SRS. Each product now shows its status, such as *Planned*, *In development* or *Available* (decision D-022, RB-21). Both are edited under **Content**.

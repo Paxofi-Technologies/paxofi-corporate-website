@@ -13,7 +13,8 @@ final class PdoMediaRepository implements MediaRepository
     use GuardedQueries;
 
     private const SELECT = "SELECT m.id, m.kind, m.filename, m.media_type, m.storage_reference, m.size_bytes, m.width, m.height,
-                                   m.alt_text, m.title, m.sha256, m.created_at, u.display_name AS uploader_name
+                                   m.alt_text, m.title, m.resource_category, m.resource_summary, m.resource_listed_at,
+                                   m.sha256, m.created_at, u.display_name AS uploader_name
                             FROM media_assets m LEFT JOIN users u ON u.id = m.uploaded_by
                             WHERE m.lifecycle_state = 'active'";
 
@@ -55,6 +56,21 @@ final class PdoMediaRepository implements MediaRepository
     public function delete(string $id): void
     {
         $this->write('DELETE FROM media_assets WHERE id = :id', ['id' => $id]);
+    }
+
+    public function setResource(string $id, ?string $category, ?string $summary, bool $listed): void
+    {
+        $this->write(
+            $listed
+                ? 'UPDATE media_assets SET resource_category = :category, resource_summary = :summary, resource_listed_at = COALESCE(resource_listed_at, UTC_TIMESTAMP()) WHERE id = :id'
+                : 'UPDATE media_assets SET resource_category = :category, resource_summary = :summary, resource_listed_at = NULL WHERE id = :id',
+            ['id' => $id, 'category' => $category, 'summary' => $summary],
+        );
+    }
+
+    public function listedResources(): array
+    {
+        return $this->select(self::SELECT . " AND m.kind = 'document' AND m.resource_listed_at IS NOT NULL ORDER BY m.resource_listed_at DESC, m.id LIMIT 200");
     }
 
     public function usage(): array
@@ -99,6 +115,11 @@ final class PdoMediaRepository implements MediaRepository
         foreach ($this->select("SELECT title, image_id, JSON_UNQUOTE(JSON_EXTRACT(draft, '$.image_id')) AS draft_image FROM articles WHERE image_id IS NOT NULL OR draft IS NOT NULL") as $row) {
             $add($row['image_id'], $row['title'] . ' (article)');
             $add($row['draft_image'], $row['title'] . ' (article draft)');
+        }
+
+        // The Resources page (D-023): a listed document must be taken off it before it can be deleted.
+        foreach ($this->select("SELECT id FROM media_assets WHERE resource_listed_at IS NOT NULL") as $row) {
+            $add($row['id'], 'the Resources page');
         }
 
         return $usage;

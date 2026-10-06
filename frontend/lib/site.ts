@@ -11,7 +11,7 @@ export const SITE = {
 };
 
 /** Every public, indexable route (used by the sitemap and the E2E tests). */
-export const PUBLIC_ROUTES = ["/", "/about", "/services", "/products", "/industries", "/insights", "/careers", "/contact", "/privacy", "/terms"] as const;
+export const PUBLIC_ROUTES = ["/", "/about", "/services", "/products", "/industries", "/insights", "/resources", "/careers", "/contact", "/privacy", "/terms"] as const;
 
 /** Social share image (1200×630, Open Graph and Twitter/X large card). */
 export const SHARE_IMAGE = {
