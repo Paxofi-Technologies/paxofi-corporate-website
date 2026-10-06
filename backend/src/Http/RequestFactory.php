@@ -39,7 +39,7 @@ final class RequestFactory
             }
         }
 
-        $clientIp = $server['REMOTE_ADDR'] ?? null;
+        $clientIp = CloudflareClientIp::resolve($server);
         $method = is_string($server['REQUEST_METHOD'] ?? null) ? strtoupper($server['REQUEST_METHOD']) : 'GET';
 
         return new Request(
@@ -49,7 +49,7 @@ final class RequestFactory
             $headers,
             $body,
             $stringQuery,
-            [RequestAttributes::CLIENT_IP => is_string($clientIp) && filter_var($clientIp, FILTER_VALIDATE_IP) !== false ? $clientIp : null],
+            [RequestAttributes::CLIENT_IP => $clientIp],
         );
     }
 

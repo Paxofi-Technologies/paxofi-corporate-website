@@ -291,3 +291,12 @@ Documents on the public Resources page (/resources) come from the media library 
   - it is the current version. To replace a file, upload the new one, list it, then take the old one off and delete it.
 - **Page text:** the heading, introduction, empty message and call to action are under **Content → Page text → Resources**.
 
+## RB-23 Cloudflare
+
+paxofi.com's DNS is managed in Cloudflare (D-024). The cPanel server's address is the one on the existing records (cPanel home → *Shared IP Address*).
+
+- **New subdomain:** create it in cPanel (Domains), then add an **A record** in Cloudflare → DNS → Records pointing to the server's address. Use **DNS only** (grey cloud) unless there is a reason to proxy. Names two levels deep (`x.corporate.paxofi.com`) must stay DNS only. Then run AutoSSL in cPanel.
+- **Proxied names** (orange cloud): set Cloudflare → SSL/TLS → **Full (strict)**. *Flexible* causes redirect loops with cPanel's Force HTTPS.
+- **Visitor addresses:** the API reads the visitor's address from Cloudflare only for connections from Cloudflare's ranges. Once a year, compare https://www.cloudflare.com/ips/ with `RANGES` in `backend/src/Http/CloudflareClientIp.php` and update it in a release if they differ.
+- **Check:** send a test enquiry from the contact form, then open it under **Enquiries**: *IP address* should be your own (search “what is my IP”), not a Cloudflare one (Cloudflare addresses start with 104., 172.64–172.71., 162.158–162.159., 141.101., 108.162., 173.245., 188.114., 190.93., 197.234., 198.41., 103.21/22/31., 131.0.72. or 2400:cb00, 2606:4700, …).
+- **Site cannot be reached (DNS_PROBE_FINISHED_NXDOMAIN):** the name has no record in Cloudflare. Add it as above.

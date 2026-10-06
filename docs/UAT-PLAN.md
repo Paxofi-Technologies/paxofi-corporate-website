@@ -286,6 +286,16 @@ Run as an Administrator, on staging first, then live. About 20 minutes.
 | IS5 | Edit an industry | **Content → Industries → Education**: change the summary and tick one more related service, **Save draft**, then **Publish changes** | The public page changes only after publishing, and the new related service appears | |
 | IS6 | Menu and phone | Open the site on a phone | *Industries* is in the menu (add it under Page text if your menu was customised); the pages fit the screen | |
 
+## Cloudflare visitor addresses (D-024)
+
+Run as an Administrator after deploying, with `api.paxofi.com` proxied (orange cloud). About 5 minutes.
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| CF1 | Sites reachable | Open corporate.paxofi.com, careers.paxofi.com and staging.corporate.paxofi.com | Each opens over https with a valid padlock | |
+| CF2 | Own address | Search “what is my IP”, then send a test enquiry from the contact form | It arrives in **Enquiries**; its *IP address* is the same as yours, not a Cloudflare one | |
+| CF3 | Sign-in | Sign in to the staff area with two-factor | Works as before | |
+
 ## Resources page (P3.4, D-023)
 
 Run as an Administrator, on staging first, then live. About 10 minutes.

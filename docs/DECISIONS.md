@@ -442,3 +442,14 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Safety:** a listed document counts as in use, so it cannot be deleted until it is taken off. Files stay public by link, as before (D-012), so list only material meant for the public.
 - **Data:** migration 019 adds `resource_category`, `resource_summary` and `resource_listed_at` to `media_assets`.
 - **Not chosen:** gated downloads behind an email form. That would collect personal data and need consent and retention rules; reconsider when there is a marketing need.
+
+## D-024 — Visitor addresses behind Cloudflare (6 Oct 2026)
+
+**Decision (CTO; the owner chose option 2 on 6 Oct 2026, after moving paxofi.com's DNS to Cloudflare):** the API may sit behind Cloudflare's proxy (orange cloud) and still see each visitor's own address.
+
+- **Why it matters:** behind the proxy every request arrives from a Cloudflare address. Without this change, everyone would share the sign-in limit (20 failures per address in 15 minutes), the enquiry, application and password-reset limits, and the analytics visitor count; enquiries and applications would store Cloudflare's address.
+- **Rule:** the API uses the `CF-Connecting-IP` header only when the connection comes from one of Cloudflare's published ranges (https://www.cloudflare.com/ips/). Cloudflare always overwrites that header, so a visitor cannot choose their address. A request sent straight to the server keeps its own address. If the host already restores the address, nothing changes.
+- **Ranges** are listed in `backend/src/Http/CloudflareClientIp.php` and reviewed yearly (RB-23).
+- **DNS:** `corporate`, `www.corporate`, `careers`, `staging.corporate` and `api-staging` are *DNS only*. Two-level names such as `www.corporate` and `staging.corporate` must stay DNS only: Cloudflare's free certificate covers one level only. `api` may be proxied, with SSL/TLS mode **Full (strict)**.
+- **Privacy:** the website privacy page has a *Network protection* section, and the applicant privacy notice (version 2026-10-06) says requests pass through Cloudflare.
+- **Not chosen:** trusting `X-Forwarded-For` from anyone (can be forged), or a setting to switch the rule off (nothing to gain: the header is only believed from Cloudflare).

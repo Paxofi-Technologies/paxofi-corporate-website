@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-/** Applicant privacy notice (D-019). Version 2026-10-05: keep in step with ApplicationInput::PRIVACY_VERSION. */
+/** Applicant privacy notice (D-019). Version 2026-10-06: keep in step with ApplicationInput::PRIVACY_VERSION. */
 export default function ApplicantPrivacy() {
   return (
     <>
@@ -27,7 +27,7 @@ export default function ApplicantPrivacy() {
         <div className="container prose">
           <p>
             This notice covers applications made on careers.paxofi.com to {"Paxofi Technologies LTD"} (“Paxofi”, “we”),
-            including the Paxofi Innovation Fellowship. Version of 5 October 2026.
+            including the Paxofi Innovation Fellowship. Version of 6 October 2026.
           </p>
 
           <h2>What we collect</h2>
@@ -57,7 +57,8 @@ export default function ApplicantPrivacy() {
             Only Paxofi staff responsible for recruitment (human resources staff and administrators) and the people who
             interview you. They use a signed-in staff area protected by two-factor sign-in; viewing your CV is recorded.
             Emails about your application are sent from our own mail system. Your CV is stored on our own server, outside
-            the public website, and is never published.
+            the public website, and is never published. Our server is reached through Cloudflare, a network provider
+            that protects it against attacks and handles each request only to deliver it to us securely.
           </p>
 
           <h2>How long we keep it</h2>
