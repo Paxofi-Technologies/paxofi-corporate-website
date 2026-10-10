@@ -24,7 +24,7 @@ pass() { echo "  ok   $*"; }
 warn() { echo "  WARN $*"; WARNED=1; }
 fail() { echo "  FAIL $*"; FAILED=1; }
 get() { curl -sS -m 20 "${AUTH[@]}" "$@"; }
-status() { get -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || echo 000; }
+status() { local c; c="$(get -o /dev/null -w '%{http_code}' "$@" 2>/dev/null)"; echo "${c:-000}"; }
 
 echo "Stabilisation check — $(date -u '+%Y-%m-%d %H:%M UTC')"
 
@@ -73,6 +73,7 @@ done
 echo "TLS certificates"
 for url in "$CORPORATE" "$CAREERS" "$API"; do
   [ -n "$url" ] || continue
+  case "$url" in https://*) ;; *) echo "  skip $url (not https)"; continue ;; esac
   host="${url#https://}"; host="${host%%/*}"
   end="$(echo | openssl s_client -connect "$host:443" -servername "$host" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
   if [ -z "$end" ]; then fail "$host: no certificate read (RB-6)"; continue; fi
