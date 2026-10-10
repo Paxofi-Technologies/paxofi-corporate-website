@@ -66,6 +66,9 @@ export function startHarness(port, { apiBase = API_BASE, env = {}, host = "127.0
 
 /** Fails with a readable list of WCAG 2.1 AA violations on the current page. */
 export async function assertAccessible(page, label = "") {
+  // After a client-side redirect Next.js sets <title> a moment later; give it
+  // up to 5 s. A page that never gets a title still fails below.
+  await page.waitForFunction(() => document.title.trim() !== "", null, { timeout: 5000 }).catch(() => {});
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
   assert.deepEqual(summary, [], `WCAG 2.1 AA violations ${label}`);
