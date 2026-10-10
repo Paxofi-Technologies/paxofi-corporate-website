@@ -42,7 +42,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 | Document | Content |
 |---|---|
-| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-025) | Every product and technical decision, newest last |
+| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-026) | Every product and technical decision, newest last |
 | `PRODUCT-BASELINE.md` | Vision, sitemap, journeys, requirements, roles, workflow, change control |
 | `RUNBOOKS.md` | Operations, incidents, escalation, monitoring, secrets |
 | `ops/DEPLOYMENT-GUIDE.template.md` | Upload deployment (rendered per release, with PDF) |
