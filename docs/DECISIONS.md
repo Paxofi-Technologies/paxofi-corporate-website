@@ -475,3 +475,21 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Not chosen:**
   - Retiring content automatically on its review date: a missed review should prompt a person, not take a page down.
   - Redirects in the web server (.htaccess): they would need file access for every change and be lost when moving to the VPS.
+
+## D-026 — How the stabilisation review is run (CW-OPS2-003, 10 Oct 2026)
+
+**Decision (CTO, under the owner's standing approval):** the post-launch review on 16 Oct 2026 decides, against written pass conditions, whether the launch period ends. It follows `STABILISATION-REVIEW.md`, and the 30-day review on 1 Nov reuses it.
+
+- **Evidence is read-only and holds no personal data.**
+  - `ops/stabilisation-check.sh` looks at the live sites from outside, as a visitor would.
+  - `ops/stabilisation-evidence.sql` runs only SELECTs in phpMyAdmin and returns counts and timings: no names, emails, messages, IP addresses or CVs. Its results can be pasted into PKDMS and Asana.
+- **Pass conditions** come from existing decisions:
+  - D-007: availability ≥ 99.5%, LCP ≤ 2.5 s, first enquiry reply within 2 business days;
+  - D-019: applications acknowledged within 2 working days;
+  - RB-10, RB-17 and RB-18: retention, email and backups.
+  Each line is marked *Pass*, *Watch* or *Action*. Every *Action* becomes an Asana task with an owner and a date.
+- **Outcome:** either the launch period closes and the site runs on the weekly checks and runbooks, or it is extended to a set date with an action list.
+- **Dependabot:** minor and patch updates whose CI is fully green are merged into `develop` and ship with the next release. Major updates still get their own change (RB-9).
+- **Not chosen:**
+  - A staff-area page or API endpoint for the evidence: it would add code to the live system during stabilisation, when the aim is to change as little as possible.
+  - Exporting raw tables for the review: that would copy personal data out of the database (D-008).

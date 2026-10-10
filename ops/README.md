@@ -32,3 +32,13 @@ The smoke test checks that:
 
 Send the folder's six files (two zips, two SQL files, PDF, SHA256SUMS) only when all three steps pass. The `dist/` folder is never committed.
 
+## Checking the live sites
+
+For the weekly check and the stabilisation and 30-day reviews (`docs/STABILISATION-REVIEW.md`):
+
+```bash
+bash ops/stabilisation-check.sh          # live: releases, API health/readiness, main pages, security headers, certificates, response time
+```
+
+`ops/stabilisation-evidence.sql` is pasted into phpMyAdmin → SQL on the live database. It only runs SELECTs and returns counts and timings (enquiry replies, applications, sign-ins, email, retention, visitors, content reviews), no personal data.
+

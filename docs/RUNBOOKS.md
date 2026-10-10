@@ -21,6 +21,8 @@ Every request to the API returns an `X-Request-Id` header and a `request_id` in 
 4. cPanel → **Disk Usage**: no sudden growth (logs, old release folders).
 5. Delete `…-old-<version>` folders and `release-<version>` folders older than one week.
 
+Shortcut for step 1 (and certificates, security headers and the main pages): `bash ops/stabilisation-check.sh` from any computer with bash, curl and openssl. It only reads, and names the runbook for anything that fails.
+
 ## RB-1 Deploy a release
 
 Follow `DEPLOYMENT-GUIDE.md` shipped with the release (generated from `ops/DEPLOYMENT-GUIDE.template.md`). Website-only releases need Step 4 only. Always finish by checking `/release.txt` in a private window. Once the staging copy exists (guide Step 11, D-013), every release goes to staging first and to live only after it has been checked there (RB-14).
