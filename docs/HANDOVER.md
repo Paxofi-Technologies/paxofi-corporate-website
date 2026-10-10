@@ -1,6 +1,6 @@
 # Operations handover — Paxofi Corporate Website v1 (CW-DOC-006)
 
-Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.com/release.txt`). UAT signed off by the owner on 2 Oct 2026 (`UAT-PLAN.md`).
+Live since 2 Oct 2026 (v1 UAT signed off by the owner that day, `UAT-PLAN.md`). All planned work is live as of **release 25** (6 Oct 2026). The deployed version is always the one shown at `https://corporate.paxofi.com/release.txt`.
 
 ## 1. What is running
 
@@ -48,6 +48,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 | `ops/DEPLOYMENT-GUIDE.template.md` | Upload deployment (rendered per release, with PDF) |
 | `ENDPOINT-RTM-V1.md`, `SCHEMA-REVIEW.md` | API and database reference |
 | `QUALITY-REPORT.md`, `UAT-PLAN.md` | Test evidence and UAT results |
+| `STABILISATION-REVIEW.md` | Post-launch review pack (CW-OPS2-003); reused for the 30-day review |
 
 ## 5. Secrets and access (locations only)
 
@@ -67,10 +68,5 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 ## 7. Upcoming reviews
 
-- **Stabilisation review (CW-OPS2-003)**, about 16 Oct 2026. Check:
-  - UptimeRobot uptime;
-  - enquiries received and answered;
-  - the retention cron log;
-  - any errors in `stderr.log` / `error_log`;
-  - open Dependabot PRs.
+- **Stabilisation review (CW-OPS2-003)**, 16 Oct 2026. Pack, checklist and agenda: `STABILISATION-REVIEW.md`. Evidence comes from `ops/stabilisation-check.sh` (live sites, read-only) and `ops/stabilisation-evidence.sql` (phpMyAdmin, read-only, counts only). It covers uptime, enquiries answered, recruitment, cron jobs, email, backups, errors and open Dependabot PRs.
 - **30-day operational review (CW-OPS2-004)**, about 1 Nov 2026. Measure against the D-007 targets: ≥ 99.5% availability, LCP ≤ 2.5 s, and P1/P2 incident response.
