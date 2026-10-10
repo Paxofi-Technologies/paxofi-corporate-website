@@ -29,8 +29,12 @@ Release in production: **`20261002-747d5a8`** (check `https://corporate.paxofi.c
    - OWASP ZAP baseline;
    - dependency audits.
 3. Promotion `develop` → `main`; CI builds the cPanel packages.
-4. The operator deploys with the PDF guide shipped in each release, then checks `/release.txt`.
-5. Rollback: RB-2 (the previous folders are kept as `…-old-<version>` for a week).
+4. Release package, built from `main` (see `ops/README.md` → *Building and checking a release*):
+   - `ops/package-release.sh` makes the zips, upgrade/install SQL and guide;
+   - `ops/release-guide-pdf.sh` makes the PDF guide;
+   - `ops/smoke-release.sh` checks the database scripts against the previous release and runs both zips.
+5. The operator deploys with the PDF guide shipped in each release, then checks `/release.txt`.
+6. Rollback: RB-2 (the previous folders are kept as `…-old-<version>` for a week).
 
 Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (RB-9).
 
@@ -38,7 +42,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 | Document | Content |
 |---|---|
-| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-008) | Careers, brand, design baseline, logo, v1 scope, analytics, service levels, retention |
+| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-025) | Every product and technical decision, newest last |
 | `PRODUCT-BASELINE.md` | Vision, sitemap, journeys, requirements, roles, workflow, change control |
 | `RUNBOOKS.md` | Operations, incidents, escalation, monitoring, secrets |
 | `ops/DEPLOYMENT-GUIDE.template.md` | Upload deployment (rendered per release, with PDF) |
