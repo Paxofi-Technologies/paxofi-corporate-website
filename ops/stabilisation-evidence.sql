@@ -118,3 +118,33 @@ WHERE created_at >= @since AND outcome <> 'success' AND action <> 'staff.sign_in
 GROUP BY action, outcome
 ORDER BY events DESC
 LIMIT 20;
+
+-- 11. Email sent per day (RB-17). A day with activity but no sent emails
+--     means sending stopped: check staff area → Email.
+SELECT DATE(sent_at) AS day, COUNT(*) AS sent
+FROM email_outbox
+WHERE status = 'sent' AND sent_at >= @since
+GROUP BY DATE(sent_at)
+ORDER BY day;
+
+-- 12. Test applications (D-027) still in the database. Erase them after each
+--     test (staff area → the application → Erase application).
+SELECT COUNT(*) AS test_applications, MIN(created_at) AS oldest
+FROM job_applications
+WHERE is_test = 1;
+
+-- 13. Careers opening dates saved in the staff area (D-028, D-030). An empty
+--     result means the server defaults in backend/.env apply. The test code is
+--     shown only as "set", never its hash.
+SELECT setting_key,
+       CASE WHEN setting_key = 'test_code_hash' THEN 'set' ELSE setting_value END AS value,
+       updated_at
+FROM careers_settings
+ORDER BY setting_key;
+
+-- 14. Published roles by engagement type (D-027: 15 Cohort 1 positions).
+SELECT engagement_type, COUNT(*) AS published_roles
+FROM career_opportunities
+WHERE lifecycle_state = 'published'
+GROUP BY engagement_type;
+
