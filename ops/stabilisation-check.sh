@@ -76,6 +76,11 @@ for url in "$CORPORATE" "$CAREERS" "$API"; do
   case "$url" in https://*) ;; *) echo "  skip $url (not https)"; continue ;; esac
   host="${url#https://}"; host="${host%%/*}"
   end="$(echo | openssl s_client -connect "$host:443" -servername "$host" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
+  if [ -z "$end" ]; then
+    # Networks that only allow web traffic through a proxy block openssl's direct
+    # connection; curl reports the same certificate through the proxy.
+    end="$(curl -svo /dev/null --max-time 15 "https://$host/" 2>&1 | sed -n 's/^\*  *expire date: //p' | head -1)"
+  fi
   if [ -z "$end" ]; then fail "$host: no certificate read (RB-6)"; continue; fi
   days=$(( ( $(date -u -d "$end" +%s) - $(date -u +%s) ) / 86400 ))
   if [ "$days" -lt 0 ]; then fail "$host: certificate expired $end (RB-6)"
