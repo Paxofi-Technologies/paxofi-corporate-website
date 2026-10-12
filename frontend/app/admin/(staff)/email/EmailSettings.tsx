@@ -72,7 +72,7 @@ export default function EmailSettings() {
       const a = r.data;
       setResult(
         a.ok
-          ? { ok: true, text: kind === "test" ? `Sent to ${a.to}. Check that inbox (and spam) in a minute.` : `Sent ${a.sent ?? 0}, failed ${a.failed ?? 0}${(a.failed ?? 0) > 0 ? ". The reason is shown under Queue." : "."}` }
+          ? { ok: kind === "test" || (a.failed ?? 0) === 0, text: kind === "test" ? `Sent to ${a.to}. Check that inbox (and spam) in a minute.` : `Sent ${a.sent ?? 0}, failed ${a.failed ?? 0}${(a.failed ?? 0) > 0 ? ". The reason is shown under Queue." : "."}` }
           : { ok: false, text: `Not sent: ${a.error}` },
       );
     } catch (e) {

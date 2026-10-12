@@ -40,8 +40,9 @@ final class SmtpTransport implements MailTransport
             $this->hello();
             if ($this->encryption === 'tls') {
                 $this->command('STARTTLS', 220);
-                if (stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT) !== true) {
-                    throw new MailFailed('STARTTLS negotiation failed.');
+                $socket = $this->socket;
+                if (self::collectingWarnings(fn () => stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT), $warnings) !== true) {
+                    throw new MailFailed(trim('STARTTLS negotiation failed. ' . $warnings));
                 }
                 $this->hello();
             }
@@ -66,6 +67,33 @@ final class SmtpTransport implements MailTransport
         }
     }
 
+    /**
+     * Runs $call with PHP warnings captured instead of printed; $warnings gets their text,
+     * without the "function(): " prefixes and PHP's generic "Unknown error".
+     *
+     * @template T
+     * @param callable(): T $call
+     * @return T
+     */
+    private static function collectingWarnings(callable $call, ?string &$warnings): mixed
+    {
+        $messages = [];
+        set_error_handler(static function (int $level, string $message) use (&$messages): bool {
+            $message = trim((string) preg_replace(['/^[a-z_]+\(\):\s*/i', '/\s+/'], ['', ' '], $message));
+            if (!str_starts_with($message, 'Unable to connect to ')) {
+                $messages[] = $message;
+            }
+
+            return true;
+        });
+        try {
+            return $call();
+        } finally {
+            restore_error_handler();
+            $warnings = implode(' ', array_unique($messages));
+        }
+    }
+
     private function connect(): void
     {
         $scheme = $this->encryption === 'ssl' ? 'ssl' : 'tcp';
@@ -75,9 +103,14 @@ final class SmtpTransport implements MailTransport
             'peer_name' => $this->host,
             'SNI_enabled' => true,
         ]]);
-        $socket = @stream_socket_client("{$scheme}://{$this->host}:{$this->port}", $errno, $error, $this->timeoutSeconds, STREAM_CLIENT_CONNECT, $context);
+        // A failed SSL handshake (for example a certificate for another name) leaves $error
+        // empty; the reason is only in PHP warnings, so collect them.
+        $socket = self::collectingWarnings(function () use ($scheme, $context, &$error) {
+            return stream_socket_client("{$scheme}://{$this->host}:{$this->port}", $errno, $error, $this->timeoutSeconds, STREAM_CLIENT_CONNECT, $context);
+        }, $warnings);
         if ($socket === false) {
-            throw new MailFailed("Could not connect to the mail server {$this->host}:{$this->port} ({$error}).");
+            $reason = trim((string) $error . ' ' . $warnings);
+            throw new MailFailed("Could not connect to the mail server {$this->host}:{$this->port} (" . ($reason !== '' ? $reason : 'no reason given') . ').');
         }
         stream_set_timeout($socket, $this->timeoutSeconds);
         $this->socket = $socket;
