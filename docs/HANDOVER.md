@@ -49,6 +49,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 | `ENDPOINT-RTM-V1.md`, `SCHEMA-REVIEW.md` | API and database reference |
 | `QUALITY-REPORT.md`, `UAT-PLAN.md` | Test evidence and UAT results |
 | `STABILISATION-REVIEW.md` | Post-launch review pack (CW-OPS2-003); reused for the 30-day review |
+| `PIF-CAMPAIGN-PLAN.md`, `ops/pif-2026-campaign-links.csv` | PIF 2026 campaign: dates, staff-area settings, Gate 1 checklist (30 Oct), tracked links |
 
 ## 5. Secrets and access (locations only)
 
@@ -69,5 +70,6 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 ## 7. Upcoming reviews
 
+- **PIF 2026 campaign:** Gate 1 on Fri 30 Oct, applications open Mon 2 Nov, Cohort 1 closes Sun 15 Nov, starts Mon 7 Dec. Plan and checklist: `PIF-CAMPAIGN-PLAN.md`.
 - **Stabilisation review (CW-OPS2-003)**, 16 Oct 2026. Pack, checklist and agenda: `STABILISATION-REVIEW.md`. Evidence comes from `ops/stabilisation-check.sh` (live sites, read-only) and `ops/stabilisation-evidence.sql` (phpMyAdmin, read-only, counts only). It covers uptime, enquiries answered, recruitment, cron jobs, email, backups, errors and open Dependabot PRs.
 - **30-day operational review (CW-OPS2-004)**, about 1 Nov 2026. Measure against the D-007 targets: ≥ 99.5% availability, LCP ≤ 2.5 s, and P1/P2 incident response.

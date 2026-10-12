@@ -19,17 +19,19 @@ The review decides one thing: is the website stable enough to leave the launch p
 
 Paste results into the PKDMS copy of this page. Do not paste names, email addresses, messages or CVs.
 
-## 2. Engineering evidence (prepared 10 Oct 2026; refresh on 15 Oct)
+## 2. Engineering evidence (refreshed 12 Oct 2026; check again on 15 Oct)
 
-| Item | State on 10 Oct | Check on 15 Oct |
+| Item | State on 12 Oct | Check on 15 Oct |
 |---|---|---|
-| Release live | Release 25 (6 Oct 2026, P3.6 reviews and redirects). UAT CR1–CR7 passed. `/release.txt` shows the version. | Release 26 deployed? (see below) |
-| Release 26 (prepared 10 Oct) | No database change and no new features. It brings: a minor update of the icon library (`lucide-react` 1.50 → 1.52), the review tools in this document, and `HANDOVER.md` updates. It may be deployed before or after the review. | — |
-| Planned scope | All planned work is built and live: v1, Phase 2 (P2.1–P2.8), careers site (C1–C3), Phase 3 (P3.1–P3.6), Cloudflare (D-024). Decisions D-001 to D-025. | — |
-| CI on `main` | Green on every merge since go-live (unit, MariaDB integration, component, E2E in three browsers with WCAG 2.1 AA, OWASP ZAP baseline, dependency audits). | Latest `main` run green |
-| Dependabot | One update PR (frontend minor/patch) merged on 10 Oct; none open. | Open PRs: ___ |
-| Known issues | KI-001 Facebook link previews (blocked by the host until the VPS move). D-004 interim logo. | Changes: ___ |
-| Open Asana items | Careers site launch and campaign go-ahead (due 19 Oct). Plan the first Insights articles (owner). KI-001 retest after the VPS move. CW-OPS2-004 30-day review (1 Nov). | — |
+| Release live | Corporate: `20261012-b05f22e` (Email page, D-031). **Careers: `20261012-dd25c03`, one release behind** (found by `stabilisation-check.sh` on 12 Oct). | Both apps show the same `/release.txt` |
+| Latest release built | `20261012-97674ca` (12 Oct): the Email page explains SSL connection failures. No database change. Deploy the API zip, and the website zip to **both** Node.js apps. | Deployed? |
+| Releases since 10 Oct | 26 (icon library update, review tools); 27 (PIF engagement types, 15 Cohort 1 positions, D-027); D-028 (opening dates set in the staff area); 28 (reviewers with recusal, talent pool, certificates and careers.paxofi.com/verify, D-029); D-030 (close applications, emails never stall silently); D-031 (Email page and SMTP settings in the staff area, test-application button). | — |
+| Planned scope | v1, Phase 2 (P2.1–P2.8), careers site (C1–C3), Phase 3 (P3.1–P3.6), Cloudflare (D-024) and the PIF recruitment features (D-027 to D-031) are built. Decisions D-001 to D-031. | — |
+| CI on `main` | Green on every merge (unit, MariaDB integration, component, E2E in three browsers with WCAG 2.1 AA, OWASP ZAP baseline, dependency audits). Latest: promotion PR 112, 12 Oct. | Latest `main` run green |
+| Dependabot | No open pull requests on 12 Oct. | Open PRs: ___ |
+| Known issues | KI-001 Facebook link previews (blocked by the host until the VPS move). D-004 interim logo. KI-002 closed (D-028). | Changes: ___ |
+| Incidents | Two since go-live, both recorded in §3.7. | New ones: ___ |
+| Open Asana items | Careers launch and campaign go-ahead, **moved to Gate 1, Fri 30 Oct** (applications open Mon 2 Nov). Plan the first Insights articles (owner). KI-001 retest after the VPS move. CW-OPS2-004 30-day review (1 Nov). | — |
 | Repository secrets | `PCF_COMPOSER_AUTH` / `PCF_GITHUB_TOKEN` expiry date: ___ (rotate before it expires) | — |
 
 ## 3. Production evidence (Operations fills in)
@@ -40,7 +42,7 @@ Each line has a pass condition. Mark it **Pass**, **Watch** (acceptable, keep an
 
 | Check | Pass when | Result |
 |---|---|---|
-| `stabilisation-check.sh` | "all checks passed" or warnings only | |
+| `stabilisation-check.sh` | "all checks passed" or warnings only | 12 Oct (Engineering): pages, API, headers and certificates pass; certificates valid to Jan 2027 or later; average 0.63 s. **Warning: careers app on an older release** (deploy the latest website zip to it). |
 | UptimeRobot uptime since 2 Oct, each monitor | ≥ 99.5% | |
 | UptimeRobot incidents | Each P1/P2 has a PKDMS record with cause and fix | |
 | UptimeRobot monitors | Website, release, API health, API readiness **and careers.paxofi.com** exist and alert the operations email (HANDOVER §1 asks for the careers monitor; RUNBOOKS lists four) | |
@@ -63,7 +65,9 @@ Each line has a pass condition. Mark it **Pass**, **Watch** (acceptable, keep an
 | Query 4: applications by stage | `waiting_over_4_days` is 0 | |
 | Staff area → Recruitment → report | No *overdue* applications | |
 | Candidate acknowledgement emails | Query 6: kind `candidate_acknowledgement` (and `application_alert` to HR) shows only `sent` | |
-| Careers site ready for launch on 19 Oct | QA checklist done (Asana), roles published, campaign links ready (RB-19) | |
+| Careers site ready for Gate 1 (Fri 30 Oct) | 15 roles published; owner tested the full flow end to end on 12 Oct (apply, acknowledgement, alert, reviewers, talent pool, certificate and verify); campaign links ready (`PIF-CAMPAIGN-PLAN.md`) | |
+| Opening dates (query 13) | Opening day Mon 2 Nov, last day for Cohort 1 Sun 15 Nov; applications not open before Gate 1 | |
+| Test applications (query 12) | Erased after testing: 0 left, or each one explained | |
 
 ### 3.4 Background jobs, email and backups
 
@@ -71,7 +75,8 @@ Each line has a pass condition. Mark it **Pass**, **Watch** (acceptable, keep an
 |---|---|---|
 | `purge-retention.log` | One line per day since it was set up; no "failed" | |
 | Query 7: retention | Every column 0 | |
-| `send-mail.log` + query 6 | No `failed` emails; nothing `pending` for more than an hour | |
+| Staff area → **Email** | "Sending is on"; nothing waiting for more than an hour; no latest error | |
+| `send-mail.log` + queries 6 and 11 | Since the 12 Oct fix: no `failed` emails, nothing `pending` for more than an hour, emails sent every day there was activity. The 6–12 Oct gap and 2 given-up emails are incident 2 (§3.7) | |
 | `backup.log` + `paxofi-backups/` | A new database and media file every night; 14 days kept | |
 | Off-server copy (RB-18) | At least one weekly copy downloaded and stored off the server | |
 | Restore test | Not required now; planned for the 30-day review (§5) | |
@@ -97,11 +102,20 @@ Each line has a pass condition. Mark it **Pass**, **Watch** (acceptable, keep an
 | Insights | First articles planned (open owner task) | |
 | Disk usage (cPanel) | Below 70% of the quota; old `…-old-<version>` folders deleted | |
 
+### 3.7 Incidents since go-live
+
+| # | When | What happened | Impact | Cause | Fix | Prevention |
+|---|---|---|---|---|---|---|
+| 1 | 12 Oct (found) | careers.paxofi.com/verify showed "Page not found"; applications failed with a generic error | Certificate checks and some applications failed until the careers app was updated | The release 25 website zip had not been deployed to the careers Node.js app | Deployed the same zip to `paxofi-careers-website` | Guide Step 4 item 6 and RB-19 say "both apps"; `stabilisation-check.sh` warns when the releases differ |
+| 2 | 6–12 Oct | No emails sent: applicant acknowledgements, HR and enquiry alerts, password links | 22 emails delayed up to 6 days; 2 given up after 6 attempts | The site sent through `paxofi.com:465`. Since the Cloudflare change (D-024) that name points to Cloudflare's proxy, which carries web traffic only, so every connection timed out. `mail.paxofi.com` reaches the server but its certificate is for `paxofi.com` | 12 Oct: Email page (D-031) showed the cause; the owner switched the transport to the server's own mail function; 18 sent at once, the rest by the cron job | Email page shows queue and latest error; `stabilisation-check` and the weekly check look at it (RB-17); outbox errors are recorded (D-030) |
+
+Decide for incident 2 whether the applicants and enquirers affected need a personal note (the 2 given-up emails).
+
 ## 4. Agenda (45 minutes)
 
 1. Evidence walk-through, §2 and §3 (20 min). Go through the Watch and Action lines only.
 2. Incidents and near misses since go-live (5 min).
-3. Careers launch on 19 Oct: go or wait (5 min).
+3. PIF campaign: readiness for Gate 1 (Fri 30 Oct) and the opening on Mon 2 Nov, from `PIF-CAMPAIGN-PLAN.md` (5 min).
 4. Decision: close the stabilisation period, or extend it with a dated action list (5 min).
 5. Actions, owners and dates (5 min). Confirm the 30-day review on 1 Nov (CW-OPS2-004).
 6. Anything for the change backlog (5 min). New work goes into Asana first (PRODUCT-BASELINE §13).
@@ -113,7 +127,8 @@ Each line has a pass condition. Mark it **Pass**, **Watch** (acceptable, keep an
 | # | Action | Owner | Due | Asana |
 |---|---|---|---|---|
 | 1 | Restore test: restore last night's backup into a new empty database and check it (RB-18) | Operations | before 1 Nov | |
-| 2 | | | | |
+| 2 | Deploy `20261012-97674ca` to the API and both Node.js apps; `stabilisation-check.sh` shows the same release on both | Operations | 16 Oct | |
+| 3 | | | | |
 
 **Carry into the 30-day review (1 Nov):** a full month of UptimeRobot data against 99.5%; LCP; P1/P2 response times; enquiry reply times; the restore test.
 
