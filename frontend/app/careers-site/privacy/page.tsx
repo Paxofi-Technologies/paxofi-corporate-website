@@ -76,9 +76,17 @@ export default function ApplicantPrivacy() {
             information with professional advisers, auditors, regulators and authorities only where the law requires it.
           </p>
 
+          <p>
+            Anyone who has the code printed on your participation certificate can check it at careers.paxofi.com/verify.
+            They see only what the certificate shows: your name, position, cohort, dates and that it is genuine. They
+            cannot search for you, and codes cannot be guessed. If we withdraw a certificate, the page shows only that it
+            is no longer valid. Only share your code with people you want to see it. People who review applications
+            step aside from any application where they have a personal connection to the applicant.
+          </p>
+
           <h2>How long we keep it</h2>
           <ul>
-            <li>If you are not selected, withdraw or decline an offer: your application, CV, notes and scores are deleted automatically 12 months after the application closes, or 12 months after its last update if it stays open. We keep it longer only if you join the talent pool by consent.</li>
+            <li>If you are not selected, withdraw or decline an offer: your application, CV, notes and scores are deleted automatically 12 months after the application closes, or 12 months after its last update if it stays open. We keep it longer only if you join the talent pool by consent. In that case we keep only your name, email, location, the role you applied for, your links and a short note (never your CV) for up to 24 months from the day you agreed, or less if you withdraw consent, and then delete it.</li>
             <li>If you join as a Fellow, Intern or Volunteer: your record is kept as a programme record after your engagement ends and reviewed at least every 6 years. It is not deleted automatically, and you can still ask us to correct or delete it. Certificate verification details (your name, certificate number, programme and dates) are kept for as long as we offer certificate verification.</li>
             <li>Your IP address and browser user-agent are removed after 90 days.</li>
             <li>A CV uploaded without completing the application is deleted after one day.</li>
