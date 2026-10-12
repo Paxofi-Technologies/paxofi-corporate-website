@@ -202,6 +202,8 @@ Staff change the wording of the main pages under **Content → Page text** (D-01
 The API sends email through the company mailbox (D-016). The settings are `MAIL_*`, `ENQUIRY_ALERT_TO` and `ERROR_ALERT_TO` in `backend/.env`.
 
 - **First check (D-031):** staff area → **Email**. It says whether sending is on, how many emails wait and since when, and the latest error. **Send me a test email** shows the exact error on screen; **Send queued emails now** sends what is waiting. SMTP settings can be entered there (they win over `MAIL_*` in .env; the password is stored encrypted).
+- **"Could not connect … (Connection timed out)" for `paxofi.com`:** the domain's website record goes through the Cloudflare proxy, which carries web traffic only. Use a mail host that points straight at the server: `mail.paxofi.com` (DNS only) or, if its certificate does not match, the server name cPanel shows under *Email Accounts → Connect Devices → Outgoing Server*.
+- **"Could not connect … (SSL operation failed … certificate verify failed …)":** the host name is not on the server's certificate. Use the cPanel server name as above.
 - **No enquiry alert arrived:**
   1. Check the spam folder.
   2. Check that `MAIL_TRANSPORT=smtp` and the `MAIL_*` settings are in `backend/.env`.

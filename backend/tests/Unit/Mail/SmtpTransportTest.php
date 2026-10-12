@@ -52,6 +52,22 @@ final class SmtpTransportTest extends TestCase
         (new SmtpTransport('127.0.0.1', 1, 'none', null, null, 'no-reply@paxofi.com', 'Paxofi', 2))->send(new Email(['ops@paxofi.com'], 'Hi', 'Body'));
     }
 
+    public function testAFailedSslHandshakeSaysWhy(): void
+    {
+        // The fake server speaks plain SMTP, so an SSL client fails the handshake, as with a
+        // certificate problem on a real server. The reason must not be empty: "(...)" not "()".
+        [, $process] = $this->server();
+        try {
+            (new SmtpTransport('127.0.0.1', $this->port, 'ssl', null, null, 'no-reply@paxofi.com', 'Paxofi', 5))->send(new Email(['ops@paxofi.com'], 'Hi', 'Body'));
+            self::fail('Expected MailFailed');
+        } catch (MailFailed $exception) {
+            self::assertStringNotContainsString('()', $exception->getMessage());
+            self::assertMatchesRegularExpression('/127\.0\.0\.1:\d+ \(.+\)\.$/', $exception->getMessage());
+        } finally {
+            proc_terminate($process);
+        }
+    }
+
     private int $port = 0;
     private string $password = '';
 
