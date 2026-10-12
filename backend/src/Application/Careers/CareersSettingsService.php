@@ -55,6 +55,8 @@ final class CareersSettingsService
                 'applications_closed' => $current->closed($now),
                 'cohort' => $current->cohort($now),
             ],
+            // Where staff open a test application (role address + ?test), D-031.
+            'careers_site_url' => $current->careersSiteUrl,
             'test_code' => ['set' => isset($saved[CareersSettingsStore::TEST_CODE_HASH]) || $server->testCode !== '', 'by_staff' => isset($saved[CareersSettingsStore::TEST_CODE_HASH]), 'by_server' => $server->testCode !== ''],
         ];
     }

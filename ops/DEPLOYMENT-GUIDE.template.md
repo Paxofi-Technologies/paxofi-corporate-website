@@ -266,6 +266,16 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10l — Email page and test applications (no settings to add, about 5 minutes)
+
+From this release the staff area has an **Email** page (administrators) and a **Test application** button under Recruitment → *Set when applications open* (decision D-031, RB-17). The database upgrade (migration 024) adds the table for SMTP settings saved in the staff area.
+
+1. Deploy as usual: the API zip, and the website zip to **both** Node.js apps (Step 4, item 6).
+2. Staff area → **Email**. It shows "Sending is on" with your `.env` settings, or says what is missing.
+3. Click **Send me a test email**. If it says "Not sent: …", that message is the cause (for example a wrong password gives "535"). Correct the setting on the same page (or in `.env`) and test again.
+4. When the test arrives, click **Send queued emails now** to send the emails that have been waiting.
+5. You may now move the SMTP details from `.env` into the Email page (the password needs `MFA_ENCRYPTION_KEY`, which is already set if staff use two-factor sign-in). Keeping them in `.env` also works; a value saved on the page wins.
+
 ## Step 10k — Reviewers, talent pool and certificates (no settings to add, about 10 minutes)
 
 From this release, applications can have assigned reviewers and conflict-of-interest recusals, candidates who were not selected can join a consent-based talent pool, and completed participants can receive certificates that anyone can check at https://careers.paxofi.com/verify (decision D-029, RB-19). The database upgrade (migration 023) adds three tables and the permission `certificates.manage` for administrators. No `.env` change is needed. Deploy as usual (Steps 2 to 4, and the same website package for `paxofi-careers-website`, Step 10d), and restart both Node.js apps.

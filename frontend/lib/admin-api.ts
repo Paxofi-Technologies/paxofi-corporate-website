@@ -309,7 +309,22 @@ export type CareersSettings = {
     cohort: string | null;
   };
   test_code: { set: boolean; by_staff: boolean; by_server: boolean };
+  /** Where test applications are made (role address + ?test). */
+  careers_site_url?: string;
 };
+
+/** The staff Email page (D-031): settings in force (never the password), the outbox and test results. */
+export type MailFieldKey = "transport" | "host" | "port" | "encryption" | "username" | "password" | "from_address" | "from_name";
+export type MailField = { value: string | null; set: boolean; source: "staff" | "server" | "none" };
+export type MailStatus = {
+  configured: boolean;
+  fields: Record<MailFieldKey, MailField>;
+  problem: string | null;
+  can_store_password: boolean;
+  queue: { pending: number; failed: number; sent_last_day: number; oldest_pending_at: string | null; last_error: string | null; last_error_kind: string | null; last_sent_at: string | null };
+  checked_at: string;
+};
+export type MailAttempt = { ok: boolean; error: string | null; seconds: number; status: MailStatus; to?: string; sent?: number; failed?: number };
 
 /** "2027-04-30" as "30 Apr 2027". */
 export function formatDay(value: string | null | undefined): string {

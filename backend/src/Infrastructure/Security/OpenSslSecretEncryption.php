@@ -20,12 +20,13 @@ final class OpenSslSecretEncryption implements SecretEncryption
 
     private readonly string $key;
 
-    public function __construct(string $configuredKey)
+    /** @param string $purpose keeps keys for different secrets apart (two-factor secrets, the mail password) */
+    public function __construct(string $configuredKey, string $purpose = 'totp-secret/v1')
     {
         if (strlen($configuredKey) < self::MIN_KEY_LENGTH) {
             throw new InvalidArgumentException('MFA_ENCRYPTION_KEY must be at least 32 characters.');
         }
-        $this->key = hash_hkdf('sha256', $configuredKey, 32, 'paxofi-corporate-website/totp-secret/v1');
+        $this->key = hash_hkdf('sha256', $configuredKey, 32, 'paxofi-corporate-website/' . $purpose);
     }
 
     public function encrypt(string $plaintext): string
