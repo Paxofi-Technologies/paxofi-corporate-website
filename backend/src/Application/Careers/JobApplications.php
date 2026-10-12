@@ -28,7 +28,10 @@ interface JobApplications
     public function claimUpload(string $tokenHash, DateTimeImmutable $now): ?array;
 
     /**
-     * @param array{stage?: string, role?: string, q?: string} $filters
+     * `viewer_id` and `viewer_email` leave out applications the viewer is recused from
+     * or made themselves (D-029).
+     *
+     * @param array{stage?: string, role?: string, q?: string, viewer_id?: string, viewer_email?: string} $filters
      * @return array{items: list<array<string, mixed>>, total: int, counts: array<string, int>}
      */
     public function search(array $filters, int $page, int $perPage): array;
@@ -45,6 +48,12 @@ interface JobApplications
 
     /** @return list<array{id: string, kind: string, body: string, author_name: ?string, created_at: string}> */
     public function notes(string $applicationId): array;
+
+    /** Whether the person wrote a scorecard entry on the application (D-029). */
+    public function scoredBy(string $applicationId, string $userId): bool;
+
+    /** Empties both scorecards, for example after a scorer recuses. */
+    public function clearScores(string $id): void;
 
     public function delete(string $id): void;
 
