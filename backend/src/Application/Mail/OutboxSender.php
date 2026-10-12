@@ -44,15 +44,18 @@ final class OutboxSender
                 $this->transport->send($item['email']);
                 $this->outbox->markSent($item['id'], ($this->clock)());
                 $sent++;
-            } catch (MailFailed $exception) {
+            } catch (\Throwable $exception) {
+                // Any failure, not only a refused delivery, is recorded on the email and retried, so one
+                // bad email or an unexpected error can never leave the queue stuck with no reason shown.
                 $failed++;
                 $attempt = $item['attempts'] + 1;
                 $wait = self::RETRY_MINUTES[$attempt - 1] ?? null;
                 $next = $wait === null ? null : ($this->clock)()->modify("+{$wait} minutes");
-                $this->outbox->markFailed($item['id'], mb_substr($exception->getMessage(), 0, 500), $next);
-                $this->logger->warning('mail.send_failed', ['email_id' => $item['id'], 'kind' => $item['email']->kind, 'attempt' => $attempt, 'error' => $exception->getMessage()]);
+                $error = $exception instanceof MailFailed ? $exception->getMessage() : (new \ReflectionClass($exception))->getShortName() . ': ' . $exception->getMessage();
+                $this->outbox->markFailed($item['id'], mb_substr($error, 0, 500), $next);
+                $this->logger->warning('mail.send_failed', ['email_id' => $item['id'], 'kind' => $item['email']->kind, 'attempt' => $attempt, 'error' => $error]);
                 if ($next === null && $this->onGiveUp !== null) {
-                    ($this->onGiveUp)('Email could not be sent', ['kind' => $item['email']->kind, 'email_id' => $item['id'], 'error' => $exception->getMessage()]);
+                    ($this->onGiveUp)('Email could not be sent', ['kind' => $item['email']->kind, 'email_id' => $item['id'], 'error' => $error]);
                 }
             }
         }
