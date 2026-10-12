@@ -12,6 +12,7 @@ return [
  ['GET','/api/v1/careers','public','published careers'],
  ['GET','/api/v1/articles','public','published News & Insights articles, newest first (page, per_page, category; D-021)'],
  ['GET','/api/v1/articles/{slug}','public','one published article with its body'],
+ ['GET','/api/v1/careers/status','public','careers.paxofi.com: whether applications are open, the opening date and the cohort (D-027)'],
  ['GET','/api/v1/careers/roles','public','careers.paxofi.com: open roles (D-018)'],
  ['GET','/api/v1/careers/roles/{slug}','public','careers.paxofi.com: one open role'],
  ['POST','/api/v1/careers/cv','public+rate-limit','CV upload (raw body; PDF or Word, up to 5 MB); returns a token the application claims'],
