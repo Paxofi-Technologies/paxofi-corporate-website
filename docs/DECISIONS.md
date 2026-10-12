@@ -566,8 +566,14 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 **Decision (CTO; the owner reported on 12 Oct 2026 that applications could be opened but never closed from the staff area):** administrators set a **last day to apply** under Recruitment → *Set when applications open*, next to the opening day and Cohort 1's last day.
 
 - After that Lagos day the API refuses applications (`403 APPLICATIONS_CLOSED`, "Applications are closed…"), and careers.paxofi.com shows "Applications are closed" instead of the form on the home page and every role page. Staff test applications with the test code still work.
-- **Close applications now** saves yesterday as the last day, so applications stop within a minute. **Reopen applications** clears it. The last day cannot be before the opening day.
+- **Close applications now** saves yesterday as the last day, so applications stop within a minute. **Reopen applications** clears it. Closing works even while the opening day is still ahead: closed always wins (fixed 12 Oct 2026; an earlier check refused it).
 - While a last day is set and applications are open, the careers home page shows "The last day to apply is …".
 - Stored in `careers_settings` (`closes_after`), so no migration. Changes are audited as `careers_settings.updated`. There is no server (.env) setting for it.
 - The careers site now shows the API's own message for any refusal it does not recognise, instead of the generic "We could not send your application", so the cause is visible.
+
+### D-030 addendum — emails that never leave the outbox (12 Oct 2026)
+
+**Found (owner, 12 Oct):** every queued email since 8 Oct was `pending` with 0 attempts and no error. A refused delivery is recorded as an attempt, so the sender was stopping on an error it did not record.
+
+**Change:** the outbox sender now records any error on the email (attempt count, `last_error` with the error type) and carries on with the next one; an email that can never be built (no valid recipient) is given up at once with the reason. The queue can no longer stall silently, and `last_error` in phpMyAdmin shows the cause.
 

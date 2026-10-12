@@ -121,8 +121,9 @@ export default function CareersSettingsForm() {
       <p className="admin-intro">
         Choose when careers.paxofi.com starts and stops accepting applications. Outside those days, people can read about the roles but not apply. Changes apply within a minute and no server setting needs to change.
       </p>
-      <p role="status"><strong>{opensLine}</strong> Now counting as <strong>{effective.cohort}</strong>.</p>
+      <p role="status"><strong>{opensLine}</strong>{effective.cohort ? <> Now counting as <strong>{effective.cohort}</strong>.</> : null}</p>
 
+      <FormStatus state="error" message={formError} />
       <p>
         {effective.applications_closed ? (
           <button type="button" className="button button--outline" onClick={reopen} disabled={busy}>Reopen applications</button>
@@ -144,7 +145,6 @@ export default function CareersSettingsForm() {
         <Field name="opens_from" label="Applications open on" type="date" defaultValue={settings.opens_from ?? ""} error={fields.opens_from} hint={`Lagos time, from midnight. Now ${SOURCES[effective.opens_from_source]}. Leave empty to use the server setting${settings.server.opens_from ? ` (${formatDay(settings.server.opens_from)})` : ""}, or open immediately if there is none.`} />
         <Field name="cohort1_closes" label="Last day for Cohort 1" type="date" defaultValue={settings.cohort1_closes ?? ""} error={fields.cohort1_closes} hint={`Applications after this day count towards Cohort 2 and the talent pool. Now ${SOURCES[effective.cohort1_closes_source]}.`} />
         <Field name="closes_after" label="Last day to apply (optional)" type="date" defaultValue={settings.closes_after ?? ""} error={fields.closes_after} hint="Lagos time: applications stop at midnight at the end of this day. Leave empty to keep applications open." />
-        <FormStatus state="error" message={formError} />
         <FormStatus state="success" message={status} />
         <button type="submit" className="button button--primary" disabled={busy}>{busy ? "Saving…" : "Save dates"}</button>
       </form>

@@ -306,7 +306,7 @@ export type CareersSettings = {
     applications_open: boolean;
     applications_closed?: boolean;
     closes_after?: string | null;
-    cohort: string;
+    cohort: string | null;
   };
   test_code: { set: boolean; by_staff: boolean; by_server: boolean };
 };
