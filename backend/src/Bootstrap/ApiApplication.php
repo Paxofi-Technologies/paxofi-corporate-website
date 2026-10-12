@@ -35,9 +35,11 @@ use Paxofi\CorporateWebsite\Application\Articles\ArticleEditor;
 use Paxofi\CorporateWebsite\Application\Articles\ArticleService;
 use Paxofi\CorporateWebsite\Application\Careers\CareerRoleEditor;
 use Paxofi\CorporateWebsite\Application\Careers\CareersService;
+use Paxofi\CorporateWebsite\Application\Careers\CertificateService;
 use Paxofi\CorporateWebsite\Application\Careers\CareersSettingsService;
 use Paxofi\CorporateWebsite\Application\Careers\RecruitmentService;
 use Paxofi\CorporateWebsite\Application\Careers\RecruitmentSettingsSource;
+use Paxofi\CorporateWebsite\Application\Careers\TalentPoolService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -56,6 +58,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareerRolesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareersSettingsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCertificatesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRedirectsController;
@@ -65,11 +68,13 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminPasswordResetController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRecruitmentController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminSessionController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminStaffController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTalentPoolController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminTwoFactorController;
 use Paxofi\CorporateWebsite\Http\Controllers\AnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\ArticlesController;
 use Paxofi\CorporateWebsite\Http\Controllers\CareersController;
 use Paxofi\CorporateWebsite\Http\Controllers\CatalogController;
+use Paxofi\CorporateWebsite\Http\Controllers\CertificateVerificationController;
 use Paxofi\CorporateWebsite\Http\Controllers\ContentController;
 use Paxofi\CorporateWebsite\Http\Controllers\FormSubmissionController;
 use Paxofi\CorporateWebsite\Http\Controllers\HealthController;
@@ -97,6 +102,9 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditRecorder;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCareerRoles;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoApplicationReviewers;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCertificates;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoTalentPool;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCareersSettings;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogEditorRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
@@ -143,6 +151,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/careers/roles/{slug}'],
         ['POST', '/api/v1/careers/cv'],
         ['POST', '/api/v1/careers/roles/{slug}/apply'],
+        ['GET', '/api/v1/careers/certificates/{code}'],
         ['POST', '/api/v1/forms/{form_key}/submit'],
         ['GET', '/api/v1/media/{id}/{filename}'],
         ['GET', '/api/v1/resources'],
@@ -204,6 +213,16 @@ final class ApiApplication implements HttpHandler
         ['POST', '/api/v1/admin/applications/{id}/notes'],
         ['POST', '/api/v1/admin/applications/{id}/emails'],
         ['DELETE', '/api/v1/admin/applications/{id}'],
+        ['POST', '/api/v1/admin/applications/{id}/reviewers'],
+        ['DELETE', '/api/v1/admin/applications/{id}/reviewers/{userId}'],
+        ['POST', '/api/v1/admin/applications/{id}/recusal'],
+        ['POST', '/api/v1/admin/applications/{id}/talent-pool'],
+        ['POST', '/api/v1/admin/applications/{id}/certificates'],
+        ['GET', '/api/v1/admin/talent-pool'],
+        ['DELETE', '/api/v1/admin/talent-pool/{id}'],
+        ['GET', '/api/v1/admin/certificates/{id}/pdf'],
+        ['POST', '/api/v1/admin/certificates/{id}/revoke'],
+        ['DELETE', '/api/v1/admin/certificates/{id}'],
         ['GET', '/api/v1/admin/articles'],
         ['POST', '/api/v1/admin/articles'],
         ['GET', '/api/v1/admin/articles/{id}'],
@@ -340,6 +359,7 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/careers/roles/{slug}', static fn (HttpRequest $r): HttpResponse => $careers()->role($r));
         $router->post('/api/v1/careers/cv', static fn (HttpRequest $r): HttpResponse => $careers()->uploadCv($r));
         $router->post('/api/v1/careers/roles/{slug}/apply', static fn (HttpRequest $r): HttpResponse => $careers()->apply($r));
+        $router->get('/api/v1/careers/certificates/{code}', fn (HttpRequest $r): HttpResponse => (new CertificateVerificationController($this->certificateService()))->verify($r));
         $router->post('/api/v1/analytics/pageview', $this->lazy(fn (): Controller => new AnalyticsController($this->analytics())));
 
         $session = fn (): AdminSessionController => new AdminSessionController($this->authService(), $this->adminGuard(), $this->clock);
@@ -428,6 +448,18 @@ final class ApiApplication implements HttpHandler
         $router->post('/api/v1/admin/applications/{id}/notes', static fn (HttpRequest $r): HttpResponse => $recruitment()->note($r));
         $router->post('/api/v1/admin/applications/{id}/emails', static fn (HttpRequest $r): HttpResponse => $recruitment()->email($r));
         $router->add('DELETE', '/api/v1/admin/applications/{id}', static fn (HttpRequest $r): HttpResponse => $recruitment()->delete($r));
+        $router->post('/api/v1/admin/applications/{id}/reviewers', static fn (HttpRequest $r): HttpResponse => $recruitment()->assignReviewer($r));
+        $router->add('DELETE', '/api/v1/admin/applications/{id}/reviewers/{userId}', static fn (HttpRequest $r): HttpResponse => $recruitment()->removeReviewer($r));
+        $router->post('/api/v1/admin/applications/{id}/recusal', static fn (HttpRequest $r): HttpResponse => $recruitment()->recuse($r));
+        $router->post('/api/v1/admin/applications/{id}/talent-pool', static fn (HttpRequest $r): HttpResponse => $recruitment()->addToTalentPool($r));
+        $router->post('/api/v1/admin/applications/{id}/certificates', static fn (HttpRequest $r): HttpResponse => $recruitment()->issueCertificate($r));
+        $talentPool = fn (): AdminTalentPoolController => new AdminTalentPoolController($this->talentPoolService(), $this->adminGuard());
+        $router->get('/api/v1/admin/talent-pool', static fn (HttpRequest $r): HttpResponse => $talentPool()->list($r));
+        $router->add('DELETE', '/api/v1/admin/talent-pool/{id}', static fn (HttpRequest $r): HttpResponse => $talentPool()->withdraw($r));
+        $certificates = fn (): AdminCertificatesController => new AdminCertificatesController($this->certificateService(), $this->adminGuard());
+        $router->get('/api/v1/admin/certificates/{id}/pdf', static fn (HttpRequest $r): HttpResponse => $certificates()->pdf($r));
+        $router->post('/api/v1/admin/certificates/{id}/revoke', static fn (HttpRequest $r): HttpResponse => $certificates()->revoke($r));
+        $router->add('DELETE', '/api/v1/admin/certificates/{id}', static fn (HttpRequest $r): HttpResponse => $certificates()->delete($r));
 
         $articleEditor = fn (): AdminArticlesController => new AdminArticlesController(
             new ArticleEditor(new PdoArticles($this->database), new PdoMediaRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), $this->clock, Uuid::v4(...)),
@@ -635,6 +667,32 @@ final class ApiApplication implements HttpHandler
             $this->outbox,
             $this->mail,
             $this->settings->recruitment,
+            new PdoApplicationReviewers($this->database),
+            $this->talentPoolService(),
+            $this->certificateService(),
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
+        );
+    }
+
+    private function talentPoolService(): TalentPoolService
+    {
+        return new TalentPoolService(
+            new PdoTalentPool($this->database),
+            new PdoJobApplications($this->database),
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
+        );
+    }
+
+    private function certificateService(): CertificateService
+    {
+        return new CertificateService(
+            new PdoCertificates($this->database),
+            new PdoJobApplications($this->database),
+            $this->settings->recruitment->careersSiteUrl,
             new PdoAuditRecorder($this->database),
             new LazyTransactionManager($this->database),
             $this->clock,

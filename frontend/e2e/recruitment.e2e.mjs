@@ -30,6 +30,8 @@ async function fakeApi(page) {
       scorecards: { evidence: { label: "Gate 2: evidence review", pass: 21, out_of: 35, criteria: CRITERIA }, interview: { label: "Gate 4: interview", pass: 24, out_of: 35, criteria: INTERVIEW } },
       email_templates: [{ key: "selection", label: "Selected (with PIF Participant Agreement)", subject: "You have been selected: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nAttached is the PIF Participant Agreement.\n\nPaxofi", stage: "agreement_pending" }, { key: "assessment_invitation", label: "Assessment invitation", subject: "Your role assessment: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nDeadline: [date and time, with time zone]\n\nPaxofi", stage: "assessment" }],
       email_available: true,
+      reviewers: [], reviewer_candidates: [{ id: "u1", name: "Hana HR" }, { id: "u2", name: "Ife Reviewer" }],
+      talent_pool: null, talent_pool_eligible: false, certificates: [], certificate_eligible: false,
     },
     roles: [{ id: "r1", slug: "software-engineer-fellow", code: "SE", engagement_type: "fellow", title: "Software Engineer Fellow", family: "Technology and engineering", summary: "Build software.", purpose: "Build and test Paxofi software.", responsibilities: ["Write code"], deliverables: [], competencies: [], tools: [], evidence: "", assessment: "", interview: "", state: "published", sort_order: 40, published_at: "2026-10-04 08:00:00", updated_at: "2026-10-04 08:00:00" }],
   };
@@ -80,6 +82,27 @@ async function fakeApi(page) {
       if (/\[[^\]]{2,60}\]/.test(body.body)) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { body: "Replace the [placeholders] in square brackets before sending." } } });
       note("email", `Email sent: ${body.subject}${body.attachment ? `\nAttached: ${body.attachment.filename}` : ""}`);
       return reply(route, 200, app);
+    }
+    if (path === `/applications/${APP_ID}/reviewers` && method === "POST") {
+      const who = app.reviewer_candidates.find((c) => c.id === body.user_id);
+      app.reviewers.push({ user_id: who.id, name: who.name, status: "assigned", reason: null, created_at: "2026-10-04 09:00:00" });
+      note("reviewer", `${who.name} was assigned as a reviewer.`);
+      return reply(route, 201, app);
+    }
+    if (path === `/applications/${APP_ID}/recusal`) {
+      if (body.reason.length < 10) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { reason: "Say why you cannot review this application (10 to 500 characters)." } } });
+      return reply(route, 200, { recused: true });
+    }
+    if (path === `/applications/${APP_ID}/talent-pool`) {
+      app.talent_pool = { id: "tp1", consent_given_on: body.consent_given_on, consent_expires_on: "2028-11-20" };
+      return reply(route, 201, app);
+    }
+    if (path === `/applications/${APP_ID}/certificates`) {
+      app.certificates = [{ id: "c1", code: "PIF-K7M2-9QXA-R4TD", status: "valid", holder_name: app.full_name, started_on: null, completed_on: body.completed_on, issued_at: "2027-04-21 09:00:00", revoked_at: null, revoked_reason: null, verify_url: "https://careers.paxofi.com/verify?code=PIF-K7M2-9QXA-R4TD" }];
+      return reply(route, 201, app);
+    }
+    if (path === "/certificates/c1/pdf") {
+      return route.fulfill({ status: 200, headers: { ...cors, "Content-Disposition": 'attachment; filename="Paxofi-certificate-PIF-K7M2-9QXA-R4TD.pdf"', "Cache-Control": "no-store" }, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
     }
     if (path === `/applications/${APP_ID}/cv`) {
       return route.fulfill({ status: 200, headers: { ...cors, "Content-Disposition": 'attachment; filename="CV-7KQ3MZ.pdf"', "Cache-Control": "no-store" }, contentType: "application/pdf", body: "%PDF-1.7\n%%EOF\n" });
@@ -150,6 +173,57 @@ describe("recruitment", () => {
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Download Ada CV\.pdf/ }).click()]);
     assert.equal(download.suggestedFilename(), "CV-7KQ3MZ.pdf");
     assert.deepEqual(state.calls.filter((c) => c.method !== "GET").map((c) => c.path), [`/applications/${APP_ID}`, `/applications/${APP_ID}/scores`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`, `/applications/${APP_ID}/emails`]);
+    await page.context().close();
+  });
+
+  test("reviewers are assigned and a conflict of interest hides the application", async () => {
+    const page = await newPage();
+    const state = await fakeApi(page);
+    await page.goto(`${BASE}/admin/recruitment/${APP_ID}`);
+    const panel = page.locator("section", { has: page.getByRole("heading", { name: "Reviewers" }) });
+    await panel.getByText("No reviewers assigned.").waitFor();
+    await panel.getByLabel("Assign a reviewer").selectOption("u2");
+    await panel.getByRole("button", { name: "Assign reviewer" }).click();
+    await page.getByText("Reviewer assigned.").waitFor();
+    await panel.getByText("Ife Reviewer").waitFor();
+    await assertAccessible(page, "reviewers panel");
+
+    await panel.getByRole("button", { name: "I have a conflict of interest" }).click();
+    await panel.getByLabel("Why can you not review this application?").fill("The candidate is my cousin.");
+    await panel.getByRole("button", { name: "Step aside from this application" }).click();
+    await page.waitForURL(/\/admin\/recruitment$/);
+    assert.deepEqual(state.calls.filter((c) => c.path.endsWith("/recusal")).map((c) => c.body), [{ reason: "The candidate is my cousin." }]);
+    await page.context().close();
+  });
+
+  test("a candidate who was not selected joins the talent pool with recorded consent", async () => {
+    const page = await newPage();
+    const state = await fakeApi(page);
+    Object.assign(state.app, { stage: "rejected", stage_label: "Not selected", talent_pool_eligible: true });
+    await page.goto(`${BASE}/admin/recruitment/${APP_ID}`);
+    const panel = page.locator("section", { has: page.getByRole("heading", { name: "Talent pool" }) });
+    await panel.getByLabel("Day they agreed").fill("2026-11-20");
+    await panel.getByLabel("How they agreed").selectOption("email_reply");
+    await panel.getByRole("button", { name: "Add to the talent pool" }).click();
+    await panel.getByText(/lapses on 2028-11-20/).waitFor();
+    assert.deepEqual(state.calls.filter((c) => c.path.endsWith("/talent-pool")).map((c) => c.body.consent_method), ["email_reply"]);
+    await assertAccessible(page, "talent pool panel");
+    await page.context().close();
+  });
+
+  test("a certificate is issued and downloaded for a completed participant", async () => {
+    const page = await newPage({ acceptDownloads: true });
+    const state = await fakeApi(page);
+    Object.assign(state.app, { stage: "completed", stage_label: "Completed", certificate_eligible: true });
+    await page.goto(`${BASE}/admin/recruitment/${APP_ID}`);
+    const panel = page.locator("section", { has: page.getByRole("heading", { name: "Certificates" }) });
+    await panel.getByLabel("Day they finished").fill("2027-04-20");
+    await panel.getByRole("button", { name: "Issue certificate" }).click();
+    await panel.getByText("PIF-K7M2-9QXA-R4TD").waitFor();
+    const [download] = await Promise.all([page.waitForEvent("download"), panel.getByRole("button", { name: "Download PDF" }).click()]);
+    assert.equal(download.suggestedFilename(), "Paxofi-certificate-PIF-K7M2-9QXA-R4TD.pdf");
+    assert.equal(await panel.getByRole("button", { name: "Revoke" }).count(), 0, "only administrators revoke");
+    await assertAccessible(page, "certificates panel");
     await page.context().close();
   });
 

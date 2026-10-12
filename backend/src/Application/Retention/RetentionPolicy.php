@@ -17,6 +17,7 @@ use InvalidArgumentException;
  * ends (D-014). Job applications and their CVs are deleted 12 months after
  * they close or, while still open, 12 months after they last moved stage;
  * CV uploads never attached to an application go after a day (D-019).
+ * Talent pool entries go when their 24-month consent lapses (D-029).
  */
 final class RetentionPolicy
 {

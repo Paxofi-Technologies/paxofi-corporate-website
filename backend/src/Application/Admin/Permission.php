@@ -23,4 +23,6 @@ final class Permission
     public const RECRUITMENT_MANAGE = 'recruitment.manage';
     /** Edit, publish and close the roles on careers.paxofi.com (D-018). */
     public const CAREERS_EDIT = 'careers.edit';
+    /** Revoke or delete participation certificates (D-029). */
+    public const CERTIFICATES_MANAGE = 'certificates.manage';
 }

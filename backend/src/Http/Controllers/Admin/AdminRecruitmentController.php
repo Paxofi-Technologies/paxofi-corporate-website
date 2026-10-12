@@ -27,8 +27,8 @@ final class AdminRecruitmentController
 
     public function list(HttpRequest $request): HttpResponse
     {
-        $this->guard->require($request, Permission::RECRUITMENT_READ);
-        $result = $this->recruitment->list($request->query());
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_READ);
+        $result = $this->recruitment->list($request->query(), $staff);
 
         return ApiResponse::success($request, $result['items'], $result['meta']);
     }
@@ -42,9 +42,9 @@ final class AdminRecruitmentController
 
     public function show(HttpRequest $request): HttpResponse
     {
-        $this->guard->require($request, Permission::RECRUITMENT_READ);
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_READ);
 
-        return ApiResponse::success($request, $this->recruitment->get(self::id($request)));
+        return ApiResponse::success($request, $this->recruitment->get(self::id($request), $staff));
     }
 
     public function stage(HttpRequest $request): HttpResponse
@@ -76,6 +76,42 @@ final class AdminRecruitmentController
         $input = RequestBody::parse($request, RequestFactory::CANDIDATE_EMAIL_MAX_BYTES);
 
         return ApiResponse::success($request, $this->recruitment->emailCandidate(self::id($request), $input, $staff, RequestContexts::from($request)));
+    }
+
+    public function assignReviewer(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_MANAGE);
+
+        return ApiResponse::success($request, $this->recruitment->assignReviewer(self::id($request), RequestBody::parse($request)['user_id'] ?? null, $staff, RequestContexts::from($request)), [], 201);
+    }
+
+    public function removeReviewer(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_MANAGE);
+
+        return ApiResponse::success($request, $this->recruitment->removeReviewer(self::id($request), RequestContexts::routeParameter($request, 'userId'), $staff, RequestContexts::from($request)));
+    }
+
+    /** Anyone who can see applications can step aside from one (reading permission is enough). */
+    public function recuse(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_READ);
+
+        return ApiResponse::success($request, $this->recruitment->recuse(self::id($request), RequestBody::parse($request)['reason'] ?? null, $staff, RequestContexts::from($request)));
+    }
+
+    public function addToTalentPool(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_MANAGE);
+
+        return ApiResponse::success($request, $this->recruitment->addToTalentPool(self::id($request), RequestBody::parse($request), $staff, RequestContexts::from($request)), [], 201);
+    }
+
+    public function issueCertificate(HttpRequest $request): HttpResponse
+    {
+        $staff = $this->guard->require($request, Permission::RECRUITMENT_MANAGE);
+
+        return ApiResponse::success($request, $this->recruitment->issueCertificate(self::id($request), RequestBody::parse($request), $staff, RequestContexts::from($request)), [], 201);
     }
 
     /** The CV, always as a download and never cached (personal data). */

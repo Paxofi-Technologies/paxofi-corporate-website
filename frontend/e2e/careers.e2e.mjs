@@ -30,6 +30,12 @@ before(async () => {
     const json = (status, body) => response.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
     if (path === "/api/v1/careers/roles") return json(200, { data: ROLES });
     if (path === "/api/v1/careers/status") return json(200, { data: STATUS });
+    const certificate = path.match(/^\/api\/v1\/careers\/certificates\/(PIF-[A-Z0-9-]+)$/);
+    if (certificate) {
+      if (certificate[1] === "PIF-K7M2-9QXA-R4TD") return json(200, { data: { code: certificate[1], valid: true, status: "valid", holder_name: "Ada Lovelace", role_title: "Software Engineer Fellow", engagement: { type: "fellow", label: "Fellow" }, cohort: "Cohort 1", started_on: "2026-11-02", completed_on: "2027-04-20", issued_on: "2027-04-21", programme: "Paxofi Innovation Fellowship (PIF) 2026", message: "This certificate is genuine." } });
+      if (certificate[1] === "PIF-REVK-ED22-AAAA") return json(200, { data: { code: certificate[1], valid: false, status: "revoked", message: "This certificate is no longer valid. It was withdrawn by Paxofi Technologies." } });
+      return json(404, { success: false, error: { code: "NOT_FOUND", message: "We could not find a certificate with that code." } });
+    }
     const one = path.match(/^\/api\/v1\/careers\/roles\/([a-z-]+)$/);
     if (one) {
       const role = ROLES.find((r) => r.slug === one[1]);
@@ -214,6 +220,33 @@ describe("careers site", () => {
     await fillApplication(page);
     await page.getByRole("button", { name: "Submit application" }).click();
     await page.getByText("Applications are not open yet. They open on Monday 2 November 2026.").first().waitFor();
+    await page.context().close();
+  });
+
+  test("a certificate is checked by its code, and revoked or unknown codes say so", async () => {
+    const page = await newPage();
+    const response = await page.goto(BASE + "/verify");
+    assert.equal(response.status(), 200);
+    assert.match(await page.locator('meta[name="robots"]').getAttribute("content"), /noindex/, "codes are never indexed");
+    await assertAccessible(page, "certificate check");
+
+    await page.getByLabel("Certificate code").fill("pif k7m2 9qxa r4td");
+    await page.getByRole("button", { name: "Check certificate" }).click();
+    await page.getByRole("heading", { name: "This certificate is genuine." }).waitFor();
+    for (const text of ["Ada Lovelace", "Software Engineer Fellow (PIF Fellow)", "Cohort 1", "2 November 2026", "20 April 2027"]) {
+      assert.ok(await page.getByText(text, { exact: true }).first().isVisible(), text);
+    }
+    assert.match(page.url(), /code=pif\+k7m2\+9qxa\+r4td|code=pif%20k7m2/i);
+    await assertAccessible(page, "certificate valid");
+
+    await page.goto(BASE + "/verify?code=PIF-REVK-ED22-AAAA");
+    await page.getByRole("heading", { name: "This certificate is no longer valid." }).waitFor();
+    assert.equal(await page.getByText("Ada Lovelace").count(), 0);
+
+    await page.goto(BASE + "/verify?code=PIF-AAAA-BBBB-CCCC");
+    await page.getByText("We could not find a certificate with that code.").waitFor();
+    await page.goto(BASE + "/verify?code=not-a-code");
+    await page.getByText("We could not find a certificate with that code.").waitFor();
     await page.context().close();
   });
 
