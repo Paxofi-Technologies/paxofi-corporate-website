@@ -19,6 +19,7 @@ const routes = [
   ["GET", "/api/v1/careers", "public"],
   ["GET", "/api/v1/articles", "public"],
   ["GET", "/api/v1/articles/{slug}", "public"],
+  ["GET", "/api/v1/careers/status", "public"],
   ["GET", "/api/v1/careers/roles", "public"],
   ["GET", "/api/v1/careers/roles/{slug}", "public"],
   ["POST", "/api/v1/careers/cv", "public+rate-limit"],
