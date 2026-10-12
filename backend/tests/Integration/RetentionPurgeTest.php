@@ -79,10 +79,19 @@ final class RetentionPurgeTest extends DatabaseTestCase
              VALUES (?, ?, ?, 'Ada', 'ada@example.com', 20, 'Motivated.', 'Projects.', ?, '2026-10-04', ?, ?, ?, '203.0.113.7', 'test-agent', ?)",
         );
         // Closed 13 months ago: deleted. Closed 11 months ago (applied 14 months ago): kept. Open, no change for 13 months: deleted. Open and recent: kept.
+        // Participants of any age: kept.
         $insert->execute(['00000000-0000-4000-8000-0000000000c1', 'PIF-OLD001', $role, '00000000-0000-4000-8000-0000000000f1', 'rejected', $at('-13 months'), $at('-13 months'), $at('-14 months')]);
         $insert->execute(['00000000-0000-4000-8000-0000000000c2', 'PIF-KEEP01', $role, '00000000-0000-4000-8000-0000000000f2', 'declined', $at('-11 months'), $at('-11 months'), $at('-14 months')]);
         $insert->execute(['00000000-0000-4000-8000-0000000000c3', 'PIF-STALE1', $role, null, 'applied', $at('-13 months'), null, $at('-13 months')]);
         $insert->execute(['00000000-0000-4000-8000-0000000000c4', 'PIF-NEW001', $role, null, 'applied', $at('-2 days'), null, $at('-2 days')]);
+        // Participants are kept for the record, however old (D-027): the purge only ever deletes people who never joined.
+        $participant = self::$pdo->prepare(
+            "INSERT INTO job_applications (id, reference, opportunity_id, full_name, email, hours_per_week, motivation, experience, privacy_version, stage, stage_changed_at, closed_at, created_at)
+             VALUES (?, ?, ?, 'Grace', 'grace@example.com', 20, 'Motivated.', 'Projects.', '2026-10-12', ?, ?, ?, ?)",
+        );
+        foreach ([['c5', 'PIF-ACC001', 'accepted', null], ['c6', 'PIF-ACT001', 'active', null], ['c7', 'PIF-COM001', 'completed', null], ['c8', 'PIF-ALU001', 'alumni', null], ['c9', 'PIF-EXT001', 'exited_early', $at('-13 months')]] as [$suffix, $reference, $stage, $closed]) {
+            $participant->execute(['00000000-0000-4000-8000-0000000000' . $suffix, $reference, $role, $stage, $at('-13 months'), $closed, $at('-14 months')]);
+        }
         self::$pdo->prepare("INSERT INTO application_notes (id, application_id, kind, body) VALUES (UUID(), '00000000-0000-4000-8000-0000000000c1', 'note', 'Old note')")->execute();
         $upload = self::$pdo->prepare("INSERT INTO application_uploads (token_hash, file_reference, filename, media_type, size_bytes, created_at, claimed_at) VALUES (?, ?, 'CV.pdf', 'application/pdf', 100, ?, ?)");
         $upload->execute([str_repeat('1', 64), '00000000-0000-4000-8000-0000000000f3', $at('-2 days'), null]);
@@ -98,7 +107,11 @@ final class RetentionPurgeTest extends DatabaseTestCase
         self::assertSame(1, $result['application_metadata_cleared'], 'the kept application from 14 months ago; the recent one keeps its IP');
         self::assertSame(2, $result['cv_uploads_deleted'], 'one unclaimed upload older than a day, one claimed row');
         self::assertEqualsCanonicalizing(['00000000-0000-4000-8000-0000000000f1', '00000000-0000-4000-8000-0000000000f3'], $deleted, 'the CV of the deleted application and the unused upload; never a CV still in use');
-        self::assertEqualsCanonicalizing(['PIF-KEEP01', 'PIF-NEW001'], self::$pdo->query('SELECT reference FROM job_applications')->fetchAll(\PDO::FETCH_COLUMN));
+        self::assertEqualsCanonicalizing(
+            ['PIF-KEEP01', 'PIF-NEW001', 'PIF-ACC001', 'PIF-ACT001', 'PIF-COM001', 'PIF-ALU001', 'PIF-EXT001'],
+            self::$pdo->query('SELECT reference FROM job_applications')->fetchAll(\PDO::FETCH_COLUMN),
+            'accepted, active, completed, alumni and exited-early records are never deleted automatically',
+        );
         self::assertSame('0', (string) self::scalar('SELECT COUNT(*) FROM application_notes'), 'notes go with the application');
         self::assertSame([null, null], array_values(self::$pdo->query("SELECT source_ip, user_agent FROM job_applications WHERE reference = 'PIF-KEEP01'")->fetch(\PDO::FETCH_NUM)));
         self::$pdo->exec('DELETE FROM job_applications');

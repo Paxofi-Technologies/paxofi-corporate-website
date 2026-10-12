@@ -64,7 +64,7 @@ export default async function Careers() {
           <div>
             <SectionHead eyebrow={t.roles_eyebrow} title={t.roles_title} />
             <ul className="role-list">
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
                 <li key={i}>
                   <span>{t[`role_${i}`]}</span>
                   <span className="role-meta">Remote · PIF</span>

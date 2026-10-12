@@ -9,7 +9,7 @@ import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
 import { isStaging } from "@/lib/staging";
 
 const DESCRIPTION =
-  "Join the Paxofi Innovation Fellowship (PIF 2026): remote, part-time roles in engineering, design, project management and HR, with real projects, mentorship and a recognised record of your work.";
+  "Join the Paxofi Innovation Fellowship (PIF 2026) as a Fellow, Intern or Volunteer: remote, mentored, with real projects. An unpaid learning programme.";
 
 /** careers.paxofi.com (D-018): its own address, title and search settings, read at run time. */
 export function generateMetadata(): Metadata {
@@ -53,7 +53,7 @@ export default async function CareersLayout({ children }: { children: React.Reac
         <div className="container careers-footer">
           <div>
             <Logo tone="dark" />
-            <p>The Paxofi Innovation Fellowship is how people join Paxofi Technologies: remote, part-time and built on real work.</p>
+            <p>The Paxofi Innovation Fellowship: remote, mentored and built on real projects. Join as a Fellow, Intern or Volunteer.</p>
           </div>
           <ul>
             <li><Link href="/#roles">Open roles</Link></li>

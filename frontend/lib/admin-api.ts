@@ -161,6 +161,10 @@ export type ApplicationRow = {
   full_name: string;
   email: string;
   role_title: string;
+  engagement_type: string;
+  engagement_label: string;
+  cohort: string | null;
+  is_test: boolean;
   stage: string;
   stage_label: string;
   created_at: string;
@@ -169,13 +173,17 @@ export type ApplicationRow = {
   has_cv: boolean;
 };
 export type ScoreSummary = { scores: Record<string, number>; total: number; out_of: number; pass: number; passed: boolean } | null;
-export type ScorecardDefinition = { label: string; pass: number; criteria: Record<string, string> };
+export type ScorecardDefinition = { label: string; pass: number; out_of: number; criteria: Record<string, string> };
+export type EngagementDetails = { type: "fellow" | "intern" | "volunteer"; label: string; term: string; hours_min: number; hours_target: number; for_whom: string };
 export type ApplicationNote = { id: string; kind: "note" | "stage" | "score" | "email"; body: string; author_name: string | null; created_at: string };
 export type EmailTemplate = { key: string; label: string; subject: string; body: string; stage: string | null };
 export type ApplicationDetail = {
   id: string;
   reference: string;
   role: { id: string; title: string; slug: string };
+  engagement: EngagementDetails;
+  cohort: string | null;
+  is_test: boolean;
   full_name: string;
   email: string;
   phone: string | null;
@@ -197,7 +205,8 @@ export type ApplicationDetail = {
   interview: ScoreSummary;
   notes: ApplicationNote[];
   stages: StageOption[];
-  scorecards: Record<"evidence" | "interview", ScorecardDefinition>;
+  /** The scorecards for this engagement type: Volunteers have the interview (short conversation) scorecard only. */
+  scorecards: Partial<Record<"evidence" | "interview", ScorecardDefinition>>;
   email_templates: EmailTemplate[];
   email_available: boolean;
 };
@@ -261,6 +270,7 @@ export type CareerRoleAdmin = {
   id: string;
   slug: string;
   code: string;
+  engagement_type: "fellow" | "intern" | "volunteer";
   title: string;
   family: string;
   summary: string;

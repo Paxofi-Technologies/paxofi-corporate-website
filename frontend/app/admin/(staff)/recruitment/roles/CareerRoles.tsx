@@ -96,6 +96,15 @@ export default function CareerRoles() {
           <FieldShell label="Title" error={fields.title}>{(p) => <input name="title" maxLength={80} required defaultValue={current?.title} {...p} />}</FieldShell>
           <div className="admin-row3">
             <FieldShell label="Code" hint="2 to 4 letters, for example SE." error={fields.code}>{(p) => <input name="code" maxLength={4} required defaultValue={current?.code} {...p} />}</FieldShell>
+            <FieldShell label="Engagement type" hint="Sets the hours, term and scorecards." error={fields.engagement_type}>
+              {(p) => (
+                <select name="engagement_type" defaultValue={current?.engagement_type ?? "fellow"} {...p}>
+                  <option value="fellow">Fellow</option>
+                  <option value="intern">Intern</option>
+                  <option value="volunteer">Volunteer</option>
+                </select>
+              )}
+            </FieldShell>
             <FieldShell label="Role family" error={fields.family}>{(p) => <input name="family" maxLength={80} required defaultValue={current?.family} {...p} />}</FieldShell>
             <FieldShell label="Display order" hint="Lower numbers come first." error={fields.sort_order}>{(p) => <input name="sort_order" type="number" min={0} max={9999} defaultValue={current?.sort_order ?? 100} {...p} />}</FieldShell>
           </div>
@@ -137,7 +146,7 @@ export default function CareerRoles() {
                 <tr key={role.id}>
                   <td>
                     <strong>{role.title}</strong>
-                    <span className="admin-sub">{role.code} · {role.family} · /roles/{role.slug}</span>
+                    <span className="admin-sub">{role.code} · PIF {role.engagement_type} · {role.family} · /roles/{role.slug}</span>
                   </td>
                   <td><span className="status-pill" data-status={role.state}>{STATE_LABELS[role.state]}</span></td>
                   <td>{formatDateTime(role.updated_at)}</td>

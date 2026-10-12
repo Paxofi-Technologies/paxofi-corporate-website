@@ -11,6 +11,7 @@ use Paxofi\Core\Contracts\TransactionManager;
 use Paxofi\CorporateWebsite\Application\Audit\AuditEvent;
 use Paxofi\CorporateWebsite\Application\Audit\AuditRecorder;
 use Paxofi\CorporateWebsite\Application\Exception\DependencyUnavailable;
+use Paxofi\CorporateWebsite\Application\Exception\Forbidden;
 use Paxofi\CorporateWebsite\Application\Exception\RateLimited;
 use Paxofi\CorporateWebsite\Application\Exception\ResourceNotFound;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
@@ -53,6 +54,28 @@ final class CareersService
         private readonly Closure $clock,
         private readonly Closure $uuid,
     ) {
+    }
+
+    /**
+     * Whether applications are open, and the cohort an application made now
+     * belongs to (D-027). The careers site shows the opening date until then.
+     *
+     * @return array{applications_open: bool, opens_at: ?string, opens_on: ?string, cohort: ?string, cohort1_closes_on: ?string}
+     */
+    public function status(): array
+    {
+        $now = ($this->clock)();
+        $lagos = new \DateTimeZone('Africa/Lagos');
+        $opensAt = $this->recruitment->opensAt;
+        $closes = $this->recruitment->cohort1ClosesAt;
+
+        return [
+            'applications_open' => $this->recruitment->open($now),
+            'opens_at' => $opensAt?->setTimezone($lagos)->format(DATE_ATOM),
+            'opens_on' => $opensAt?->setTimezone($lagos)->format('l j F Y'),
+            'cohort' => $this->recruitment->cohort($now),
+            'cohort1_closes_on' => $closes?->setTimezone($lagos)->modify('-1 day')->format('l j F Y'),
+        ];
     }
 
     /** @return list<array<string, mixed>> */
@@ -104,15 +127,21 @@ final class CareersService
     public function apply(string $slug, mixed $input, RequestContext $context): array
     {
         $role = $this->publishedRole($slug);
-        $values = ApplicationInput::validate($input);
+        $now = ($this->clock)();
+        // Staff with the test code can submit controlled test applications before opening (Gate 1); they are flagged and left out of reports.
+        $testing = $this->recruitment->isTestCode(is_array($input) ? ($input['test_code'] ?? null) : null);
+        if (!$testing && !$this->recruitment->open($now)) {
+            $opens = $this->status()['opens_on'];
+            throw new Forbidden('Applications are not open yet' . ($opens === null ? '.' : ". They open on {$opens}."), 'APPLICATIONS_NOT_OPEN');
+        }
+        $values = ApplicationInput::validate($input, $role->engagementType);
         if ($values['likely_spam']) {
             $this->logger->info('application.honeypot_triggered', ['request_id' => $context->requestId]);
 
             return ['reference' => 'PIF-' . self::code(), 'role' => $role->title];
         }
-        $now = ($this->clock)();
         $recent = $this->applications->recentCounts($context->clientIp, $values['email'], $now);
-        if ($recent['ip'] >= self::MAX_PER_IP_HOUR || $recent['email'] >= self::MAX_PER_EMAIL_DAY) {
+        if (!$testing && ($recent['ip'] >= self::MAX_PER_IP_HOUR || $recent['email'] >= self::MAX_PER_EMAIL_DAY)) {
             throw new RateLimited(3600);
         }
         if ($this->applications->hasOpenApplication($values['email'], $role->id)) {
@@ -124,7 +153,11 @@ final class CareersService
             $reference = 'PIF-' . self::code();
         } while ($this->applications->referenceExists($reference));
 
-        $this->transactions->transaction(function () use ($id, $reference, $role, $values, $context, $now): void {
+        $values['engagement_type'] = $role->engagementType->value;
+        $values['cohort'] = $this->recruitment->cohort($now);
+        $values['is_test'] = $testing;
+        $timeline = $this->timeline($values['cohort']);
+        $this->transactions->transaction(function () use ($id, $reference, $role, $values, $context, $now, $timeline, $testing): void {
             $cv = null;
             if ($values['cv_token'] !== null) {
                 $cv = $this->applications->claimUpload(hash('sha256', $values['cv_token']), $now);
@@ -137,15 +170,16 @@ final class CareersService
             if (!$this->mail->enabled) {
                 return;
             }
-            $application = ['full_name' => $values['full_name'], 'role_title' => $role->title, 'reference' => $reference, 'hours_per_week' => $values['hours_per_week']];
+            $application = ['full_name' => $values['full_name'], 'role_title' => $role->title, 'reference' => $reference, 'hours_per_week' => $values['hours_per_week'], 'engagement_type' => $role->engagementType->value];
             $template = CandidateEmails::TEMPLATES['acknowledgement'];
-            $fill = CandidateEmails::values($application);
+            $fill = CandidateEmails::values($application, $this->recruitment->careersSiteUrl . '/privacy', $timeline);
             $this->outbox->add(new Email([$values['email']], CandidateEmails::fill($template['subject'], $fill), CandidateEmails::fill($template['body'], $fill) . "\n", $this->recruitment->replyTo, 'candidate_acknowledgement'));
             if ($this->recruitment->alertTo !== []) {
-                $this->outbox->add(new Email($this->recruitment->alertTo, "New application: {$role->title} ({$reference})", implode("\n", [
-                    'A new application arrived on ' . $this->recruitment->careersSiteUrl . '.',
+                $this->outbox->add(new Email($this->recruitment->alertTo, ($testing ? '[TEST] ' : '') . "New application: {$role->title} ({$reference})", implode("\n", [
+                    ($testing ? 'A TEST application arrived' : 'A new application arrived') . ' on ' . $this->recruitment->careersSiteUrl . '.',
                     '',
                     'Role: ' . $role->title,
+                    'Engagement type: ' . $role->engagementType->label(),
                     'Reference: ' . $reference,
                     'Name: ' . Email::oneLine($values['full_name']),
                     'Hours a week: ' . $values['hours_per_week'],
@@ -157,6 +191,20 @@ final class CareersService
         });
 
         return ['reference' => $reference, 'role' => $role->title];
+    }
+
+    /** One paragraph for the acknowledgement email, from the cohort the application belongs to. */
+    private function timeline(?string $cohort): string
+    {
+        $closes = $this->status()['cohort1_closes_on'];
+        if ($cohort === 'Cohort 1' && $closes !== null) {
+            return "Applications for Cohort 1 close on {$closes}. We review them after that date and email you at every step.";
+        }
+        if ($cohort === 'Cohort 2') {
+            return 'Cohort 1 applications have closed, so we will consider your application for our talent pool and for the next cohort. We will email you if that changes.';
+        }
+
+        return 'We review applications as they come in and email you at every step.';
     }
 
     private function publishedRole(string $slug): CareerRole

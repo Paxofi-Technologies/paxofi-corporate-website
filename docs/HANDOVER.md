@@ -42,7 +42,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 | Document | Content |
 |---|---|
-| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-026) | Every product and technical decision, newest last |
+| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-027) | Every product and technical decision, newest last |
 | `PRODUCT-BASELINE.md` | Vision, sitemap, journeys, requirements, roles, workflow, change control |
 | `RUNBOOKS.md` | Operations, incidents, escalation, monitoring, secrets |
 | `ops/DEPLOYMENT-GUIDE.template.md` | Upload deployment (rendered per release, with PDF) |
@@ -64,6 +64,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 | D-004 | Interim logo mark | Replace `components/Logo.tsx`, `app/icon.svg` and `public/og-image.png` when the designer delivers the master logo |
 | D-005 | Phase 2: staff sign-in (done: P2.1, D-009), two-factor sign-in (done: P2.2, D-010), products and services editing (done: P2.3, D-011), media library (done: P2.4, D-012; back up `paxofi-media` with the database), staging copy (P2.5, D-013: every release goes to staging first; RB-14), visitor analytics (P2.6, D-014, cookieless; RB-15), page text editing (P2.7, D-015; Content → Page text), email alerts, staff password reset, error alerts and nightly backups (P2.8, D-016; RB-17, RB-18) | Asana tasks labelled "[Phase 2]" |
 | D-006 | No analytics in v1 | Revisit in Phase 2 (cookieless, self-hosted) |
+| KI-002 | Retention of participant records: the approved Data Privacy Notice DP-025 v1.1 says 6 years after the engagement, then deletion or anonymisation; the owner decided on 11 Oct 2026 to keep participant records without deletion (D-027). The system deletes none automatically; the careers privacy notice follows DP-025 | Owner to amend DP-025 (and then the careers notice), or confirm the 6-year review |
 | VPS | Planned move from shared hosting | Then re-test Facebook (KI-001); consider Git-based deploys and server-level HTTPS/HSTS |
 
 ## 7. Upcoming reviews

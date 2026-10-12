@@ -493,3 +493,23 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Not chosen:**
   - A staff-area page or API endpoint for the evidence: it would add code to the live system during stabilisation, when the aim is to change as little as possible.
   - Exporting raw tables for the review: that would copy personal data out of the database (D-008).
+
+## D-027 — PIF engagement types, the Cohort 1 positions and participant records (11 Oct 2026)
+
+**Decision (CTO; the owner approved "all except" four points on 11 Oct 2026, after the PKDMS Launch Decision Pack Revisions 1–4 of 6–10 Oct 2026):** careers.paxofi.com follows the Launch Decision Pack. This supersedes the Fellow-only wording of D-017 and D-019.
+
+- **Three engagement types.** Every position is a Fellow, Intern or Volunteer position, each with its own rules.
+  - Hours a week: Fellows and Interns at least 15 (target 20); Volunteers at least 10 (target 15).
+  - Term: Fellows 24 programme weeks; Interns 12 or 24; Volunteers 8 to 24, project-based.
+  - Agreement: Fellowship, Internship or Volunteer Agreement, each with its offer letter.
+  - Unpaid; not employment; 18 or older.
+- **15 Cohort 1 positions (9 role families).** Fellows: Project Manager, Program Coordinator, Graphics / Creative Designer, Software Engineer, Frontend Developer, HR Officer, UX/UI Designer, Marketing Officer. Interns: Software Engineer, Frontend Developer, UX/UI Design, Digital Marketing. Volunteers: Graphics / Creative Designer, People Operations, Content & Communications. Role code FD becomes FE. Public pages show no seat numbers and no mentor names. Staff can still edit roles and add new ones (Recruitment → Roles, now with the engagement type).
+- **Selection by type.** Evidence review (7 criteria, 35 points): Fellows progress at 21, Interns at 18; Volunteers have none. Interview (7 criteria, 35): Fellows select at 24, Interns at 21. Volunteers: a short conversation of 5 criteria (25 points), selected at 15, and no role assessment.
+- **Statuses** now include Completed, Alumni and Exited early. Talent Pool follows with consent (package C).
+- **Opening date and cohorts.** `CAREERS_APPLICATIONS_OPEN_FROM` keeps the form closed until a Lagos day (Mon 2 Nov 2026; Gate 1 is Fri 30 Oct). `CAREERS_COHORT1_CLOSES` (Sun 15 Nov 2026) labels later applications *Cohort 2*. A secret `CAREERS_TEST_CODE` lets staff submit flagged test applications before opening (the Gate 1 test); they are left out of the report.
+- **Participant records are never deleted automatically (owner decision, 11 Oct 2026).** The retention purge now deletes only applications that never became participants. Accepted, onboarding, active, completed, alumni and exited-early records are kept for the record. **Open conflict:** the approved Data Privacy Notice DP-025 v1.1 says participant records are kept 6 years after the engagement and then deleted or anonymised. The applicant notice on careers.paxofi.com follows DP-025 (6 years, then reviewed) until the owner amends DP-025; nothing deletes records in the meantime.
+- **Applicant privacy notice** (version 2026-10-12) follows DP-025 v1.1: legal bases, talent pool by consent, human review of every decision, voluntary adjustments, service providers and transfers, rights, 30-day reply, complaint to the NDPC.
+- **Candidate emails** are written per engagement type and follow the public messaging rules (the type always named; unpaid, not employment; no promise of pay; formal decisions by email from hr@paxofi.com).
+- **Corporate Careers page text** defaults now name the three types, the hours and terms, the nine role families and the unpaid status. A published override under Content → Page text → Careers replaces them and must be checked.
+- **Delivered:** migration 021, `GET /api/v1/careers/status`, release 27, guide Step 10j, RB-19.
+- **Not chosen:** one position per role family with a type chosen on the form (it would hide which Fellow, Intern or Volunteer positions exist and break the "one role, one page" addresses); deleting participant records at 6 years automatically (the owner asked to keep them).

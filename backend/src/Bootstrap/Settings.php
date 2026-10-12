@@ -63,6 +63,9 @@ final readonly class Settings
                 alertTo: Email::addressList($environment->get('RECRUITMENT_ALERT_TO', '')),
                 replyTo: Email::isAddress($reply = trim($environment->get('RECRUITMENT_REPLY_TO', '') ?? '')) ? $reply : 'hr@paxofi.com',
                 careersSiteUrl: rtrim(trim($environment->get('CAREERS_SITE_URL', '') ?? '') ?: 'https://careers.paxofi.com', '/'),
+                opensAt: RecruitmentSettings::lagosDay($environment->get('CAREERS_APPLICATIONS_OPEN_FROM', '')),
+                cohort1ClosesAt: RecruitmentSettings::lagosDay($environment->get('CAREERS_COHORT1_CLOSES', ''), true),
+                testCode: RecruitmentSettings::validTestCode($environment->get('CAREERS_TEST_CODE', '')),
             ),
         );
     }

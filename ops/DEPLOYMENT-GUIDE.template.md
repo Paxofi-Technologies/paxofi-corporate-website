@@ -265,6 +265,25 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10j — PIF engagement types, the opening date and test applications (about 20 minutes)
+
+From this release, careers.paxofi.com offers the three PIF engagement types (Fellow, Intern, Volunteer) and the nine Cohort 1 role families, with the hours, terms and scorecards of each (decision D-027). The database upgrade (migration 021) adds the engagement type, a cohort label and a test flag, adds the eight new positions, and changes the Frontend Developer role code from FD to FE.
+
+**Do this BEFORE or WITH the release, or applications open at once:**
+
+1. File Manager → `/home/paxoalhu/paxofi-api-runtime/backend/.env` → **Edit** and add (a test code is any 16 or more random characters; keep it secret):
+
+        CAREERS_APPLICATIONS_OPEN_FROM=2026-11-02
+        CAREERS_COHORT1_CLOSES=2026-11-15
+        CAREERS_TEST_CODE=<your secret test code>
+
+    Until the opening date, careers.paxofi.com shows "Applications open on Monday 2 November 2026" and the API refuses applications. From 16 November the site says later applications go to the talent pool and Cohort 2. Without `CAREERS_APPLICATIONS_OPEN_FROM`, applications are open.
+2. Deploy as usual (Steps 2 to 4, and the same website package for `paxofi-careers-website`, Step 10d). Restart both Node.js apps.
+3. Open `https://careers.paxofi.com`: the nine role families show, with Fellow, Intern and Volunteer links, and the opening notice.
+4. **Gate 1 test (one application per engagement type, then ideally all 15 positions):** open `https://careers.paxofi.com/roles/software-engineer-intern?test`, enter the test code, and apply with your own email (for example `you+intern@gmail.com`). You should receive the acknowledgement, and `RECRUITMENT_ALERT_TO` an alert starting `[TEST]`. In **Recruitment**, the application shows *Test application* and is left out of the report. Erase each test application afterwards.
+5. **Page text:** if anyone has published the **Careers** page text before (Content → Page text → Careers), their wording replaces the new defaults. Open it and check hours, terms, "rolling intake", the role list (now nine) and the FAQ against the Launch Production Pack.
+6. ClickUp and the Notion register use role code **FE** for Frontend Developer.
+
 ## Step 10i — Content reviews and redirects (no server change)
 
 From this release, **Content → Reviews** shows when each page, product, service, industry, article and Resources document should next be checked, and **Content → Redirects** keeps old addresses working when a page is retired (decision D-025, RB-24). The database upgrade (migration 020) adds the two tables it needs. Administrators get a weekly email while anything is due, sent by the existing `send-mail.php` cron job: there is nothing new to schedule. Start by marking the main pages reviewed, so each has a date.

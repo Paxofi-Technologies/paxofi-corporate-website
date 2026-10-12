@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, ClipboardCheck, Mail, PenTool, Rocket, Search, Sparkles, UserCog, Users } from "lucide-react";
 import { SectionHead } from "@/components/Sections";
-import { RECRUITMENT_EMAIL, loadRoles } from "@/lib/careers";
+import { RECRUITMENT_EMAIL, groupRoles, loadRoles, loadStatus } from "@/lib/careers";
 import { resolveApiBase } from "@/lib/contact";
 import { pageCopy } from "@/lib/page-copy-server";
 
@@ -12,7 +12,9 @@ export const dynamic = "force-dynamic";
 const processIcons = [Search, PenTool, ClipboardCheck, Users, CheckCircle2, UserCog, Rocket];
 
 export default async function CareersHome() {
-  const [t, roles] = await Promise.all([pageCopy("careers"), loadRoles(resolveApiBase(process.env))]);
+  const apiBase = resolveApiBase(process.env);
+  const [t, roles, status] = await Promise.all([pageCopy("careers"), loadRoles(apiBase), loadStatus(apiBase)]);
+  const groups = roles === null ? [] : groupRoles(roles);
   return (
     <>
       <section className="page-hero careers-hero">
@@ -32,22 +34,41 @@ export default async function CareersHome() {
 
       <section className="section" id="roles" tabIndex={-1}>
         <div className="container">
-          <SectionHead eyebrow={t.roles_eyebrow} title="Open roles" intro="Every role is remote and part-time, at least 15 hours a week. Choose one role that matches your strongest skills and evidence." />
+          <SectionHead eyebrow={t.roles_eyebrow} title="Open roles" intro="Every position is remote and part of an unpaid learning programme. Fellows and Interns commit at least 15 hours a week, Volunteers at least 10. Choose how you want to join, then the role that matches your strongest skills." />
+          {status !== null && !status.open && (
+            <p className="notice" role="status">
+              <strong>Applications open{status.opensOn ? ` on ${status.opensOn}` : " soon"}.</strong> You can read about every role now and apply from that day.
+            </p>
+          )}
+          {status !== null && status.open && status.cohort === "Cohort 1" && status.cohort1ClosesOn && (
+            <p className="notice" role="status"><strong>Cohort 1 applications close on {status.cohort1ClosesOn}.</strong> Applications stay open afterwards for our talent pool and the next cohort.</p>
+          )}
+          {status !== null && status.open && status.cohort === "Cohort 2" && (
+            <p className="notice" role="status"><strong>Cohort 1 applications have closed.</strong> You can still apply: we consider later applications for our talent pool and the next cohort.</p>
+          )}
           {roles === null ? (
             <p className="form-status" data-state="error" role="alert">
               We could not load the open roles just now. Please refresh in a minute, or email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.
             </p>
-          ) : roles.length === 0 ? (
+          ) : groups.length === 0 ? (
             <p>There are no open roles right now. New intakes are announced here and on LinkedIn; you are welcome to email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.</p>
           ) : (
             <ul className="role-cards">
-              {roles.map((role) => (
-                <li key={role.slug} className="role-card">
-                  <span className="role-code" aria-hidden="true">{role.code}</span>
-                  <h3><Link href={`/roles/${role.slug}`}>{role.title}</Link></h3>
-                  <p className="role-meta">{role.family} · Remote · Part-time</p>
-                  <p>{role.summary}</p>
-                  <span className="text-link" aria-hidden="true">View role and apply <ArrowRight size={16} /></span>
+              {groups.map((group) => (
+                <li key={group.code || group.name} className="role-card role-card--group">
+                  <span className="role-code" aria-hidden="true">{group.code}</span>
+                  <h3>{group.name}</h3>
+                  <p className="role-meta">{group.family} · Remote</p>
+                  <p>{group.summary}</p>
+                  <ul className="role-offers" aria-label={`${group.name}: ways to join`}>
+                    {group.roles.map((role) => (
+                      <li key={role.slug}>
+                        <Link href={`/roles/${role.slug}`} aria-label={`${role.title}: view role and apply`}>
+                          {role.engagement.label} <ArrowRight size={14} aria-hidden="true" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>

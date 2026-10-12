@@ -10,13 +10,18 @@ const PORT = Number(process.env.E2E_PORT || 3123) + 6;
 const API_PORT = PORT + 1;
 const API = `http://127.0.0.1:${API_PORT}/api/v1`;
 
+const ENGAGEMENT = { type: "fellow", label: "Fellow", term: "24 programme weeks", hours_min: 15, hours_target: 20, for_whom: "People with foundation skills who want to own real deliverables." };
 const ROLE = {
-  slug: "software-engineer-fellow", code: "SE", title: "Software Engineer Fellow", family: "Technology and engineering",
+  slug: "software-engineer-fellow", code: "SE", engagement_type: "fellow", engagement: ENGAGEMENT, title: "Software Engineer Fellow", family: "Technology and engineering",
   summary: "Design, build and test Paxofi software.", purpose: "Take part in the design, development and testing of Paxofi software systems.",
   responsibilities: ["Contribute to backend APIs", "Write tests"], deliverables: ["Working, tested features"], competencies: ["PHP", "SQL"], tools: ["PHP 8+", "Git / GitHub"],
   evidence: "A code sample you can walk us through.", assessment: "Practical coding task.", interview: "Technical reasoning.",
 };
-const ROLES = [ROLE, { ...ROLE, slug: "hr-officer-fellow", code: "HR", title: "HR Officer Fellow", family: "People and HR", summary: "Support recruitment and onboarding." }];
+const INTERN = { ...ROLE, slug: "software-engineer-intern", engagement_type: "intern", engagement: { ...ENGAGEMENT, type: "intern", label: "Intern", term: "12 or 24 weeks" }, title: "Software Engineer Intern" };
+const VOLUNTEER = { ...ROLE, slug: "content-communications-volunteer", code: "CC", engagement_type: "volunteer", engagement: { ...ENGAGEMENT, type: "volunteer", label: "Volunteer", term: "8 to 24 weeks, project-based", hours_min: 10, hours_target: 15 }, title: "Content & Communications Volunteer", family: "Marketing and communications", summary: "Tell the Paxofi story clearly." };
+const ROLES = [ROLE, INTERN, { ...ROLE, slug: "hr-officer-fellow", code: "HR", title: "HR Officer Fellow", family: "People and HR", summary: "Support recruitment and onboarding." }, VOLUNTEER];
+// Applications are open unless a test sets this to a closed status (CAREERS_APPLICATIONS_OPEN_FROM).
+let STATUS = { applications_open: true, opens_at: null, opens_on: null, cohort: "Cohort 1", cohort1_closes_on: "Sunday 15 November 2026" };
 
 let api;
 before(async () => {
@@ -24,6 +29,7 @@ before(async () => {
     const path = new URL(request.url, "http://localhost").pathname;
     const json = (status, body) => response.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
     if (path === "/api/v1/careers/roles") return json(200, { data: ROLES });
+    if (path === "/api/v1/careers/status") return json(200, { data: STATUS });
     const one = path.match(/^\/api\/v1\/careers\/roles\/([a-z-]+)$/);
     if (one) {
       const role = ROLES.find((r) => r.slug === one[1]);
@@ -73,7 +79,10 @@ describe("careers site", () => {
     assert.match(await page.title(), /Careers at Paxofi/);
     assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://careers.paxofi.com");
     await page.getByRole("link", { name: "Software Engineer Fellow" }).waitFor();
-    assert.equal(await page.locator(".role-card").count(), 2);
+    assert.equal(await page.locator(".role-card").count(), 3, "roles are grouped by role family: Software Engineer (Fellow, Intern), HR Officer and Content & Communications");
+    await page.getByRole("link", { name: "Software Engineer Intern: view role and apply" }).waitFor();
+    await page.getByRole("link", { name: "Content & Communications Volunteer: view role and apply" }).waitFor();
+    await page.getByText("Cohort 1 applications close on Sunday 15 November 2026").waitFor();
     assert.ok(await page.getByText("Is the fellowship paid?").isVisible(), "FAQ from the Careers page text");
     assert.ok(await page.locator('a[href="https://corporate.paxofi.com"], a[href^="http"][href*="paxofi"]').first().isVisible(), "link back to the corporate site");
     await assertAccessible(page, "careers home");
@@ -100,7 +109,9 @@ describe("careers site", () => {
     await page.getByRole("link", { name: ROLE.title }).click();
     await page.waitForURL(`**/roles/${ROLE.slug}`);
     assert.equal(await page.locator("h1").textContent(), ROLE.title);
-    assert.ok(await page.getByText("Unpaid fellowship: no stipend or salary").isVisible());
+    assert.ok(await page.getByText("Unpaid: a learning and development programme, not employment").isVisible());
+    assert.ok(await page.getByText("24 programme weeks").first().isVisible());
+    assert.ok(await page.getByText("At least 15 hours a week (20 recommended)").isVisible());
     await assertAccessible(page, "role page");
 
     await fillApplication(page);
@@ -139,6 +150,70 @@ describe("careers site", () => {
     await page.getByRole("button", { name: "Submit application" }).click();
     await page.getByText("Add your CV, a portfolio link or your LinkedIn profile").first().waitFor();
     assert.equal(await page.getByLabel(/^CV/).getAttribute("aria-invalid"), "true");
+    await page.context().close();
+  });
+
+  test("each engagement type shows its own hours, term and hours choices", async () => {
+    const page = await newPage();
+    await page.goto(`${BASE}/roles/${VOLUNTEER.slug}`);
+    assert.ok(await page.getByText("At least 10 hours a week (15 recommended)").isVisible());
+    assert.ok(await page.getByText("8 to 24 weeks, project-based").first().isVisible());
+    const options = await page.getByLabel("Hours a week you can commit").locator("option").evaluateAll((nodes) => nodes.map((n) => n.value));
+    assert.deepEqual(options, ["10", "15", "20", "25", "30", "35", "40"]);
+    assert.equal(await page.getByLabel("Hours a week you can commit").inputValue(), "15", "Volunteers default to their target of 15");
+    await page.goto(`${BASE}/roles/${INTERN.slug}`);
+    assert.ok(await page.getByText("12 or 24 weeks").first().isVisible());
+    assert.deepEqual(await page.getByLabel("Hours a week you can commit").locator("option").evaluateAll((nodes) => nodes.map((n) => n.value)), ["15", "20", "25", "30", "35", "40"]);
+    assert.equal(await page.getByLabel("Hours a week you can commit").inputValue(), "20");
+    await assertAccessible(page, "intern role page");
+    await page.context().close();
+  });
+
+  test("before applications open the site shows the opening date and no form, except for staff test mode", async () => {
+    STATUS = { applications_open: false, opens_at: "2026-11-02T00:00:00+01:00", opens_on: "Monday 2 November 2026", cohort: "Cohort 1", cohort1_closes_on: "Sunday 15 November 2026" };
+    try {
+      const page = await newPage();
+      const seen = await mockApplyApi(page, { apply: () => ({ status: 201, body: { data: { reference: "PIF-TEST01", role: ROLE.title } } }) });
+      await page.goto(BASE + "/");
+      await page.getByText("Applications open on Monday 2 November 2026.").waitFor();
+      await assertAccessible(page, "home before opening");
+
+      await page.goto(`${BASE}/roles/${ROLE.slug}`);
+      await page.getByText("Applications open on Monday 2 November 2026.").waitFor();
+      assert.equal(await page.getByRole("button", { name: "Submit application" }).count(), 0, "no form before opening");
+      assert.equal(await page.getByLabel("Full name").count(), 0);
+
+      await page.goto(`${BASE}/roles/${ROLE.slug}?test`);
+      await page.getByLabel("Test code (staff only)").fill("controlled-test-code-0123456789");
+      await fillApplication(page);
+      await page.getByRole("button", { name: "Submit application" }).click();
+      await page.getByRole("heading", { name: "Application received" }).waitFor();
+      assert.equal(seen.apply.test_code, "controlled-test-code-0123456789");
+      await page.context().close();
+    } finally {
+      STATUS = { applications_open: true, opens_at: null, opens_on: null, cohort: "Cohort 1", cohort1_closes_on: "Sunday 15 November 2026" };
+    }
+  });
+
+  test("after the Cohort 1 window the site says later applications go to the talent pool and the next cohort", async () => {
+    STATUS = { applications_open: true, opens_at: null, opens_on: null, cohort: "Cohort 2", cohort1_closes_on: "Sunday 15 November 2026" };
+    try {
+      const page = await newPage();
+      await page.goto(BASE + "/");
+      await page.getByText("Cohort 1 applications have closed.").waitFor();
+      await page.context().close();
+    } finally {
+      STATUS = { applications_open: true, opens_at: null, opens_on: null, cohort: "Cohort 1", cohort1_closes_on: "Sunday 15 November 2026" };
+    }
+  });
+
+  test("a refusal before opening is shown to the candidate", async () => {
+    const page = await newPage();
+    await mockApplyApi(page, { apply: () => ({ status: 403, body: { success: false, error: { code: "APPLICATIONS_NOT_OPEN", message: "Applications are not open yet. They open on Monday 2 November 2026." } } }) });
+    await page.goto(`${BASE}/roles/${ROLE.slug}`);
+    await fillApplication(page);
+    await page.getByRole("button", { name: "Submit application" }).click();
+    await page.getByText("Applications are not open yet. They open on Monday 2 November 2026.").first().waitFor();
     await page.context().close();
   });
 
