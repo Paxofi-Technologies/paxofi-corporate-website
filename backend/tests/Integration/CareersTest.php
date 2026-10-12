@@ -379,6 +379,46 @@ final class CareersTest extends DatabaseTestCase
         self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'careers_settings.updated'"));
     }
 
+    public function testAnAdministratorClosesAndReopensApplications(): void
+    {
+        $admin = $this->setupAdmin();
+        $lagos = new DateTimeImmutable('now', new DateTimeZone('Africa/Lagos'));
+        $yesterday = $lagos->modify('-1 day')->format('Y-m-d');
+        $inTenDays = $lagos->modify('+10 days')->format('Y-m-d');
+
+        // A last day in the future: still open, and the public status names it.
+        $later = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => '', 'closes_after' => $inTenDays], $admin);
+        self::assertSame(200, $later->status(), $later->body());
+        self::assertSame([$inTenDays, true, false], [self::decode($later)['data']['effective']['closes_after'], self::decode($later)['data']['effective']['applications_open'], self::decode($later)['data']['effective']['applications_closed']]);
+        $status = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/status')))['data'];
+        self::assertSame([true, false], [$status['applications_open'], $status['applications_closed']]);
+        self::assertNotNull($status['closes_on']);
+
+        // "Close applications now" saves yesterday as the last day.
+        $closed = self::decode($this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => '', 'closes_after' => $yesterday], $admin))['data'];
+        self::assertSame([false, true], [$closed['effective']['applications_open'], $closed['effective']['applications_closed']]);
+        $status = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/status')))['data'];
+        self::assertSame([false, true], [$status['applications_open'], $status['applications_closed']]);
+        $refused = $this->app()->handle($this->apply('software-engineer-fellow', []));
+        self::assertSame(403, $refused->status());
+        self::assertSame('APPLICATIONS_CLOSED', self::decode($refused)['error']['code']);
+        self::assertStringContainsString('closed', self::decode($refused)['error']['message']);
+
+        // A form that does not send the last day leaves it as it is.
+        $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => ''], $admin);
+        self::assertTrue(self::decode($this->call('GET', '/api/v1/admin/careers-settings', cookie: $admin))['data']['effective']['applications_closed']);
+
+        // The last day cannot come before the opening day.
+        $order = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => $inTenDays, 'cohort1_closes' => '', 'closes_after' => $yesterday], $admin);
+        self::assertSame(422, $order->status());
+        self::assertArrayHasKey('closes_after', self::decode($order)['error']['details']['fields']);
+
+        // Reopening clears the last day.
+        $reopened = self::decode($this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => '', 'closes_after' => ''], $admin))['data'];
+        self::assertSame([null, true, false], [$reopened['effective']['closes_after'], $reopened['effective']['applications_open'], $reopened['effective']['applications_closed']]);
+        self::assertSame(201, $this->app()->handle($this->apply('software-engineer-fellow', []))->status());
+    }
+
     public function testTheServerSettingAppliesUntilAnAdministratorSavesADate(): void
     {
         $admin = $this->setupAdmin();

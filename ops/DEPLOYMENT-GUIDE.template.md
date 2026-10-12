@@ -106,6 +106,7 @@ In File Manager turn on **Settings → Show Hidden Files (dotfiles)** first, so 
    - **Do not** click *Run NPM Install*: the package already contains everything.
    - **Save** (this writes cPanel's Node.js routing into the domain's document root from Step 0), then **Start App** (or **Restart**).
 5. **Test the website:** open {{SITE_URL}}/release.txt: it must show `{{VERSION}}`. Then open {{SITE_URL}} and {{SITE_URL}}/contact. Pages load with styling and no error.
+6. **Now update the careers site with the same ZIP. Do not skip this.** careers.paxofi.com is a second Node.js app (`paxofi-careers-website`) that runs the same package. Repeat items 1 to 4 for it: extract the ZIP again, rename the extracted `paxofi-corporate-website` folder to `paxofi-careers-website`, swap it in, keep its variables (`API_BASE_URL`, `SITE_SECTION=careers`, `CAREERS_SITE_URL`), and **Restart** it (Step 10d has the details). Then open https://careers.paxofi.com/release.txt: it must also show `{{VERSION}}`. If it shows an older version, the careers site is still running the old release: new pages such as /verify show "Page not found" and applications can fail with "We could not send your application".
 
 ## Step 5 — Final check (5 minutes)
 

@@ -96,8 +96,10 @@ test("roles are grouped by role family, Fellow first", () => {
 test("the opening status is read defensively", async () => {
   const ok = (body: unknown, status = 200) => (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
   const closed = await loadStatus("https://api.test/api/v1", ok({ data: { applications_open: false, opens_at: "2026-11-02T00:00:00+01:00", opens_on: "Monday 2 November 2026", cohort: "Cohort 1", cohort1_closes_on: "Sunday 15 November 2026" } }));
-  assert.deepEqual(closed, { open: false, opensOn: "Monday 2 November 2026", cohort: "Cohort 1", cohort1ClosesOn: "Sunday 15 November 2026" });
-  assert.deepEqual(await loadStatus("https://api.test/api/v1", ok({ data: { applications_open: true } })), { open: true, opensOn: null, cohort: null, cohort1ClosesOn: null });
+  assert.deepEqual(closed, { open: false, closed: false, opensOn: "Monday 2 November 2026", closesOn: null, cohort: "Cohort 1", cohort1ClosesOn: "Sunday 15 November 2026" });
+  assert.deepEqual(await loadStatus("https://api.test/api/v1", ok({ data: { applications_open: true } })), { open: true, closed: false, opensOn: null, closesOn: null, cohort: null, cohort1ClosesOn: null });
+  const ended = await loadStatus("https://api.test/api/v1", ok({ data: { applications_open: false, applications_closed: true, closes_on: "Friday 27 November 2026" } }));
+  assert.deepEqual([ended?.open, ended?.closed, ended?.closesOn], [false, true, "Friday 27 November 2026"], "after the last day to apply (D-030)");
   assert.equal(await loadStatus("https://api.test/api/v1", ok({ data: { applications_open: "yes" } })), null);
   assert.equal(await loadStatus("https://api.test/api/v1", ok({}, 404)), null, "an older API without the endpoint counts as unknown, not closed");
   assert.equal(await loadStatus("https://api.test/api/v1", (async () => { throw new Error("down"); }) as typeof fetch), null);
@@ -105,5 +107,11 @@ test("the opening status is read defensively", async () => {
 
 test("a refusal before opening is shown with the API's own message", () => {
   assert.equal(describeApplicationFailure(403, { error: { code: "APPLICATIONS_NOT_OPEN", message: "Applications are not open yet. They open on Monday 2 November 2026." } }).message, "Applications are not open yet. They open on Monday 2 November 2026.");
-  assert.match(describeApplicationFailure(403, null).message, /not open yet/);
+  assert.match(describeApplicationFailure(403, null).message, /not open/);
+});
+
+test("any other refusal shows the API's message instead of a generic one", () => {
+  assert.match(describeApplicationFailure(409, { error: { code: "CONFLICT", message: "Something specific went wrong." } }).message, /^Something specific went wrong\. If this keeps happening, email hr@paxofi\.com\.$/);
+  assert.match(describeApplicationFailure(500, { error: { message: "Internal details" } }).message, /^We could not send your application/, "server errors stay generic");
+  assert.match(describeApplicationFailure(0, null).message, /^We could not send your application/);
 });

@@ -170,8 +170,8 @@ export function groupRoles(roles: CareerRole[]): RoleGroup[] {
   return [...groups.values()];
 }
 
-/** Whether applications are open yet, from /careers/status (the opening date is set by CAREERS_APPLICATIONS_OPEN_FROM). */
-export type ApplicationsStatus = { open: boolean; opensOn: string | null; cohort: string | null; cohort1ClosesOn: string | null };
+/** Whether applications are open, from /careers/status: not yet open, open, or closed after the last day to apply (D-030). */
+export type ApplicationsStatus = { open: boolean; closed: boolean; opensOn: string | null; closesOn: string | null; cohort: string | null; cohort1ClosesOn: string | null };
 
 export async function loadStatus(apiBase: string | undefined, fetchImpl: typeof fetch = fetch): Promise<ApplicationsStatus | null> {
   try {
@@ -181,7 +181,7 @@ export async function loadStatus(apiBase: string | undefined, fetchImpl: typeof 
     const data = isRecord(payload) && isRecord(payload.data) ? payload.data : null;
     if (!data || typeof data.applications_open !== "boolean") return null;
     const text = (key: string) => (typeof data[key] === "string" ? (data[key] as string) : null);
-    return { open: data.applications_open, opensOn: text("opens_on"), cohort: text("cohort"), cohort1ClosesOn: text("cohort1_closes_on") };
+    return { open: data.applications_open, closed: data.applications_closed === true, opensOn: text("opens_on"), closesOn: text("closes_on"), cohort: text("cohort"), cohort1ClosesOn: text("cohort1_closes_on") };
   } catch {
     return null;
   }
@@ -228,11 +228,13 @@ export function describeApplicationFailure(status: number, body: unknown): Appli
       if (typeof value === "string" && value !== "") fields[key] = value;
     }
   }
-  if (status === 403) return { message: typeof error?.message === "string" ? error.message : "Applications are not open yet.", fields };
+  if (status === 403) return { message: typeof error?.message === "string" ? error.message : "Applications are not open at the moment.", fields };
   if (status === 429) return { message: "We have received several applications from your connection in a short time. Please wait an hour and try again.", fields };
   if (status === 404) return { message: "This role is no longer open. Please choose another role.", fields };
   if (status === 503) return { message: typeof error?.message === "string" ? error.message : GENERIC_FAILURE, fields };
   if (status === 422) return { message: typeof error?.message === "string" ? error.message : "Please correct the highlighted fields.", fields };
+  // Anything else: say what the API said, if it said something, so the candidate (and HR) know what happened.
+  if (status >= 400 && status < 500 && typeof error?.message === "string" && error.message !== "") return { message: `${error.message} If this keeps happening, email ${RECRUITMENT_EMAIL}.`, fields };
   return { message: GENERIC_FAILURE, fields };
 }
 

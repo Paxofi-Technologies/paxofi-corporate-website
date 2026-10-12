@@ -561,3 +561,13 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
   - Emailing the talent pool from the system: it needs unsubscribe handling and consent for each message; staff use the HR mailbox.
   - Certificates in the future PIF module: they start here because release 28 ships before that module exists; they can move later without changing the codes.
 
+## D-030 — Closing applications from the staff area (12 Oct 2026)
+
+**Decision (CTO; the owner reported on 12 Oct 2026 that applications could be opened but never closed from the staff area):** administrators set a **last day to apply** under Recruitment → *Set when applications open*, next to the opening day and Cohort 1's last day.
+
+- After that Lagos day the API refuses applications (`403 APPLICATIONS_CLOSED`, "Applications are closed…"), and careers.paxofi.com shows "Applications are closed" instead of the form on the home page and every role page. Staff test applications with the test code still work.
+- **Close applications now** saves yesterday as the last day, so applications stop within a minute. **Reopen applications** clears it. The last day cannot be before the opening day.
+- While a last day is set and applications are open, the careers home page shows "The last day to apply is …".
+- Stored in `careers_settings` (`closes_after`), so no migration. Changes are audited as `careers_settings.updated`. There is no server (.env) setting for it.
+- The careers site now shows the API's own message for any refusal it does not recognise, instead of the generic "We could not send your application", so the cause is visible.
+

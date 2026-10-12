@@ -295,6 +295,8 @@ export type RedirectItem = { id: string; from: string; to: string; note: string 
 export type CareersSettings = {
   opens_from: string | null;
   cohort1_closes: string | null;
+  /** The last day to apply, set here (D-030). */
+  closes_after?: string | null;
   server: { opens_from: string | null; cohort1_closes: string | null };
   effective: {
     opens_from: string | null;
@@ -302,6 +304,8 @@ export type CareersSettings = {
     opens_from_source: "staff" | "server" | "none";
     cohort1_closes_source: "staff" | "server" | "none";
     applications_open: boolean;
+    applications_closed?: boolean;
+    closes_after?: string | null;
     cohort: string;
   };
   test_code: { set: boolean; by_staff: boolean; by_server: boolean };
