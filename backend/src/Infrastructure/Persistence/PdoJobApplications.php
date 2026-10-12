@@ -108,6 +108,11 @@ final class PdoJobApplications implements JobApplications
             $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
             $parameters += ['q1' => $like, 'q2' => $like, 'q3' => $like];
         }
+        if (isset($filters['viewer_id'], $filters['viewer_email'])) {
+            $where[] = "NOT EXISTS (SELECT 1 FROM application_reviewers rv WHERE rv.application_id = a.id AND rv.user_id = :viewer AND rv.status = 'recused')";
+            $where[] = 'LOWER(a.email) <> :viewer_email';
+            $parameters += ['viewer' => $filters['viewer_id'], 'viewer_email' => strtolower($filters['viewer_email'])];
+        }
         $counts = [];
         foreach ($this->select('SELECT a.stage, COUNT(*) AS n FROM job_applications a WHERE ' . implode(' AND ', $where) . ' GROUP BY a.stage', $parameters) as $row) {
             $counts[(string) $row['stage']] = (int) $row['n'];
@@ -156,6 +161,19 @@ final class PdoJobApplications implements JobApplications
     {
         $column = $gate === 'interview' ? 'interview_scores' : 'evidence_scores';
         $this->write("UPDATE job_applications SET {$column} = :scores WHERE id = :id", ['id' => $id, 'scores' => json_encode($scores, JSON_THROW_ON_ERROR)]);
+    }
+
+    public function scoredBy(string $applicationId, string $userId): bool
+    {
+        return $this->select(
+            "SELECT 1 FROM application_notes WHERE application_id = :application AND author_id = :user AND kind = 'score' LIMIT 1",
+            ['application' => $applicationId, 'user' => $userId],
+        ) !== [];
+    }
+
+    public function clearScores(string $id): void
+    {
+        $this->write('UPDATE job_applications SET evidence_scores = NULL, interview_scores = NULL WHERE id = :id', ['id' => $id]);
     }
 
     public function addNote(string $applicationId, ?string $authorId, string $kind, string $body): void

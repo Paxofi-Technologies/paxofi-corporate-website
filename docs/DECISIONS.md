@@ -527,3 +527,37 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Project classes.** Every project is a practice replica, a Paxofi project, a participant's own idea or a client project, each with its own gates before anything goes live. A lawyer reviews participant-owned ideas and client work before any starts.
 - **Records.** Participant records are kept for the record. DP-025 is amended to v1.2 ("kept as programme records after the engagement ends, reviewed at least every 6 years"), confirmed by the owner on 12 Oct 2026; the careers privacy notice follows. This resolves KI-002.
 - **Not chosen:** keeping dates only in `.env` (an owner edit and restart for each change).
+
+## D-029 — Reviewers with recusal, the talent pool, and certificates with a public check (release 28, 12 Oct 2026)
+
+**Decision (CTO; the owner approved the design on 12 Oct 2026 and asked for release 28 to carry reviewers, the talent pool, certificates and the public verification page):**
+
+- **Reviewers and recusal.**
+  - Staff who manage recruitment can assign up to 5 reviewers to an application. When reviewers are assigned, only they can score it; with none assigned, anyone who manages recruitment can, as before.
+  - Any staff member who can see applications can declare a conflict of interest, with a reason of 10 to 500 characters. From then on the application is hidden from them everywhere (list, counts, detail, CV, notes, scores, emails: "not found"), and they cannot be assigned again. A recusal cannot be removed.
+  - If the person had saved a scorecard on that application, both scorecards are cleared, so the next reviewer scores again.
+  - A staff member whose sign-in email is the applicant's email is treated as recused automatically.
+  - Only people who manage recruitment see the reason. The application history records that a person stepped aside, never why. Audited: `application.reviewer_assigned`, `.reviewer_removed`, `.recused`.
+- **Talent pool.**
+  - Candidates who were *Not selected*, *Declined* or *Withdrawn* can be added only with recorded consent: the day they agreed (not before they applied, not in the future) and how (email reply, written consent, or another way explained in a note).
+  - Consent lasts 24 months. The entry copies name, email, location, role, engagement type, links and a note, never the CV, so it outlives the application.
+  - Withdrawing consent deletes the entry at once. It is also deleted when consent lapses (daily retention job) or when the application is erased. Audited: `talent_pool.added`, `.withdrawn`.
+  - Staff area: Recruitment → Talent pool (`recruitment.read`; adding and withdrawing need `recruitment.manage`). One entry per email address.
+  - Staff contact pool members by email from hr@paxofi.com; the system sends nothing to them.
+- **Certificates.**
+  - A certificate is issued for a participant who is *Completed* or *Alumni* (not test applications), with the finish day and an optional start day. The holder's name, position, cohort and dates are copied, so the certificate stays valid if the application is deleted.
+  - Each certificate has a random code (`PIF-XXXX-XXXX-XXXX`, 12 characters from an alphabet without 0, 1, I, L, O; about 60 bits), unique and unguessable.
+  - The PDF is drawn by the API on demand (A4 landscape, standard fonts, no stored file). It says that PIF is an unpaid learning programme and that the certificate is not a record of employment.
+  - Staff with `recruitment.manage` issue; `recruitment.read` downloads; the new permission `certificates.manage` (administrators) revokes or deletes. Revoking keeps the record and its reason; deleting is for erasure requests. Audited: `certificate.issued`, `.revoked`, `.deleted`.
+- **Public verification page.**
+  - `careers.paxofi.com/verify` (API `GET /api/v1/careers/certificates/{code}`) takes the code in any letter case, with or without spaces and dashes. It works without JavaScript.
+  - A valid code shows only what is printed on the certificate (name, position, cohort, dates, issue day). A revoked code shows only that the certificate is no longer valid, with no name and no reason. Unknown and malformed codes get the same 404 message, so the page cannot be used to explore. Responses are never cached, and the page is `noindex` and not in the sitemap.
+  - The page is private to whoever holds a code; the holder chooses who to give it to.
+- **Data:** migration 023 adds `application_reviewers`, `talent_pool`, `certificates` and the `certificates.manage` permission.
+- **For the owner:** the applicant privacy notice (version 2026-10-12) already covers the talent pool by consent. It does not yet say that a certificate holder's name is visible to anyone who has the code. Add a sentence and bump the notice version when you approve the wording; nothing in the system depends on the version.
+- **Not chosen:**
+  - Per-reviewer scorecards with averaging: a larger change to the scoring model. Today there is one scorecard per gate; reviewers decide who may write it. Revisit when reviews move into the PIF module.
+  - A QR code on the certificate: the code and the address are printed; a QR needs a PDF drawing library or more code for little gain.
+  - Emailing the talent pool from the system: it needs unsubscribe handling and consent for each message; staff use the HR mailbox.
+  - Certificates in the future PIF module: they start here because release 28 ships before that module exists; they can move later without changing the codes.
+

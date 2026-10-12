@@ -1761,6 +1761,19 @@ textarea:focus-visible {
   padding-bottom: 12px;
 }
 
+/* Reviewers, certificates (D-029) */
+.admin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  gap: 12px;
+}
+.admin-list li {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
 /* Pictures and downloads on product and service cards (D-012) */
 .card-image {
   width: 100%;

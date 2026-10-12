@@ -51,7 +51,7 @@ try {
     };
     $result = (new RetentionPurge(Connection::make($environment), new RetentionPolicy(), $deleteCv))->run();
     fwrite(STDOUT, sprintf(
-        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted, %d sign-in attempts deleted, %d sessions deleted, %d analytics rows deleted, %d emails deleted, %d password reset links deleted, %d job applications deleted (with their CVs), %d applications' IP/user-agent cleared, %d unused CV uploads deleted.\n",
+        "%s retention purge: %d enquiries deleted, %d enquiries' IP/user-agent cleared, %d audit events deleted, %d sign-in attempts deleted, %d sessions deleted, %d analytics rows deleted, %d emails deleted, %d password reset links deleted, %d job applications deleted (with their CVs), %d applications' IP/user-agent cleared, %d unused CV uploads deleted, %d lapsed talent pool entries deleted.\n",
         gmdate('Y-m-d H:i:s'),
         $result['enquiries_deleted'],
         $result['enquiry_metadata_cleared'],
@@ -64,6 +64,7 @@ try {
         $result['applications_deleted'],
         $result['application_metadata_cleared'],
         $result['cv_uploads_deleted'],
+        $result['talent_pool_deleted'],
     ));
 } catch (Throwable $exception) {
     fwrite(STDERR, 'Retention purge failed: ' . $exception->getMessage() . PHP_EOL);

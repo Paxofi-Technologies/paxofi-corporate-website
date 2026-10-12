@@ -7,6 +7,7 @@ import { can, useAdmin } from "@/components/admin/AdminContext";
 import { FieldShell, FormStatus } from "@/components/admin/AdminForm";
 import { NoAccess } from "@/components/admin/StaffShell";
 import { AdminApiError, type ApplicationDetail, downloadCv, formatBytes, formatDateTime } from "@/lib/admin-api";
+import { CertificatePanel, ReviewerPanel, TalentPoolPanel } from "./ReleasePanels";
 
 type Gate = "evidence" | "interview";
 const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
@@ -20,7 +21,7 @@ async function toBase64(file: Blob): Promise<string> {
   return btoa(binary);
 }
 
-const NOTE_LABELS: Record<string, string> = { note: "Note", stage: "Stage", score: "Score", email: "Email sent" };
+const NOTE_LABELS: Record<string, string> = { note: "Note", stage: "Stage", score: "Score", email: "Email sent", reviewer: "Reviewer", recusal: "Conflict of interest", talent_pool: "Talent pool", certificate: "Certificate" };
 
 /** One application: details, CV, stage, scorecards, candidate emails and notes (D-019). */
 export default function ApplicationView({ id }: { id: string }) {
@@ -264,6 +265,10 @@ export default function ApplicationView({ id }: { id: string }) {
               )}
             </section>
           )}
+
+          <ReviewerPanel app={app} path={path} onChange={setApp} />
+          <TalentPoolPanel app={app} path={path} onChange={setApp} />
+          <CertificatePanel app={app} path={path} onChange={setApp} />
 
           <section className="form-card" aria-labelledby="notes-heading">
             <h2 id="notes-heading">Notes and history</h2>

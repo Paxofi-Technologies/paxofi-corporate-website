@@ -22,6 +22,21 @@ final class RetentionPurgeTest extends DatabaseTestCase
         $this->now = new DateTimeImmutable('2026-10-02 12:00:00', new DateTimeZone('UTC'));
     }
 
+    public function testTalentPoolEntriesLapseWhenConsentExpires(): void
+    {
+        self::$pdo->exec('DELETE FROM talent_pool');
+        $insert = self::$pdo->prepare("INSERT INTO talent_pool (id, full_name, email, role_title, engagement_type, consent_given_on, consent_method, consent_expires_on) VALUES (:id, 'Ada', :email, 'Software Engineer Fellow', 'fellow', '2024-01-01', 'email_reply', :expires)");
+        $insert->execute(['id' => Uuid::v4(), 'email' => 'lapsed@example.com', 'expires' => '2026-10-01']);
+        $insert->execute(['id' => Uuid::v4(), 'email' => 'today@example.com', 'expires' => '2026-10-02']);
+        $insert->execute(['id' => Uuid::v4(), 'email' => 'valid@example.com', 'expires' => '2027-01-01']);
+
+        $result = (new RetentionPurge(self::$pdo, new RetentionPolicy()))->run($this->now);
+
+        self::assertSame(1, $result['talent_pool_deleted'], 'only the entry that expired yesterday goes');
+        self::assertEqualsCanonicalizing(['today@example.com', 'valid@example.com'], self::$pdo->query('SELECT email FROM talent_pool')->fetchAll(\PDO::FETCH_COLUMN));
+        self::$pdo->exec('DELETE FROM talent_pool');
+    }
+
     public function testAppliesEachRetentionPeriod(): void
     {
         $fresh = $this->enquiry('-10 days');
@@ -32,7 +47,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
 
         $result = (new RetentionPurge(self::$pdo, new RetentionPolicy()))->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0, 'applications_deleted' => 0, 'application_metadata_cleared' => 0, 'cv_uploads_deleted' => 0], $result);
+        self::assertSame(['enquiry_metadata_cleared' => 2, 'enquiries_deleted' => 1, 'audit_events_deleted' => 1, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0, 'applications_deleted' => 0, 'application_metadata_cleared' => 0, 'cv_uploads_deleted' => 0, 'talent_pool_deleted' => 0], $result);
         self::assertSame(['203.0.113.7', 'test-agent'], $this->network($fresh));
         self::assertSame([null, null], $this->network($ninetyOneDays));
         self::assertSame('0', (string) self::scalar('SELECT COUNT(*) FROM enquiries WHERE id = ?', [$expired]));
@@ -66,7 +81,7 @@ final class RetentionPurgeTest extends DatabaseTestCase
         $purge = new RetentionPurge(self::$pdo, new RetentionPolicy());
         $purge->run($this->now);
 
-        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0, 'applications_deleted' => 0, 'application_metadata_cleared' => 0, 'cv_uploads_deleted' => 0], $purge->run($this->now));
+        self::assertSame(['enquiry_metadata_cleared' => 0, 'enquiries_deleted' => 0, 'audit_events_deleted' => 0, 'login_attempts_deleted' => 0, 'sessions_deleted' => 0, 'analytics_rows_deleted' => 0, 'emails_deleted' => 0, 'password_resets_deleted' => 0, 'applications_deleted' => 0, 'application_metadata_cleared' => 0, 'cv_uploads_deleted' => 0, 'talent_pool_deleted' => 0], $purge->run($this->now));
         self::assertSame('1', (string) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'data_retention.purged'"), 'no audit noise');
     }
 

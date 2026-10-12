@@ -24,7 +24,7 @@ final class RetentionPurge
     {
     }
 
-    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int, analytics_rows_deleted: int, emails_deleted: int, password_resets_deleted: int, applications_deleted: int, application_metadata_cleared: int, cv_uploads_deleted: int} */
+    /** @return array{enquiry_metadata_cleared: int, enquiries_deleted: int, audit_events_deleted: int, login_attempts_deleted: int, sessions_deleted: int, analytics_rows_deleted: int, emails_deleted: int, password_resets_deleted: int, applications_deleted: int, application_metadata_cleared: int, cv_uploads_deleted: int, talent_pool_deleted: int} */
     public function run(?DateTimeImmutable $now = null): array
     {
         $now = ($now ?? new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'));
@@ -82,6 +82,8 @@ final class RetentionPurge
                 // A claimed upload's file belongs to its application, so only unclaimed files are deleted here.
                 'cv_uploads_deleted' => $this->deleteWithFiles('application_uploads', 'file_reference', 'claimed_at IS NULL AND created_at < :cutoff', $this->policy->cvUploadCutoff($now), $files)
                     + $this->execute('DELETE FROM application_uploads WHERE claimed_at IS NOT NULL AND claimed_at < :cutoff', $this->policy->cvUploadCutoff($now)),
+                // Talent pool consent lapses after 24 months (D-029): the entry goes the day after it expires.
+                'talent_pool_deleted' => $this->execute('DELETE FROM talent_pool WHERE consent_expires_on < DATE(:cutoff)', $now),
             ];
 
             if (array_sum($result) > 0) {

@@ -58,6 +58,7 @@ export default async function CareersLayout({ children }: { children: React.Reac
           <ul>
             <li><Link href="/#roles">Open roles</Link></li>
             <li><Link href="/privacy">Applicant privacy notice</Link></li>
+            <li><Link href="/verify">Check a certificate</Link></li>
             <li><a href={`${corporate}/about`} rel="noopener">About Paxofi</a></li>
             <li><a href={`mailto:${RECRUITMENT_EMAIL}`}><Mail size={14} aria-hidden="true" /> {RECRUITMENT_EMAIL}</a></li>
           </ul>

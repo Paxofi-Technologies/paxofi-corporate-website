@@ -265,6 +265,15 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10k — Reviewers, talent pool and certificates (no settings to add, about 10 minutes)
+
+From this release, applications can have assigned reviewers and conflict-of-interest recusals, candidates who were not selected can join a consent-based talent pool, and completed participants can receive certificates that anyone can check at https://careers.paxofi.com/verify (decision D-029, RB-19). The database upgrade (migration 023) adds three tables and the permission `certificates.manage` for administrators. No `.env` change is needed. Deploy as usual (Steps 2 to 4, and the same website package for `paxofi-careers-website`, Step 10d), and restart both Node.js apps.
+
+1. Open `https://careers.paxofi.com/verify`: the form shows. Enter `PIF-AAAA-BBBB-CCCC`; it says it could not find a certificate.
+2. Staff area → **Recruitment → Talent pool** opens (empty at first).
+3. On a test application (staging first), assign a reviewer, then issue a certificate after moving the application to *Completed*. Download the PDF, check the name and dates, and check the code on `/verify`. Revoke it (administrator) and check that `/verify` now says it is no longer valid. Delete the test certificate.
+4. The daily retention job (Step 6) now also deletes talent pool entries whose 24-month consent has lapsed. Its log line ends with "lapsed talent pool entries deleted".
+
 ## Step 10j — PIF engagement types, the opening date and test applications (about 20 minutes)
 
 From this release, careers.paxofi.com offers the three PIF engagement types (Fellow, Intern, Volunteer) and the nine Cohort 1 role families, with the hours, terms and scorecards of each (decision D-027). The database upgrade (migration 021) adds the engagement type, a cohort label and a test flag, adds the eight new positions, and changes the Frontend Developer role code from FD to FE.

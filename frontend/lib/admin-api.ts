@@ -175,7 +175,7 @@ export type ApplicationRow = {
 export type ScoreSummary = { scores: Record<string, number>; total: number; out_of: number; pass: number; passed: boolean } | null;
 export type ScorecardDefinition = { label: string; pass: number; out_of: number; criteria: Record<string, string> };
 export type EngagementDetails = { type: "fellow" | "intern" | "volunteer"; label: string; term: string; hours_min: number; hours_target: number; for_whom: string };
-export type ApplicationNote = { id: string; kind: "note" | "stage" | "score" | "email"; body: string; author_name: string | null; created_at: string };
+export type ApplicationNote = { id: string; kind: "note" | "stage" | "score" | "email" | "reviewer" | "recusal" | "talent_pool" | "certificate"; body: string; author_name: string | null; created_at: string };
 export type EmailTemplate = { key: string; label: string; subject: string; body: string; stage: string | null };
 export type ApplicationDetail = {
   id: string;
@@ -209,7 +209,53 @@ export type ApplicationDetail = {
   scorecards: Partial<Record<"evidence" | "interview", ScorecardDefinition>>;
   email_templates: EmailTemplate[];
   email_available: boolean;
+  /** Reviewers and recusals (D-029). The reason is shown to staff who manage recruitment only. */
+  reviewers: ApplicationReviewer[];
+  reviewer_candidates: { id: string; name: string }[];
+  /** The talent pool entry made from this application, and whether it could be (D-029). */
+  talent_pool: { id: string; consent_given_on: string; consent_expires_on: string } | null;
+  talent_pool_eligible: boolean;
+  certificates: CertificateSummary[];
+  certificate_eligible: boolean;
 };
+export type ApplicationReviewer = { user_id: string; name: string; status: "assigned" | "recused"; reason: string | null; created_at: string };
+export type CertificateSummary = {
+  id: string;
+  code: string;
+  status: "valid" | "revoked";
+  holder_name: string;
+  started_on: string | null;
+  completed_on: string;
+  issued_at: string;
+  revoked_at: string | null;
+  revoked_reason: string | null;
+  verify_url: string;
+};
+export type TalentPoolEntry = {
+  id: string;
+  application_id: string | null;
+  reference: string | null;
+  full_name: string;
+  email: string;
+  location: string | null;
+  role_title: string;
+  engagement_type: string;
+  engagement_label: string;
+  portfolio_url: string | null;
+  linkedin_url: string | null;
+  note: string | null;
+  consent_given_on: string;
+  consent_method: string;
+  consent_method_label: string;
+  consent_expires_on: string;
+  expiring_soon: boolean;
+  added_on: string;
+};
+export const CONSENT_METHODS: { value: string; label: string }[] = [
+  { value: "email_reply", label: "The candidate replied to our email" },
+  { value: "written", label: "Signed or written consent" },
+  { value: "other", label: "Another way (explain in the note)" },
+];
 
 /** News & Insights articles (D-021). */
 export type ArticleContentValues = { title: string; category: "news" | "insight" | "announcement"; summary: string; body: string; author_name: string | null; image_id: string | null };
@@ -309,14 +355,23 @@ export type CareerRoleAdmin = {
  * so the file never sits at a shareable address.
  */
 export async function downloadCv(apiBase: string | undefined, id: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  return downloadFile(apiBase, `/applications/${encodeURIComponent(id)}/cv`, "CV", fetchImpl);
+}
+
+/** A certificate PDF (D-029), downloaded the same way as a CV. */
+export async function downloadCertificate(apiBase: string | undefined, id: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  return downloadFile(apiBase, `/certificates/${encodeURIComponent(id)}/pdf`, "certificate.pdf", fetchImpl);
+}
+
+async function downloadFile(apiBase: string | undefined, path: string, fallbackName: string, fetchImpl: typeof fetch): Promise<void> {
   let response: Response;
   try {
-    response = await fetchImpl(adminUrl(apiBase, `/applications/${encodeURIComponent(id)}/cv`), { credentials: "include", cache: "no-store" });
+    response = await fetchImpl(adminUrl(apiBase, path), { credentials: "include", cache: "no-store" });
   } catch {
     throw new AdminApiError(0, "NETWORK", NETWORK_FAILURE);
   }
   if (!response.ok) throw toError(response.status, await response.json().catch(() => null));
-  const name = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "CV";
+  const name = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? fallbackName;
   const url = URL.createObjectURL(await response.blob());
   const link = document.createElement("a");
   link.href = url;
