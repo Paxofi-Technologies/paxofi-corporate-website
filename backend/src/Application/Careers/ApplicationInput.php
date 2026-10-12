@@ -14,9 +14,10 @@ use Paxofi\CorporateWebsite\Application\Mail\Email;
  */
 final class ApplicationInput
 {
-    public const PRIVACY_VERSION = '2026-10-06';
+    public const PRIVACY_VERSION = '2026-10-12';
     public const HONEYPOT_FIELD = 'website';
-    public const HOURS = [15, 20, 25, 30, 35, 40];
+    /** Hours a week a candidate can choose; each engagement type has its own minimum (EngagementType::minHours). */
+    public const HOURS = [10, 15, 20, 25, 30, 35, 40];
     /** "How did you hear about this role?" (optional; P3.1). */
     public const SOURCES = [
         'linkedin' => 'LinkedIn',
@@ -33,7 +34,7 @@ final class ApplicationInput
     ];
 
     /** @return array<string, mixed> */
-    public static function validate(mixed $input): array
+    public static function validate(mixed $input, EngagementType $type = EngagementType::Fellow): array
     {
         $input = is_array($input) ? $input : [];
         $errors = [];
@@ -65,8 +66,8 @@ final class ApplicationInput
         }
         $hours = $input['hours_per_week'] ?? null;
         $values['hours_per_week'] = is_numeric($hours) ? (int) $hours : 0;
-        if (!in_array($values['hours_per_week'], self::HOURS, true)) {
-            $errors['hours_per_week'] = 'Choose how many hours a week you can commit (at least 15).';
+        if (!in_array($values['hours_per_week'], self::HOURS, true) || $values['hours_per_week'] < $type->minHours()) {
+            $errors['hours_per_week'] = "Choose how many hours a week you can commit (at least {$type->minHours()}).";
         }
         foreach (['motivation' => 'why you want this role', 'experience' => 'your relevant experience or evidence'] as $key => $what) {
             $length = mb_strlen($values[$key]);

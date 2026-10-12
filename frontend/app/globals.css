@@ -2147,6 +2147,54 @@ textarea:focus-visible {
   color: var(--blue-strong);
   font-weight: 600;
 }
+/* A role family with one link per engagement type (Fellow, Intern, Volunteer). */
+.role-card--group:hover,
+.role-card--group:focus-within {
+  transform: none;
+}
+.role-offers {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.role-offers a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--paxofi-blue);
+  border-radius: 999px;
+  color: var(--blue-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+.role-offers a:hover,
+.role-offers a:focus-visible {
+  background: #e8f0ff;
+}
+/* A short, calm message above a list or form (for example "Applications open on …"). */
+.notice {
+  margin: 0 0 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--paxofi-blue);
+  border-radius: var(--radius-sm);
+  background: #eef4ff;
+  color: var(--ink);
+}
+.engagement-badge {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+}
 .role-code {
   justify-self: start;
   padding: 4px 10px;
@@ -2334,11 +2382,14 @@ textarea:focus-visible {
 .status-pill[data-status="selected"],
 .status-pill[data-status="accepted"],
 .status-pill[data-status="onboarding"],
+.status-pill[data-status="completed"],
+.status-pill[data-status="alumni"],
 .status-pill[data-status="active"] {
   background: #e6f8f1;
   color: #046c4e;
 }
 .status-pill[data-status="rejected"],
+.status-pill[data-status="exited_early"],
 .status-pill[data-status="declined"],
 .status-pill[data-status="withdrawn"],
 .status-pill[data-status="draft"] {

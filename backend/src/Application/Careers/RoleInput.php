@@ -34,6 +34,12 @@ final class RoleInput
             'assessment' => $text('assessment', 0, 400, 'Keep this to 400 characters.'),
             'interview' => $text('interview', 0, 400, 'Keep this to 400 characters.'),
         ];
+        $given = $input['engagement_type'] ?? null;
+        $type = $given === null ? EngagementType::Fellow : (is_string($given) ? EngagementType::tryFrom($given) : null);
+        if ($type === null) {
+            $errors['engagement_type'] = 'Choose Fellow, Intern or Volunteer.';
+        }
+        $values['engagement_type'] = ($type ?? EngagementType::Fellow)->value;
         if (!isset($errors['code']) && preg_match('/^[A-Z]{2,4}$/', $values['code']) !== 1) {
             $errors['code'] = 'Use 2 to 4 letters, for example SE.';
         }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
-import { CAMPAIGN_STORAGE_KEY, CV_ACCEPT, type Campaign, HOURS_OPTIONS, RECRUITMENT_EMAIL, SOURCE_OPTIONS, applyUrl, campaignFrom, checkCvFile, cvUploadUrl, describeApplicationFailure } from "@/lib/careers";
+import { CAMPAIGN_STORAGE_KEY, CV_ACCEPT, type Campaign, RECRUITMENT_EMAIL, SOURCE_OPTIONS, applyUrl, campaignFrom, checkCvFile, cvUploadUrl, describeApplicationFailure, hoursOptions } from "@/lib/careers";
 
 /** The campaign of the link this visit started from (CampaignCapture), or of this page's own address. */
 function currentCampaign(): Campaign {
@@ -15,13 +15,13 @@ function currentCampaign(): Campaign {
   return campaignFrom(window.location.search) ?? {};
 }
 
-type Props = { apiBase?: string; slug: string; roleTitle: string; evidenceHint: string };
+type Props = { apiBase?: string; slug: string; roleTitle: string; evidenceHint: string; minHours: number; targetHours: number; engagementLabel: string; testMode?: boolean };
 type Status = "idle" | "uploading" | "sending" | "error";
 
 const ORDER = ["full_name", "email", "phone", "location", "hours_per_week", "cv", "portfolio_url", "linkedin_url", "motivation", "experience", "age_confirmed", "privacy_consent"];
 
 /** The application form: the CV (optional) goes first, then the details claim it (D-019). */
-export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint }: Props) {
+export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint, minHours, targetHours, engagementLabel, testMode = false }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,6 +85,7 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
       privacy_consent: data.get("privacy_consent") === "yes",
       website: text("website"),
       source: text("source"),
+      ...(testMode && text("test_code") ? { test_code: text("test_code") } : {}),
       ...currentCampaign(),
     };
     try {
@@ -112,7 +113,7 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
       <div className="application-done" role="status">
         <h3 ref={doneRef} tabIndex={-1}>Application received</h3>
         <p>Thank you for applying for <strong>{roleTitle}</strong>. Your reference is <strong className="application-reference">{receipt.reference}</strong>.</p>
-        <p>We have emailed a confirmation to {receipt.email}. Every applicant hears back by email; screening usually takes about two weeks. Please also check your spam folder.</p>
+        <p>We have emailed a confirmation to {receipt.email}. We email every applicant at each step, from hr@paxofi.com. Please also check your spam folder.</p>
         <p>Questions? Email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a> with your reference.</p>
         <p><Link href="/#roles">See the other open roles</Link></p>
       </div>
@@ -139,10 +140,10 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
         <label>Country and city<input name="location" autoComplete="address-level1" maxLength={120} required placeholder="Lagos, Nigeria" aria-invalid={invalid("location")} aria-describedby={describedBy("location")} />{errorText("location")}</label>
         <label>
           Hours a week you can commit
-          <select name="hours_per_week" required defaultValue="20" aria-invalid={invalid("hours_per_week")} aria-describedby={describedBy("hours_per_week", true)}>
-            {HOURS_OPTIONS.map((hours) => <option key={hours} value={hours}>{hours === 40 ? "40 or more" : hours} hours</option>)}
+          <select name="hours_per_week" required defaultValue={String(targetHours)} aria-invalid={invalid("hours_per_week")} aria-describedby={describedBy("hours_per_week", true)}>
+            {hoursOptions(minHours).map((hours) => <option key={hours} value={hours}>{hours === 40 ? "40 or more" : hours} hours</option>)}
           </select>
-          <span id="hours_per_week-hint" className="form-note">The minimum is 15 hours a week; 20 is recommended.</span>
+          <span id="hours_per_week-hint" className="form-note">For a PIF {engagementLabel} the minimum is {minHours} hours a week; {targetHours} is recommended.</span>
           {errorText("hours_per_week")}
         </label>
       </fieldset>
@@ -191,10 +192,21 @@ export default function ApplicationForm({ apiBase, slug, roleTitle, evidenceHint
         {errorText("age_confirmed")}
         <label className="check-field">
           <input name="privacy_consent" type="checkbox" value="yes" required aria-invalid={invalid("privacy_consent")} aria-describedby={describedBy("privacy_consent")} />
-          <span>I have read the <Link href="/privacy">applicant privacy notice</Link> and agree that Paxofi uses my application to assess me for this role. It is kept for up to 12 months.</span>
+          <span>I have read the <Link href="/privacy">applicant privacy notice</Link> and agree that Paxofi uses my application to assess me for this role. If I am not selected it is kept for up to 12 months, then deleted.</span>
         </label>
         {errorText("privacy_consent")}
       </fieldset>
+
+      {testMode && (
+        <fieldset>
+          <legend>Staff test</legend>
+          <label>
+            Test code (staff only)
+            <input name="test_code" autoComplete="off" maxLength={80} aria-describedby="test_code-hint" />
+            <span id="test_code-hint" className="form-note">With the test code this application is flagged as a test and left out of reports. Leave it empty to apply normally.</span>
+          </label>
+        </fieldset>
+      )}
 
       {/* Honeypot: hidden from people and assistive tech; bots that fill it are discarded server-side. */}
       <div className="hp-field" aria-hidden="true">

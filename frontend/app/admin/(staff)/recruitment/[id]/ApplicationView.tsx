@@ -98,8 +98,8 @@ export default function ApplicationView({ id }: { id: string }) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const scores: Record<string, number> = {};
-    for (const key of Object.keys(app?.scorecards[gate].criteria ?? {})) scores[key] = Number(data.get(key) ?? 0);
-    run(gate, async () => (await request<ApplicationDetail>(`${path}/scores`, { method: "POST", body: { gate, scores } })).data, `${app?.scorecards[gate].label} saved.`);
+    for (const key of Object.keys(app?.scorecards[gate]?.criteria ?? {})) scores[key] = Number(data.get(key) ?? 0);
+    run(gate, async () => (await request<ApplicationDetail>(`${path}/scores`, { method: "POST", body: { gate, scores } })).data, `${app?.scorecards[gate]?.label ?? "Scorecard"} saved.`);
   }
 
   function addNote(event: FormEvent<HTMLFormElement>) {
@@ -159,7 +159,7 @@ export default function ApplicationView({ id }: { id: string }) {
       {back}
       <h1 className="admin-title">{app.full_name}</h1>
       <p className="admin-intro">
-        {app.reference} · {app.role.title} · <span className="status-pill" data-status={app.stage}>{app.stage_label}</span>
+        {app.reference} · {app.role.title} · PIF {app.engagement.label}{app.cohort ? ` · ${app.cohort}` : ""} · <span className="status-pill" data-status={app.stage}>{app.stage_label}</span>{app.is_test && <> · <span className="status-pill" data-status="draft">Test application</span></>}
       </p>
       <FormStatus state="success" message={saved} />
       <FormStatus state="error" message={error} />
@@ -192,13 +192,14 @@ export default function ApplicationView({ id }: { id: string }) {
 
           {(["evidence", "interview"] as const).map((gate) => {
             const card = app.scorecards[gate];
+            if (!card) return null;
             const result = app[gate];
             return (
               <section key={gate} className="form-card" aria-labelledby={`${gate}-heading`}>
                 <h2 id={`${gate}-heading`}>{card.label}</h2>
                 <p className="admin-help">
-                  Score each criterion from 1 (weak) to 5 (excellent). Progression mark: {card.pass} of 35.
-                  {result && <> Current: <strong>{result.total}/35</strong>, {result.passed ? "meets the mark" : "below the mark"}.</>}
+                  Score each criterion from 1 (weak) to 5 (excellent). {gate === "interview" ? "Selection mark" : "Progression mark"}: {card.pass} of {card.out_of}.
+                  {result && <> Current: <strong>{result.total}/{card.out_of}</strong>, {result.passed ? "meets the mark" : "below the mark"}.</>}
                 </p>
                 {manage ? (
                   <form className="contact-form scorecard" onSubmit={(e) => score(gate, e)} key={JSON.stringify(result?.scores ?? {})}>

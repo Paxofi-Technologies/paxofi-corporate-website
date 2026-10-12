@@ -8,6 +8,7 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
+use Paxofi\CorporateWebsite\Application\Careers\ApplicationStage;
 use Paxofi\CorporateWebsite\Infrastructure\Support\Uuid;
 
 /**
@@ -64,11 +65,12 @@ final class RetentionPurge
                 'emails_deleted' => $this->execute("DELETE FROM email_outbox WHERE status = 'sent' AND created_at < :cutoff", $this->policy->sentEmailCutoff($now))
                     + $this->execute("DELETE FROM email_outbox WHERE status = 'failed' AND created_at < :cutoff", $this->policy->failedEmailCutoff($now)),
                 'password_resets_deleted' => $this->execute('DELETE FROM password_resets WHERE expires_at < :cutoff', $this->policy->passwordResetCutoff($now)),
-                // Applications 12 months after closing, or after their last stage change while open (D-019).
+                // Applications that never became participants, 12 months after closing, or after their last stage change while open
+                // (D-019). Participant records (accepted, onboarding, active, completed, alumni, exited early) are never deleted here (D-027).
                 'applications_deleted' => $this->deleteWithFiles(
                     'job_applications',
                     'cv_reference',
-                    'COALESCE(closed_at, stage_changed_at, created_at) < :cutoff',
+                    "stage IN ('" . implode("', '", ApplicationStage::purgeable()) . "') AND COALESCE(closed_at, stage_changed_at, created_at) < :cutoff",
                     $this->policy->applicationCutoff($now),
                     $files,
                 ),

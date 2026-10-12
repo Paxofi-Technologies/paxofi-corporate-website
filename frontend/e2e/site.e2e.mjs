@@ -227,11 +227,11 @@ describe("navigation", () => {
     await page.getByRole("link", { name: "Explore careers" }).first().click();
     await page.waitForURL(`${BASE}/careers`);
     await page.getByRole("heading", { name: "Your next opportunity could start here." }).waitFor();
-    assert.equal(await page.locator(".role-list li").count(), 7, "the seven PIF role families");
-    await page.getByText("No stipend or salary at this time", { exact: false }).waitFor();
+    assert.equal(await page.locator(".role-list li").count(), 9, "the nine PIF role families");
+    await page.getByText("Unpaid: a learning and development programme", { exact: false }).waitFor();
     const faq = page.getByText("Is the fellowship paid?");
     await faq.click();
-    await page.getByText("does not offer a stipend, allowance or salary", { exact: false }).waitFor();
+    await page.getByText("No stipend, allowance or salary is offered or promised", { exact: false }).waitFor();
     assert.equal(await page.getByRole("link", { name: "hr@paxofi.com" }).getAttribute("href"), "mailto:hr@paxofi.com");
     // After an in-app navigation Next.js sets the new <title> a moment after the content (seen in WebKit).
     await page.waitForFunction(() => document.title.startsWith("Careers"));

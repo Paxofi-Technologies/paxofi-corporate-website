@@ -11,7 +11,21 @@ export const CAREERS_PREFIX = "/careers-site";
 
 export const CV_MAX_BYTES = 5 * 1024 * 1024;
 export const CV_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-export const HOURS_OPTIONS = [15, 20, 25, 30, 35, 40] as const;
+export const HOURS_OPTIONS = [10, 15, 20, 25, 30, 35, 40] as const;
+
+/** The three PIF engagement types (Launch Decision Pack Revision 1); the API keeps the same rules (EngagementType.php). */
+export type EngagementType = "fellow" | "intern" | "volunteer";
+export type Engagement = { type: EngagementType; label: string; term: string; hoursMin: number; hoursTarget: number; forWhom: string };
+export const ENGAGEMENTS: Record<EngagementType, Engagement> = {
+  fellow: { type: "fellow", label: "Fellow", term: "24 programme weeks", hoursMin: 15, hoursTarget: 20, forWhom: "People with foundation skills who want to own real deliverables." },
+  intern: { type: "intern", label: "Intern", term: "12 or 24 weeks", hoursMin: 15, hoursTarget: 20, forWhom: "Students, recent graduates and early-career learners. SIWES and industrial-training placements are welcome." },
+  volunteer: { type: "volunteer", label: "Volunteer", term: "8 to 24 weeks, project-based", hoursMin: 10, hoursTarget: 15, forWhom: "People who want to contribute to a defined project and build experience." },
+};
+
+/** Hours a week a candidate can choose for an engagement type (at least its minimum). */
+export function hoursOptions(min: number): number[] {
+  return HOURS_OPTIONS.filter((hours) => hours >= min);
+}
 export const RECRUITMENT_EMAIL = "hr@paxofi.com";
 
 /** "How did you hear about this role?" (P3.1); the API keeps the same keys (ApplicationInput::SOURCES). */
@@ -47,6 +61,7 @@ export function campaignFrom(search: string): Campaign | null {
 export type CareerRole = {
   slug: string;
   code: string;
+  engagement: Engagement;
   title: string;
   family: string;
   summary: string;
@@ -101,6 +116,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function parseEngagement(type: unknown, details: unknown): Engagement {
+  const known: EngagementType = type === "intern" || type === "volunteer" ? type : "fellow";
+  const base = ENGAGEMENTS[known];
+  if (!isRecord(details)) return base;
+  const text = (key: string, fallback: string) => (typeof details[key] === "string" && details[key] !== "" ? (details[key] as string) : fallback);
+  const number = (key: string, fallback: number) => (typeof details[key] === "number" ? (details[key] as number) : fallback);
+  return { type: known, label: text("label", base.label), term: text("term", base.term), hoursMin: number("hours_min", base.hoursMin), hoursTarget: number("hours_target", base.hoursTarget), forWhom: text("for_whom", base.forWhom) };
+}
+
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []);
 
 /** A role from the API, or null when the shape is wrong. */
@@ -111,6 +135,7 @@ export function parseRole(value: unknown): CareerRole | null {
     slug: value.slug,
     title: value.title,
     code: text("code"),
+    engagement: parseEngagement(value.engagement_type, value.engagement),
     family: text("family"),
     summary: text("summary"),
     purpose: text("purpose"),
@@ -125,6 +150,42 @@ export function parseRole(value: unknown): CareerRole | null {
 }
 
 const TIMEOUT_MS = 4000;
+
+/** A role family on the careers home page: one card, with a link for each engagement type it is offered as. */
+export type RoleGroup = { code: string; name: string; family: string; summary: string; roles: CareerRole[] };
+
+/** Groups roles by role code, in the order the API lists them ("Software Engineer Fellow" and "Software Engineer Intern" become "Software Engineer"). */
+export function groupRoles(roles: CareerRole[]): RoleGroup[] {
+  const groups = new Map<string, RoleGroup>();
+  for (const role of roles) {
+    const key = role.code || role.slug;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.roles.push(role);
+      continue;
+    }
+    const name = role.title.replace(/\s+(Fellow|Intern|Volunteer)$/i, "");
+    groups.set(key, { code: role.code, name, family: role.family, summary: role.summary, roles: [role] });
+  }
+  return [...groups.values()];
+}
+
+/** Whether applications are open yet, from /careers/status (the opening date is set by CAREERS_APPLICATIONS_OPEN_FROM). */
+export type ApplicationsStatus = { open: boolean; opensOn: string | null; cohort: string | null; cohort1ClosesOn: string | null };
+
+export async function loadStatus(apiBase: string | undefined, fetchImpl: typeof fetch = fetch): Promise<ApplicationsStatus | null> {
+  try {
+    const response = await fetchImpl(`${apiRoot(apiBase)}/careers/status`, { headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (!response.ok) return null;
+    const payload: unknown = await response.json();
+    const data = isRecord(payload) && isRecord(payload.data) ? payload.data : null;
+    if (!data || typeof data.applications_open !== "boolean") return null;
+    const text = (key: string) => (typeof data[key] === "string" ? (data[key] as string) : null);
+    return { open: data.applications_open, opensOn: text("opens_on"), cohort: text("cohort"), cohort1ClosesOn: text("cohort1_closes_on") };
+  } catch {
+    return null;
+  }
+}
 
 /** Open roles, or null when the API cannot be read (the page then says so and gives the HR email). */
 export async function loadRoles(apiBase: string | undefined, fetchImpl: typeof fetch = fetch): Promise<CareerRole[] | null> {
@@ -167,6 +228,7 @@ export function describeApplicationFailure(status: number, body: unknown): Appli
       if (typeof value === "string" && value !== "") fields[key] = value;
     }
   }
+  if (status === 403) return { message: typeof error?.message === "string" ? error.message : "Applications are not open yet.", fields };
   if (status === 429) return { message: "We have received several applications from your connection in a short time. Please wait an hour and try again.", fields };
   if (status === 404) return { message: "This role is no longer open. Please choose another role.", fields };
   if (status === 503) return { message: typeof error?.message === "string" ? error.message : GENERIC_FAILURE, fields };

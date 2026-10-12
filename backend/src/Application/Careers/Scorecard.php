@@ -7,51 +7,68 @@ namespace Paxofi\CorporateWebsite\Application\Careers;
 use Paxofi\CorporateWebsite\Application\Exception\ValidationFailed;
 
 /**
- * The two scorecards of the PIF 2026 HR screening package (D-019): Gate 2
- * evidence review (progress at 21/35) and Gate 4 interview (24/35). Each
- * criterion is scored 1 to 5.
+ * The scorecards of the PIF 2026 selection package (D-019, D-027; Launch
+ * Production Pack section 8). Each criterion is scored 1 to 5.
+ *
+ * - Evidence review (Fellows and Interns): 7 criteria, 35 points. Progress at 21 (Fellows) or 18 (Interns).
+ * - Interview (Fellows and Interns): 7 criteria, 35 points. Select at 24 (Fellows) or 21 (Interns).
+ * - Short conversation (Volunteers): 5 criteria, 25 points. Select at 15. Volunteers have no evidence review.
  */
 final class Scorecard
 {
-    public const GATES = [
-        'evidence' => [
-            'label' => 'Gate 2: evidence review',
-            'pass' => 21,
-            'criteria' => [
-                'capability' => 'Role capability',
-                'evidence' => 'Evidence or portfolio',
-                'communication' => 'Communication',
-                'reliability' => 'Reliability and ownership',
-                'learning' => 'Learning agility',
-                'collaboration' => 'Collaboration',
-                'readiness' => 'Role-specific readiness',
-            ],
-        ],
-        'interview' => [
-            'label' => 'Gate 4: interview',
-            'pass' => 24,
-            'criteria' => [
-                'motivation' => 'Motivation and programme fit',
-                'competence' => 'Role competence',
-                'problem_solving' => 'Problem solving',
-                'communication' => 'Communication',
-                'collaboration' => 'Collaboration',
-                'accountability' => 'Accountability',
-                'learning' => 'Learning orientation',
-            ],
-        ],
+    private const EVIDENCE_CRITERIA = [
+        'capability' => 'Role capability',
+        'evidence' => 'Evidence or portfolio',
+        'communication' => 'Communication',
+        'reliability' => 'Reliability and ownership',
+        'learning' => 'Learning agility',
+        'collaboration' => 'Collaboration',
+        'readiness' => 'Role-specific readiness',
     ];
 
-    /** @return array<string, int> */
-    public static function validate(string $gate, mixed $scores): array
+    private const INTERVIEW_CRITERIA = [
+        'motivation' => 'Motivation and programme fit',
+        'competence' => 'Role competence',
+        'problem_solving' => 'Problem solving',
+        'communication' => 'Communication',
+        'collaboration' => 'Collaboration',
+        'accountability' => 'Accountability',
+        'learning' => 'Learning orientation',
+    ];
+
+    private const CONVERSATION_CRITERIA = [
+        'motivation' => 'Motivation',
+        'communication' => 'Communication',
+        'reliability' => 'Reliability',
+        'collaboration' => 'Collaboration',
+        'availability' => 'Availability',
+    ];
+
+    /** @return array<string, array{label: string, pass: int, out_of: int, criteria: array<string, string>}> the scorecards that apply to the engagement type, by gate */
+    public static function definitions(EngagementType $type): array
     {
-        if (!isset(self::GATES[$gate])) {
-            throw new ValidationFailed(['gate' => 'Choose the evidence review or the interview scorecard.'], 'Please correct the highlighted fields.');
+        $gates = [];
+        if ($type->hasEvidenceGate()) {
+            $gates['evidence'] = ['label' => 'Gate 2: evidence review', 'pass' => (int) $type->evidencePass(), 'out_of' => 35, 'criteria' => self::EVIDENCE_CRITERIA];
+        }
+        $gates['interview'] = $type === EngagementType::Volunteer
+            ? ['label' => 'Gate 4: short conversation', 'pass' => $type->interviewPass(), 'out_of' => $type->interviewOutOf(), 'criteria' => self::CONVERSATION_CRITERIA]
+            : ['label' => 'Gate 4: interview', 'pass' => $type->interviewPass(), 'out_of' => $type->interviewOutOf(), 'criteria' => self::INTERVIEW_CRITERIA];
+
+        return $gates;
+    }
+
+    /** @return array<string, int> */
+    public static function validate(EngagementType $type, string $gate, mixed $scores): array
+    {
+        $definitions = self::definitions($type);
+        if (!isset($definitions[$gate])) {
+            throw new ValidationFailed(['gate' => $type->hasEvidenceGate() ? 'Choose the evidence review or the interview scorecard.' : 'Volunteers have a short conversation scorecard only.'], 'Please correct the highlighted fields.');
         }
         $scores = is_array($scores) ? $scores : [];
         $clean = [];
         $errors = [];
-        foreach (self::GATES[$gate]['criteria'] as $key => $label) {
+        foreach ($definitions[$gate]['criteria'] as $key => $label) {
             $value = $scores[$key] ?? null;
             if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
                 $errors[$key] = "Score {$label} from 1 to 5.";
@@ -71,20 +88,18 @@ final class Scorecard
         return $clean;
     }
 
-    /** @param array<string, int>|null $scores */
-    public static function summary(string $gate, ?array $scores): ?array
+    /**
+     * @param array<string, int>|null $scores
+     * @return array{scores: array<string, int>, total: int, out_of: int, pass: int, passed: bool}|null
+     */
+    public static function summary(EngagementType $type, string $gate, ?array $scores): ?array
     {
-        if ($scores === null) {
+        $definition = self::definitions($type)[$gate] ?? null;
+        if ($scores === null || $definition === null) {
             return null;
         }
         $total = array_sum($scores);
 
-        return ['scores' => $scores, 'total' => $total, 'out_of' => 35, 'pass' => self::GATES[$gate]['pass'], 'passed' => $total >= self::GATES[$gate]['pass']];
-    }
-
-    /** @return array<string, array{label: string, pass: int, criteria: array<string, string>}> */
-    public static function definitions(): array
-    {
-        return self::GATES;
+        return ['scores' => $scores, 'total' => $total, 'out_of' => $definition['out_of'], 'pass' => $definition['pass'], 'passed' => $total >= $definition['pass']];
     }
 }
