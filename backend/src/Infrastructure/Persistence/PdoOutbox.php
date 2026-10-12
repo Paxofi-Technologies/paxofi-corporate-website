@@ -62,11 +62,20 @@ final class PdoOutbox implements Outbox
             ['now' => $now->format('Y-m-d H:i:s')],
         );
 
-        return array_map(fn (array $row): array => [
-            'id' => (string) $row['id'],
-            'attempts' => (int) $row['attempts'],
-            'email' => new Email(explode(',', (string) $row['recipients']), (string) $row['subject'], (string) $row['body_text'], $row['reply_to'] === null ? null : (string) $row['reply_to'], (string) $row['kind'], $this->attachments((string) $row['id'])),
-        ], $rows);
+        $due = [];
+        foreach ($rows as $row) {
+            try {
+                $email = new Email(explode(',', (string) $row['recipients']), (string) $row['subject'], (string) $row['body_text'], $row['reply_to'] === null ? null : (string) $row['reply_to'], (string) $row['kind'], $this->attachments((string) $row['id']));
+            } catch (\InvalidArgumentException $exception) {
+                // An email that can never be sent (for example no valid recipient) is given up at once,
+                // with the reason, instead of blocking every email queued after it.
+                $this->markFailed((string) $row['id'], 'Cannot be sent: ' . $exception->getMessage(), null);
+                continue;
+            }
+            $due[] = ['id' => (string) $row['id'], 'attempts' => (int) $row['attempts'], 'email' => $email];
+        }
+
+        return $due;
     }
 
     public function markSent(string $id, DateTimeImmutable $now): void

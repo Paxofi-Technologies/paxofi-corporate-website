@@ -90,10 +90,8 @@ final class CareersSettingsService
             if ($opens !== null && $closes !== null && $closes < $opens) {
                 $errors['cohort1_closes'] = 'The last day for Cohort 1 must be on or after the opening day.';
             }
-            $lastDay = array_key_exists(CareersSettingsStore::CLOSES_AFTER, $values) ? $values[CareersSettingsStore::CLOSES_AFTER] : ($this->store->all()[CareersSettingsStore::CLOSES_AFTER] ?? null);
-            if ($opens !== null && $lastDay !== null && $lastDay < $opens) {
-                $errors['closes_after'] = 'The last day to apply must be on or after the opening day.';
-            }
+            // A last day before the opening day is allowed: "Close applications now" must work even
+            // while the opening day is still ahead. Closed always wins (D-030).
         }
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');

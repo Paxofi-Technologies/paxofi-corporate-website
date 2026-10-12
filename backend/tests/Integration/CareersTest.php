@@ -408,10 +408,10 @@ final class CareersTest extends DatabaseTestCase
         $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => ''], $admin);
         self::assertTrue(self::decode($this->call('GET', '/api/v1/admin/careers-settings', cookie: $admin))['data']['effective']['applications_closed']);
 
-        // The last day cannot come before the opening day.
-        $order = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => $inTenDays, 'cohort1_closes' => '', 'closes_after' => $yesterday], $admin);
-        self::assertSame(422, $order->status());
-        self::assertArrayHasKey('closes_after', self::decode($order)['error']['details']['fields']);
+        // Closing works even while the opening day is still ahead: closed wins.
+        $ahead = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => $inTenDays, 'cohort1_closes' => '', 'closes_after' => $yesterday], $admin);
+        self::assertSame(200, $ahead->status(), $ahead->body());
+        self::assertSame([false, true], [self::decode($ahead)['data']['effective']['applications_open'], self::decode($ahead)['data']['effective']['applications_closed']]);
 
         // Reopening clears the last day.
         $reopened = self::decode($this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => '', 'closes_after' => ''], $admin))['data'];
