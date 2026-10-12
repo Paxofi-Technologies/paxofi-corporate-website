@@ -25,6 +25,11 @@ final class CareersController
     {
     }
 
+    public function status(HttpRequest $request): HttpResponse
+    {
+        return ApiResponse::success($request, $this->careers->status());
+    }
+
     public function roles(HttpRequest $request): HttpResponse
     {
         return ApiResponse::success($request, $this->careers->roles());

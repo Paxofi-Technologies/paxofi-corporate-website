@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import ApplicationForm from "./ApplicationForm";
-import { RECRUITMENT_EMAIL, loadRole } from "@/lib/careers";
+import { RECRUITMENT_EMAIL, loadRole, loadStatus } from "@/lib/careers";
 import { resolveApiBase } from "@/lib/contact";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ test?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const role = await loadRole(resolveApiBase(process.env), (await params).slug);
@@ -18,9 +18,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /** One open role: what it involves and how it is assessed, then the application form (D-018, D-019). */
-export default async function RolePage({ params }: Props) {
+export default async function RolePage({ params, searchParams }: Props) {
   const apiBase = resolveApiBase(process.env);
-  const role = await loadRole(apiBase, (await params).slug);
+  const [role, status] = await Promise.all([loadRole(apiBase, (await params).slug), loadStatus(apiBase)]);
+  // Staff add ?test to this address to reveal the test-code field for controlled test applications (Gate 1).
+  const testMode = typeof (await searchParams)?.test === "string";
+  const canApply = status === null || status.open || testMode;
   if (role === "missing") notFound();
   if (role === null) {
     return (
@@ -46,16 +49,17 @@ export default async function RolePage({ params }: Props) {
       <section className="page-hero">
         <div className="container page-hero-inner">
           <p className="careers-back"><Link href="/#roles"><ArrowLeft size={16} aria-hidden="true" /> All open roles</Link></p>
-          <span className="eyebrow">{role.family} · Paxofi Innovation Fellowship</span>
+          <span className="eyebrow">{role.family} · PIF {role.engagement.label}</span>
           <h1>{role.title}</h1>
           <p className="lead">{role.purpose}</p>
           <ul className="role-facts" aria-label="At a glance">
             <li><strong>Where</strong> Remote</li>
-            <li><strong>Time</strong> At least 15 hours a week (20 recommended)</li>
-            <li><strong>Term</strong> 3, 6 or 12 months, confirmed at offer</li>
-            <li><strong>Pay</strong> Unpaid fellowship: no stipend or salary</li>
+            <li><strong>Time</strong> At least {role.engagement.hoursMin} hours a week ({role.engagement.hoursTarget} recommended)</li>
+            <li><strong>Term</strong> {role.engagement.term}</li>
+            <li><strong>Pay</strong> Unpaid: a learning and development programme, not employment</li>
+            <li><strong>Who it is for</strong> {role.engagement.forWhom}</li>
           </ul>
-          <a className="button button--primary" href="#apply">Apply for this role</a>
+          <a className="button button--primary" href="#apply">{canApply ? "Apply for this role" : "When applications open"}</a>
         </div>
       </section>
 
@@ -78,7 +82,7 @@ export default async function RolePage({ params }: Props) {
               {role.assessment && (<><dt>Assessment</dt><dd>{role.assessment}</dd></>)}
               {role.interview && (<><dt>Interview focus</dt><dd>{role.interview}</dd></>)}
             </dl>
-            <p className="form-note">Every applicant is reviewed with the same scorecard. Assessments test capability; they are never unpaid production work for Paxofi.</p>
+            <p className="form-note">Every applicant for this role is reviewed with the same scorecard. Any role task tests capability and is never work that Paxofi intends to use.</p>
           </aside>
         </div>
       </section>
@@ -87,8 +91,16 @@ export default async function RolePage({ params }: Props) {
         <div className="container">
           <div className="form-card application-card">
             <h2>Apply for {role.title}</h2>
-            <p className="form-note">It takes about 10 minutes. You can apply to one role at a time. Fields marked “optional” can be left empty.</p>
-            <ApplicationForm apiBase={apiBase} slug={role.slug} roleTitle={role.title} evidenceHint={role.evidence} />
+            {canApply ? (
+              <>
+                <p className="form-note">It takes about 10 minutes. You can apply to one role at a time. Fields marked “optional” can be left empty.</p>
+                <ApplicationForm apiBase={apiBase} slug={role.slug} roleTitle={role.title} evidenceHint={role.evidence} minHours={role.engagement.hoursMin} targetHours={role.engagement.hoursTarget} engagementLabel={role.engagement.label} testMode={testMode} />
+              </>
+            ) : (
+              <p className="notice" role="status">
+                <strong>Applications open{status?.opensOn ? ` on ${status.opensOn}` : " soon"}.</strong> Read the role now and come back then to apply. Questions? Email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.
+              </p>
+            )}
           </div>
         </div>
       </section>

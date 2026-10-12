@@ -62,7 +62,9 @@ final class RecruitmentService
 
             return [
                 'id' => $row['id'], 'reference' => $row['reference'], 'full_name' => $row['full_name'], 'email' => $row['email'],
-                'role_title' => $row['role_title'], 'stage' => $stage->value, 'stage_label' => $stage->label(), 'created_at' => $row['created_at'],
+                'role_title' => $row['role_title'], 'engagement_type' => self::engagement($row)->value, 'engagement_label' => self::engagement($row)->label(),
+                'cohort' => $row['cohort'] ?? null, 'is_test' => (int) ($row['is_test'] ?? 0) === 1,
+                'stage' => $stage->value, 'stage_label' => $stage->label(), 'created_at' => $row['created_at'],
                 'evidence_total' => $row['evidence_scores'] === null ? null : array_sum($row['evidence_scores']),
                 'interview_total' => $row['interview_scores'] === null ? null : array_sum($row['interview_scores']),
                 'has_cv' => $row['cv_reference'] !== null,
@@ -160,11 +162,15 @@ final class RecruitmentService
     {
         $row = $this->find($id);
         $stage = ApplicationStage::from((string) $row['stage']);
+        $type = self::engagement($row);
 
         return [
             'id' => $row['id'],
             'reference' => $row['reference'],
             'role' => ['id' => $row['opportunity_id'], 'title' => $row['role_title'], 'slug' => $row['role_slug']],
+            'engagement' => $type->toPublicArray(),
+            'cohort' => $row['cohort'] ?? null,
+            'is_test' => (int) ($row['is_test'] ?? 0) === 1,
             'full_name' => $row['full_name'],
             'email' => $row['email'],
             'phone' => $row['phone'],
@@ -182,12 +188,12 @@ final class RecruitmentService
             'stage_changed_at' => $row['stage_changed_at'],
             'closed_at' => $row['closed_at'],
             'created_at' => $row['created_at'],
-            'evidence' => Scorecard::summary('evidence', $row['evidence_scores']),
-            'interview' => Scorecard::summary('interview', $row['interview_scores']),
+            'evidence' => Scorecard::summary($type, 'evidence', $row['evidence_scores']),
+            'interview' => Scorecard::summary($type, 'interview', $row['interview_scores']),
             'notes' => $this->applications->notes($id),
             'stages' => ApplicationStage::options(),
-            'scorecards' => Scorecard::definitions(),
-            'email_templates' => CandidateEmails::forApplication($row),
+            'scorecards' => Scorecard::definitions($type),
+            'email_templates' => CandidateEmails::forApplication($row, $this->recruitment->careersSiteUrl . '/privacy'),
             'email_available' => $this->mail->enabled,
         ];
     }
@@ -213,13 +219,14 @@ final class RecruitmentService
 
     public function score(string $id, mixed $gate, mixed $scores, AuthenticatedStaff $staff, RequestContext $context): array
     {
-        $this->find($id);
+        $type = self::engagement($this->find($id));
         $gate = is_string($gate) ? $gate : '';
-        $clean = Scorecard::validate($gate, $scores);
-        $summary = Scorecard::summary($gate, $clean);
-        $this->transactions->transaction(function () use ($id, $gate, $clean, $summary, $staff, $context): void {
+        $clean = Scorecard::validate($type, $gate, $scores);
+        $summary = Scorecard::summary($type, $gate, $clean);
+        $label = Scorecard::definitions($type)[$gate]['label'];
+        $this->transactions->transaction(function () use ($id, $gate, $clean, $summary, $label, $staff, $context): void {
             $this->applications->setScores($id, $gate, $clean);
-            $this->applications->addNote($id, $staff->user->id, 'score', sprintf('%s scored %d/35 (%s).', Scorecard::GATES[$gate]['label'], $summary['total'], $summary['passed'] ? 'meets the progression mark' : 'below the progression mark'));
+            $this->applications->addNote($id, $staff->user->id, 'score', sprintf('%s scored %d/%d (%s).', $label, $summary['total'], $summary['out_of'], $summary['passed'] ? 'meets the progression mark' : 'below the progression mark'));
             $this->audit->record(new AuditEvent('application.scored', AuditEvent::OUTCOME_SUCCESS, 'application', $id, $staff->user->id, $context->requestId));
         });
 
@@ -244,7 +251,7 @@ final class RecruitmentService
     /** Largest file staff can attach to a candidate email (the agreement). */
     public const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
     /** Templates that promise an attachment, so cannot be sent without one. */
-    private const NEEDS_ATTACHMENT = ['selection' => 'Attach the PIF Participant Agreement (PDF or Word) before sending.'];
+    private const NEEDS_ATTACHMENT = ['selection' => 'Attach the offer letter and agreement as one PDF or Word file before sending.'];
 
     /**
      * Sends a candidate email (edited from a template), with an optional PDF or
@@ -317,7 +324,7 @@ final class RecruitmentService
         if ($detected === null || !in_array($detected->mimeType, ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], true)) {
             throw new ValidationFailed([], 'Attach a PDF or Word (.docx) file.');
         }
-        $base = pathinfo($filename, PATHINFO_FILENAME) ?: 'PIF-Participant-Agreement';
+        $base = pathinfo($filename, PATHINFO_FILENAME) ?: 'PIF-offer-and-agreement';
 
         return new Attachment($base . '.' . $detected->extension, $detected->mimeType, $bytes);
     }
@@ -348,6 +355,12 @@ final class RecruitmentService
         if ($row['cv_reference'] !== null) {
             $this->cvStorage->delete((string) $row['cv_reference']);
         }
+    }
+
+    /** @param array<string, mixed> $row an application row */
+    private static function engagement(array $row): EngagementType
+    {
+        return EngagementType::tryFrom((string) ($row['engagement_type'] ?? '')) ?? EngagementType::Fellow;
     }
 
     /** @return array<string, mixed> */

@@ -26,11 +26,12 @@ async function fakeApi(page) {
       source: { value: "linkedin", label: "LinkedIn" }, campaign: { source: "linkedin", medium: "social", campaign: "pif-2026" },
       cv: { filename: "Ada CV.pdf", size_bytes: 20480, media_type: "application/pdf" }, stage: "applied", stage_label: "Applied",
       stage_changed_at: "2026-10-04 08:00:00", closed_at: null, created_at: "2026-10-04 08:00:00", evidence: null, interview: null, notes: [],
-      stages: STAGES, scorecards: { evidence: { label: "Gate 2: evidence review", pass: 21, criteria: CRITERIA }, interview: { label: "Gate 4: interview", pass: 24, criteria: INTERVIEW } },
+      stages: STAGES, engagement: { type: "fellow", label: "Fellow", term: "24 programme weeks", hours_min: 15, hours_target: 20, for_whom: "People with foundation skills." }, cohort: "Cohort 1", is_test: false,
+      scorecards: { evidence: { label: "Gate 2: evidence review", pass: 21, out_of: 35, criteria: CRITERIA }, interview: { label: "Gate 4: interview", pass: 24, out_of: 35, criteria: INTERVIEW } },
       email_templates: [{ key: "selection", label: "Selected (with PIF Participant Agreement)", subject: "You have been selected: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nAttached is the PIF Participant Agreement.\n\nPaxofi", stage: "agreement_pending" }, { key: "assessment_invitation", label: "Assessment invitation", subject: "Your role assessment: Software Engineer Fellow (PIF-7KQ3MZ)", body: "Hello Ada,\n\nDeadline: [date and time, with time zone]\n\nPaxofi", stage: "assessment" }],
       email_available: true,
     },
-    roles: [{ id: "r1", slug: "software-engineer-fellow", code: "SE", title: "Software Engineer Fellow", family: "Technology and engineering", summary: "Build software.", purpose: "Build and test Paxofi software.", responsibilities: ["Write code"], deliverables: [], competencies: [], tools: [], evidence: "", assessment: "", interview: "", state: "published", sort_order: 40, published_at: "2026-10-04 08:00:00", updated_at: "2026-10-04 08:00:00" }],
+    roles: [{ id: "r1", slug: "software-engineer-fellow", code: "SE", engagement_type: "fellow", title: "Software Engineer Fellow", family: "Technology and engineering", summary: "Build software.", purpose: "Build and test Paxofi software.", responsibilities: ["Write code"], deliverables: [], competencies: [], tools: [], evidence: "", assessment: "", interview: "", state: "published", sort_order: 40, published_at: "2026-10-04 08:00:00", updated_at: "2026-10-04 08:00:00" }],
   };
   const cors = { "Access-Control-Allow-Origin": BASE, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Accept", "Access-Control-Expose-Headers": "Content-Disposition", Vary: "Origin" };
   const reply = (route, status, body, meta = {}) => route.fulfill({ status, headers: cors, contentType: "application/json", body: JSON.stringify(status < 400 ? { success: true, data: body, meta } : { success: false, error: body }) });
@@ -47,7 +48,7 @@ async function fakeApi(page) {
 
     if (path === "/session") return reply(route, 200, { ...HR, two_factor_enabled: true });
     if (path === "/applications" && method === "GET") {
-      return reply(route, 200, [{ id: APP_ID, reference: app.reference, full_name: app.full_name, email: app.email, role_title: app.role.title, stage: app.stage, stage_label: app.stage_label, created_at: app.created_at, evidence_total: app.evidence?.total ?? null, interview_total: null, has_cv: true }],
+      return reply(route, 200, [{ id: APP_ID, reference: app.reference, full_name: app.full_name, email: app.email, role_title: app.role.title, engagement_type: "fellow", engagement_label: "Fellow", cohort: "Cohort 1", is_test: false, stage: app.stage, stage_label: app.stage_label, created_at: app.created_at, evidence_total: app.evidence?.total ?? null, interview_total: null, has_cv: true }],
         { page: 1, per_page: 25, total: 1, total_pages: 1, counts: { [app.stage]: 1 }, stages: STAGES, roles: [{ id: "r1", title: app.role.title }] });
     }
     if (path === "/applications/report") {

@@ -6,13 +6,14 @@ namespace Paxofi\CorporateWebsite\Infrastructure\Persistence;
 
 use Paxofi\CorporateWebsite\Application\Careers\CareerRole;
 use Paxofi\CorporateWebsite\Application\Careers\CareerRoles;
+use Paxofi\CorporateWebsite\Application\Careers\EngagementType;
 
 /** career_opportunities (migrations 001 and 014, D-018). */
 final class PdoCareerRoles implements CareerRoles
 {
     use GuardedQueries;
 
-    private const COLUMNS = 'id, slug, code, title, family, summary, description, content, lifecycle_state, sort_order, published_at, updated_at';
+    private const COLUMNS = 'id, slug, code, engagement_type, title, family, summary, description, content, lifecycle_state, sort_order, published_at, updated_at';
 
     public function __construct(private readonly Database $database)
     {
@@ -50,8 +51,8 @@ final class PdoCareerRoles implements CareerRoles
     public function create(string $id, string $slug, array $values): void
     {
         $this->write(
-            "INSERT INTO career_opportunities (id, slug, title, description, lifecycle_state, code, family, summary, content, sort_order)
-             VALUES (:id, :slug, :title, :purpose, 'draft', :code, :family, :summary, :content, :sort)",
+            "INSERT INTO career_opportunities (id, slug, title, description, lifecycle_state, code, engagement_type, family, summary, content, sort_order)
+             VALUES (:id, :slug, :title, :purpose, 'draft', :code, :engagement, :family, :summary, :content, :sort)",
             ['id' => $id, 'slug' => $slug] + self::parameters($values),
         );
     }
@@ -59,7 +60,7 @@ final class PdoCareerRoles implements CareerRoles
     public function update(string $id, array $values): void
     {
         $this->write(
-            'UPDATE career_opportunities SET title = :title, description = :purpose, code = :code, family = :family, summary = :summary, content = :content, sort_order = :sort WHERE id = :id',
+            'UPDATE career_opportunities SET title = :title, description = :purpose, code = :code, engagement_type = :engagement, family = :family, summary = :summary, content = :content, sort_order = :sort WHERE id = :id',
             ['id' => $id] + self::parameters($values),
         );
     }
@@ -76,7 +77,7 @@ final class PdoCareerRoles implements CareerRoles
     private static function parameters(array $values): array
     {
         return [
-            'title' => $values['title'], 'purpose' => $values['purpose'], 'code' => $values['code'], 'family' => $values['family'],
+            'title' => $values['title'], 'purpose' => $values['purpose'], 'code' => $values['code'], 'engagement' => $values['engagement_type'], 'family' => $values['family'],
             'summary' => $values['summary'], 'sort' => $values['sort_order'],
             'content' => json_encode([
                 'responsibilities' => $values['responsibilities'], 'deliverables' => $values['deliverables'], 'competencies' => $values['competencies'],
@@ -96,6 +97,7 @@ final class PdoCareerRoles implements CareerRoles
             (string) $row['id'],
             (string) $row['slug'],
             (string) ($row['code'] ?? '') ?: strtoupper(substr((string) $row['title'], 0, 2)),
+            EngagementType::tryFrom((string) ($row['engagement_type'] ?? '')) ?? EngagementType::Fellow,
             (string) $row['title'],
             (string) ($row['family'] ?? ''),
             (string) ($row['summary'] ?? '') ?: mb_substr((string) $row['description'], 0, 300),

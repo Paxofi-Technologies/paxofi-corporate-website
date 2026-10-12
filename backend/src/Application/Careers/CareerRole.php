@@ -16,6 +16,7 @@ final readonly class CareerRole
         public string $id,
         public string $slug,
         public string $code,
+        public EngagementType $engagementType,
         public string $title,
         public string $family,
         public string $summary,
@@ -34,6 +35,8 @@ final readonly class CareerRole
         return [
             'slug' => $this->slug,
             'code' => $this->code,
+            'engagement_type' => $this->engagementType->value,
+            'engagement' => $this->engagementType->toPublicArray(),
             'title' => $this->title,
             'family' => $this->family,
             'summary' => $this->summary,

@@ -117,11 +117,15 @@ export default function ApplicationList() {
                     <Link href={`/admin/recruitment/${row.id}`} className="admin-strong-link">{row.full_name}</Link>
                     <span className="admin-sub">{row.reference} · {row.email}{row.has_cv ? " · CV" : ""}</span>
                   </td>
-                  <td>{row.role_title}</td>
+                  <td>
+                    {row.role_title}
+                    <span className="admin-sub">PIF {row.engagement_label}{row.cohort ? ` · ${row.cohort}` : ""}{row.is_test ? " · TEST" : ""}</span>
+                  </td>
                   <td><span className="status-pill" data-status={row.stage}>{row.stage_label}</span></td>
                   <td className="admin-small">
-                    {row.evidence_total === null ? "—" : `Evidence ${row.evidence_total}/35`}
-                    {row.interview_total !== null && <><br />Interview {row.interview_total}/35</>}
+                    {row.evidence_total === null && row.interview_total === null ? "—" : null}
+                    {row.evidence_total !== null && `Evidence ${row.evidence_total}/35`}
+                    {row.interview_total !== null && <>{row.evidence_total !== null && <br />}{row.engagement_type === "volunteer" ? `Conversation ${row.interview_total}/25` : `Interview ${row.interview_total}/35`}</>}
                   </td>
                   <td>{formatDateTime(row.created_at)}</td>
                 </tr>

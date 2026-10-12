@@ -55,11 +55,16 @@ final class CareersTest extends DatabaseTestCase
         }
     }
 
-    public function testTheSevenFellowshipRolesArePublishedInOrder(): void
+    public function testTheFifteenCohortOnePositionsArePublishedInOrder(): void
     {
         $roles = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/roles')))['data'];
 
-        self::assertSame(['PM', 'PC', 'GD', 'SE', 'FD', 'HR', 'UX'], array_column($roles, 'code'));
+        self::assertSame(['PM', 'PC', 'GD', 'GD', 'SE', 'SE', 'FE', 'FE', 'HR', 'HR', 'UX', 'UX', 'MK', 'MK', 'CC'], array_column($roles, 'code'));
+        self::assertSame(
+            ['fellow', 'fellow', 'fellow', 'volunteer', 'fellow', 'intern', 'fellow', 'intern', 'fellow', 'volunteer', 'fellow', 'intern', 'fellow', 'intern', 'volunteer'],
+            array_column($roles, 'engagement_type'),
+            'eight Fellow, four Intern and three Volunteer places (Final Campaign Configuration v2.0)',
+        );
         self::assertSame('project-manager-fellow', $roles[0]['slug']);
         self::assertNotSame([], $roles[0]['responsibilities']);
         self::assertArrayNotHasKey('id', $roles[0], 'internal ids stay private');
@@ -68,6 +73,11 @@ final class CareersTest extends DatabaseTestCase
         self::assertSame(200, $one->status());
         self::assertSame('Software Engineer Fellow', self::decode($one)['data']['title']);
         self::assertSame(404, $this->app()->handle(self::request('GET', '/api/v1/careers/roles/no-such-role'))->status());
+
+        $intern = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/roles/software-engineer-intern')))['data'];
+        self::assertSame(['intern', 'Intern', '12 or 24 weeks', 15, 20], [$intern['engagement']['type'], $intern['engagement']['label'], $intern['engagement']['term'], $intern['engagement']['hours_min'], $intern['engagement']['hours_target']]);
+        $volunteer = self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/roles/content-communications-volunteer')))['data'];
+        self::assertSame([10, 15, '8 to 24 weeks, project-based'], [$volunteer['engagement']['hours_min'], $volunteer['engagement']['hours_target'], $volunteer['engagement']['term']]);
     }
 
     public function testAnApplicationWithACvIsStoredAcknowledgedAndAlerted(): void
@@ -203,7 +213,7 @@ final class CareersTest extends DatabaseTestCase
 
         $missing = $this->call('POST', "/api/v1/admin/applications/{$id}/emails", $email, $admin);
         self::assertSame(422, $missing->status());
-        self::assertStringContainsString('Attach the PIF Participant Agreement', self::decode($missing)['error']['details']['fields']['attachment']);
+        self::assertStringContainsString('Attach the offer letter and agreement', self::decode($missing)['error']['details']['fields']['attachment']);
         $wrong = $this->call('POST', "/api/v1/admin/applications/{$id}/emails", $email + ['attachment' => ['filename' => 'agreement.pdf', 'content_base64' => base64_encode('<?php echo 1;')]], $admin);
         self::assertSame(422, $wrong->status(), 'checked by content, not by name');
 
@@ -257,6 +267,144 @@ final class CareersTest extends DatabaseTestCase
         self::assertStringNotContainsString('ada@example.com', $report->body(), 'counts only, no personal data');
     }
 
+    public function testHoursFollowTheEngagementType(): void
+    {
+        $app = $this->app();
+        self::assertSame(422, $app->handle($this->apply('software-engineer-fellow', ['hours_per_week' => 10]))->status(), 'Fellows commit at least 15 hours');
+        self::assertSame(422, $app->handle($this->apply('software-engineer-intern', ['hours_per_week' => 10], email: 'intern@example.com'))->status(), 'Interns commit at least 15 hours');
+        $volunteer = $app->handle($this->apply('content-communications-volunteer', ['hours_per_week' => 10], email: 'vol@example.com', ip: '198.51.100.41'));
+        self::assertSame(201, $volunteer->status(), $volunteer->body());
+        self::assertSame(['volunteer', 10], array_map(static fn ($v) => is_numeric($v) ? (int) $v : $v, array_values(self::$pdo->query("SELECT engagement_type, hours_per_week FROM job_applications WHERE email = 'vol@example.com'")->fetch(\PDO::FETCH_NUM))));
+    }
+
+    public function testTheAcknowledgementNamesTheEngagementTypeTermsAndPrivacyNotice(): void
+    {
+        $app = $this->app();
+        $app->handle($this->apply('digital-marketing-intern', [], email: 'intern@example.com'));
+        $app->handle($this->apply('people-operations-volunteer', [], email: 'vol@example.com', ip: '198.51.100.42'));
+        $app->afterResponse();
+        $texts = [];
+        foreach ($this->mail->sent as $mail) {
+            if ($mail->to === ['intern@example.com'] || $mail->to === ['vol@example.com']) {
+                $texts[$mail->to[0]] = $mail->subject . "\n" . $mail->text;
+            }
+        }
+        self::assertCount(2, $texts);
+        foreach ($texts as $email => $text) {
+            self::assertStringNotContainsString('[', $text, 'every placeholder is filled');
+            self::assertStringNotContainsString('stipend', $text);
+            self::assertStringContainsString('unpaid learning and development programme, not employment', $text);
+            self::assertStringContainsString('https://careers.paxofi.com/privacy', $text);
+            self::assertStringContainsString('hr@paxofi.com', $text);
+        }
+        self::assertStringContainsString('PIF Intern', $texts['intern@example.com']);
+        self::assertStringContainsString('12 or 24 weeks', $texts['intern@example.com']);
+        self::assertStringContainsString('at least 15 hours a week', $texts['intern@example.com']);
+        self::assertStringContainsString('role assessment, then a structured interview', $texts['intern@example.com']);
+        self::assertStringContainsString('PIF Volunteer', $texts['vol@example.com']);
+        self::assertStringContainsString('at least 10 hours a week', $texts['vol@example.com']);
+        self::assertStringContainsString('a short conversation', $texts['vol@example.com']);
+    }
+
+    public function testApplicationsStayClosedUntilTheOpeningDateExceptForControlledTests(): void
+    {
+        $opens = (new DateTimeImmutable('now', new DateTimeZone('Africa/Lagos')))->modify('+3 days')->format('Y-m-d');
+        $code = 'controlled-test-code-0123456789';
+        $app = $this->app(extra: ['CAREERS_APPLICATIONS_OPEN_FROM' => $opens, 'CAREERS_COHORT1_CLOSES' => '2099-12-31', 'CAREERS_TEST_CODE' => $code]);
+
+        $status = self::decode($app->handle(self::request('GET', '/api/v1/careers/status')))['data'];
+        self::assertFalse($status['applications_open']);
+        self::assertNotNull($status['opens_on']);
+        self::assertSame('Cohort 1', $status['cohort']);
+
+        $closed = $app->handle($this->apply('software-engineer-fellow', []));
+        self::assertSame(403, $closed->status());
+        self::assertSame('APPLICATIONS_NOT_OPEN', self::decode($closed)['error']['code']);
+        self::assertStringContainsString('open on', self::decode($closed)['error']['message']);
+        self::assertSame(403, $app->handle($this->apply('software-engineer-fellow', ['test_code' => 'wrong-code-0123456789-abcdef']))->status());
+        self::assertSame(0, (int) self::scalar('SELECT COUNT(*) FROM job_applications'));
+
+        $test = $app->handle($this->apply('software-engineer-fellow', ['test_code' => $code]));
+        self::assertSame(201, $test->status(), $test->body());
+        self::assertSame(['Cohort 1', '1'], array_map('strval', array_values(self::$pdo->query('SELECT cohort, is_test FROM job_applications')->fetch(\PDO::FETCH_NUM))));
+        $app->afterResponse();
+        $alert = array_values(array_filter($this->mail->sent, static fn ($m): bool => $m->to === ['recruitment@paxofi.com']))[0];
+        self::assertStringStartsWith('[TEST] New application', $alert->subject);
+
+        $admin = $this->setupAdmin();
+        $items = self::decode($this->call('GET', '/api/v1/admin/applications', cookie: $admin))['data'];
+        self::assertTrue($items[0]['is_test'], 'staff see the Test flag');
+        $report = self::decode($this->call('GET', '/api/v1/admin/applications/report?days=30', cookie: $admin))['data'];
+        self::assertSame(0, $report['total'], 'test applications never count in the report');
+
+        $open = $this->app(extra: ['CAREERS_APPLICATIONS_OPEN_FROM' => '2020-01-01']);
+        self::assertTrue(self::decode($open->handle(self::request('GET', '/api/v1/careers/status')))['data']['applications_open']);
+    }
+
+    public function testApplicationsAfterTheCohortOneWindowBelongToCohortTwo(): void
+    {
+        $app = $this->app(extra: ['CAREERS_COHORT1_CLOSES' => '2020-01-01']);
+        self::assertSame(201, $app->handle($this->apply('software-engineer-fellow', []))->status());
+        self::assertSame('Cohort 2', self::scalar('SELECT cohort FROM job_applications'));
+        $app->afterResponse();
+        $ack = array_values(array_filter($this->mail->sent, static fn ($m): bool => $m->to === ['ada@example.com']))[0];
+        self::assertStringContainsString('talent pool', $ack->text);
+
+        self::$pdo->exec('DELETE FROM job_applications');
+        $unset = $this->app();
+        $unset->handle($this->apply('software-engineer-fellow', []));
+        self::assertNull(self::scalar('SELECT cohort FROM job_applications'), 'no closing date, no cohort label');
+    }
+
+    public function testScorecardsAndThresholdsFollowTheEngagementType(): void
+    {
+        $app = $this->app();
+        $app->handle($this->apply('software-engineer-intern', [], email: 'intern@example.com'));
+        $app->handle($this->apply('content-communications-volunteer', [], email: 'vol@example.com', ip: '198.51.100.43'));
+        $admin = $this->setupAdmin();
+        $internId = (string) self::scalar("SELECT id FROM job_applications WHERE email = 'intern@example.com'");
+        $volunteerId = (string) self::scalar("SELECT id FROM job_applications WHERE email = 'vol@example.com'");
+
+        $evidence = static fn (array $scores): array => array_combine(['capability', 'evidence', 'communication', 'reliability', 'learning', 'collaboration', 'readiness'], $scores);
+        $below = self::decode($this->call('POST', "/api/v1/admin/applications/{$internId}/scores", ['gate' => 'evidence', 'scores' => $evidence([3, 3, 3, 3, 2, 2, 1])], $admin))['data']['evidence'];
+        self::assertSame([17, 35, 18, false], [$below['total'], $below['out_of'], $below['pass'], $below['passed']], 'Interns progress at 18 of 35');
+        $at = self::decode($this->call('POST', "/api/v1/admin/applications/{$internId}/scores", ['gate' => 'evidence', 'scores' => $evidence([3, 3, 3, 3, 2, 2, 2])], $admin))['data']['evidence'];
+        self::assertTrue($at['passed']);
+        $interview = static fn (array $scores): array => array_combine(['motivation', 'competence', 'problem_solving', 'communication', 'collaboration', 'accountability', 'learning'], $scores);
+        $internInterview = self::decode($this->call('POST', "/api/v1/admin/applications/{$internId}/scores", ['gate' => 'interview', 'scores' => $interview([3, 3, 3, 3, 3, 3, 3])], $admin))['data']['interview'];
+        self::assertSame([21, 21, true], [$internInterview['total'], $internInterview['pass'], $internInterview['passed']], 'Interns are selected at 21 of 35');
+
+        $detail = self::decode($this->call('GET', "/api/v1/admin/applications/{$volunteerId}", cookie: $admin))['data'];
+        self::assertSame(['interview'], array_keys($detail['scorecards']), 'Volunteers have a short conversation only');
+        self::assertSame([25, 15], [$detail['scorecards']['interview']['out_of'], $detail['scorecards']['interview']['pass']]);
+        self::assertSame(['motivation', 'communication', 'reliability', 'collaboration', 'availability'], array_keys($detail['scorecards']['interview']['criteria']));
+        self::assertSame(422, $this->call('POST', "/api/v1/admin/applications/{$volunteerId}/scores", ['gate' => 'evidence', 'scores' => $evidence([3, 3, 3, 3, 3, 3, 3])], $admin)->status());
+        $conversation = self::decode($this->call('POST', "/api/v1/admin/applications/{$volunteerId}/scores", ['gate' => 'interview', 'scores' => ['motivation' => 3, 'communication' => 3, 'reliability' => 3, 'collaboration' => 3, 'availability' => 3]], $admin))['data'];
+        self::assertSame([15, 25, true], [$conversation['interview']['total'], $conversation['interview']['out_of'], $conversation['interview']['passed']]);
+        self::assertStringContainsString('scored 15/25', $conversation['notes'][0]['body']);
+        $templates = array_column($detail['email_templates'], 'key');
+        self::assertNotContains('assessment_invitation', $templates, 'Volunteers have no role assessment');
+    }
+
+    public function testTheCanonicalStatusesIncludeTheEndOfTheJourney(): void
+    {
+        $app = $this->app();
+        $app->handle($this->apply('software-engineer-fellow', []));
+        $id = (string) self::scalar('SELECT id FROM job_applications');
+        $admin = $this->setupAdmin();
+        $detail = self::decode($this->call('GET', "/api/v1/admin/applications/{$id}", cookie: $admin))['data'];
+        self::assertSame(
+            ['applied', 'screening', 'shortlisted', 'assessment', 'interview', 'selected', 'agreement_pending', 'accepted', 'onboarding', 'active', 'completed', 'alumni', 'declined', 'withdrawn', 'rejected', 'exited_early'],
+            array_column($detail['stages'], 'value'),
+        );
+        foreach (['active' => 'Active', 'completed' => 'Completed', 'alumni' => 'Alumni', 'exited_early' => 'Exited early'] as $stage => $label) {
+            $changed = self::decode($this->call('PATCH', "/api/v1/admin/applications/{$id}", ['stage' => $stage], $admin))['data'];
+            self::assertSame($label, $changed['stage_label']);
+        }
+        self::assertNotNull(self::scalar("SELECT closed_at FROM job_applications WHERE id = '{$id}'"), 'exited early ends the record');
+        self::assertSame(201, $app->handle($this->apply('software-engineer-fellow', [], ip: '198.51.100.44'))->status(), 'someone who left early or finished may apply again');
+    }
+
     public function testWorkingDaysSkipWeekends(): void
     {
         $friday = new \DateTimeImmutable('2026-10-02 15:00:00', new \DateTimeZone('UTC'));
@@ -266,7 +414,7 @@ final class CareersTest extends DatabaseTestCase
     public function testRolesAreDraftedPublishedAndClosedInTheStaffArea(): void
     {
         $admin = $this->setupAdmin();
-        $role = ['title' => 'Data Analyst Fellow', 'code' => 'DA', 'family' => 'Data', 'summary' => 'Turn data into decisions for Paxofi products.', 'purpose' => 'Builds dashboards and analysis for product and growth teams.', 'responsibilities' => "Build dashboards\nAnalyse funnels", 'sort_order' => 80];
+        $role = ['title' => 'Data Analyst Fellow', 'code' => 'DA', 'family' => 'Data', 'summary' => 'Turn data into decisions for Paxofi products.', 'purpose' => 'Builds dashboards and analysis for product and growth teams.', 'responsibilities' => "Build dashboards\nAnalyse funnels", 'sort_order' => 200];
         $created = $this->call('POST', '/api/v1/admin/career-roles', $role, $admin);
         self::assertSame(201, $created->status(), $created->body());
         $data = self::decode($created)['data'];
@@ -340,7 +488,8 @@ final class CareersTest extends DatabaseTestCase
         return $this->app()->handle(self::request($method, $uri, $headers, $payload === null ? '' : json_encode($payload, JSON_THROW_ON_ERROR), $query));
     }
 
-    private function app(bool $storage = true): ApiApplication
+    /** @param array<string, string> $extra more environment settings, for example CAREERS_APPLICATIONS_OPEN_FROM */
+    private function app(bool $storage = true, array $extra = []): ApiApplication
     {
         $environment = Environment::from([
             'APP_ENV' => 'testing',
@@ -348,7 +497,7 @@ final class CareersTest extends DatabaseTestCase
             'CORS_ALLOWED_ORIGINS' => self::ORIGIN . ',' . self::CAREERS,
             'ADMIN_SETUP_TOKEN' => self::SETUP_TOKEN,
             'RECRUITMENT_ALERT_TO' => 'recruitment@paxofi.com',
-        ] + ($storage ? ['MEDIA_STORAGE_PATH' => self::$storage] : []));
+        ] + ($storage ? ['MEDIA_STORAGE_PATH' => self::$storage] : []) + $extra);
         $cheap = defined('PASSWORD_ARGON2ID') ? ['memory_cost' => 1024, 'time_cost' => 1, 'threads' => 1] : ['cost' => 4];
 
         return new ApiApplication(

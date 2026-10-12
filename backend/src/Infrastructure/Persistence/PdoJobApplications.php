@@ -27,12 +27,12 @@ final class PdoJobApplications implements JobApplications
     public function add(string $id, string $reference, string $roleId, array $values, ?array $cv, RequestContext $context): void
     {
         $this->write(
-            'INSERT INTO job_applications (id, reference, opportunity_id, full_name, email, phone, location, hours_per_week, portfolio_url, linkedin_url, motivation, experience,
+            'INSERT INTO job_applications (id, reference, opportunity_id, engagement_type, cohort, is_test, full_name, email, phone, location, hours_per_week, portfolio_url, linkedin_url, motivation, experience,
                  cv_reference, cv_filename, cv_media_type, cv_size, privacy_version, source_ip, user_agent, source, utm_source, utm_medium, utm_campaign)
-             VALUES (:id, :reference, :role, :name, :email, :phone, :location, :hours, :portfolio, :linkedin, :motivation, :experience,
+             VALUES (:id, :reference, :role, :engagement, :cohort, :is_test, :name, :email, :phone, :location, :hours, :portfolio, :linkedin, :motivation, :experience,
                  :cv, :cv_name, :cv_type, :cv_size, :privacy, :ip, :ua, :source, :utm_source, :utm_medium, :utm_campaign)',
             [
-                'id' => $id, 'reference' => $reference, 'role' => $roleId, 'name' => $values['full_name'], 'email' => $values['email'],
+                'id' => $id, 'reference' => $reference, 'role' => $roleId, 'engagement' => $values['engagement_type'] ?? 'fellow', 'cohort' => $values['cohort'] ?? null, 'is_test' => empty($values['is_test']) ? 0 : 1, 'name' => $values['full_name'], 'email' => $values['email'],
                 'phone' => $values['phone'], 'location' => $values['location'], 'hours' => $values['hours_per_week'],
                 'portfolio' => $values['portfolio_url'], 'linkedin' => $values['linkedin_url'], 'motivation' => $values['motivation'], 'experience' => $values['experience'],
                 'cv' => $cv['file_reference'] ?? null, 'cv_name' => $cv['filename'] ?? null, 'cv_type' => $cv['media_type'] ?? null, 'cv_size' => $cv['size_bytes'] ?? null,
@@ -60,8 +60,10 @@ final class PdoJobApplications implements JobApplications
 
     public function hasOpenApplication(string $email, string $roleId): bool
     {
+        $stages = "'" . implode("', '", ApplicationStage::inProgress()) . "'";
+
         return $this->select(
-            "SELECT 1 FROM job_applications WHERE email = :email AND opportunity_id = :role AND stage NOT IN ('declined', 'withdrawn', 'rejected') LIMIT 1",
+            "SELECT 1 FROM job_applications WHERE email = :email AND opportunity_id = :role AND stage IN ({$stages}) LIMIT 1",
             ['email' => $email, 'role' => $roleId],
         ) !== [];
     }
@@ -118,7 +120,7 @@ final class PdoJobApplications implements JobApplications
         $total = (int) ($this->select("SELECT COUNT(*) AS n FROM job_applications a WHERE {$condition}", $parameters)[0]['n'] ?? 0);
         $rows = $this->select(
             sprintf(
-                "SELECT a.id, a.reference, a.full_name, a.email, a.stage, a.created_at, a.evidence_scores, a.interview_scores, a.cv_reference, o.title AS role_title
+                "SELECT a.id, a.reference, a.full_name, a.email, a.stage, a.created_at, a.evidence_scores, a.interview_scores, a.cv_reference, a.engagement_type, a.cohort, a.is_test, o.title AS role_title
                  FROM job_applications a JOIN career_opportunities o ON o.id = a.opportunity_id
                  WHERE {$condition} ORDER BY a.created_at DESC, a.id LIMIT %d OFFSET %d",
                 $perPage,
@@ -199,7 +201,8 @@ final class PdoJobApplications implements JobApplications
 
     public function report(?DateTimeImmutable $since): array
     {
-        $where = $since === null ? '1 = 1' : 'a.created_at >= :since';
+        // Controlled test applications (Gate 1) never count in the report.
+        $where = $since === null ? 'a.is_test = 0' : 'a.is_test = 0 AND a.created_at >= :since';
         $parameters = $since === null ? [] : ['since' => $since->format('Y-m-d H:i:s')];
         $group = fn (string $expression): array => array_map(
             static fn (array $row): array => ['key' => $row['k'] === null ? null : (string) $row['k'], 'count' => (int) $row['n']],

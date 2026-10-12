@@ -134,6 +134,7 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/careers'],
         ['GET', '/api/v1/articles'],
         ['GET', '/api/v1/articles/{slug}'],
+        ['GET', '/api/v1/careers/status'],
         ['GET', '/api/v1/careers/roles'],
         ['GET', '/api/v1/careers/roles/{slug}'],
         ['POST', '/api/v1/careers/cv'],
@@ -326,6 +327,7 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/articles/{slug}', static fn (HttpRequest $r): HttpResponse => $articles()->show($r));
 
         $careers = fn (): CareersController => new CareersController($this->careersService());
+        $router->get('/api/v1/careers/status', static fn (HttpRequest $r): HttpResponse => $careers()->status($r));
         $router->get('/api/v1/careers/roles', static fn (HttpRequest $r): HttpResponse => $careers()->roles($r));
         $router->get('/api/v1/careers/roles/{slug}', static fn (HttpRequest $r): HttpResponse => $careers()->role($r));
         $router->post('/api/v1/careers/cv', static fn (HttpRequest $r): HttpResponse => $careers()->uploadCv($r));
