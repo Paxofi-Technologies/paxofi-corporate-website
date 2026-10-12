@@ -29,11 +29,12 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $environment = Environment::from((new EnvLoader())->load(dirname(__DIR__) . '/.env'));
 $settings = Settings::fromEnvironment($environment);
-if ($settings->mailTransport === null) {
-    fwrite(STDOUT, "Email sending is not configured (MAIL_TRANSPORT); nothing to do.\n");
+$application = new ApiApplication($settings, new StreamLogger(fopen('php://stderr', 'wb')));
+// Settings saved in the staff area (D-031) count too, not only MAIL_* in .env.
+if (!$application->mailConfigured()) {
+    fwrite(STDOUT, gmdate('Y-m-d H:i:s') . " email sending is not configured (staff area → Email, or MAIL_* in .env); nothing to do.\n");
     exit(0);
 }
-$application = new ApiApplication($settings, new StreamLogger(fopen('php://stderr', 'wb')));
 
 try {
     $due = $application->contentReviewReminder()->run();

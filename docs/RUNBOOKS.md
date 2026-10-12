@@ -201,6 +201,7 @@ Staff change the wording of the main pages under **Content → Page text** (D-01
 
 The API sends email through the company mailbox (D-016). The settings are `MAIL_*`, `ENQUIRY_ALERT_TO` and `ERROR_ALERT_TO` in `backend/.env`.
 
+- **First check (D-031):** staff area → **Email**. It says whether sending is on, how many emails wait and since when, and the latest error. **Send me a test email** shows the exact error on screen; **Send queued emails now** sends what is waiting. SMTP settings can be entered there (they win over `MAIL_*` in .env; the password is stored encrypted).
 - **No enquiry alert arrived:**
   1. Check the spam folder.
   2. Check that `MAIL_TRANSPORT=smtp` and the `MAIL_*` settings are in `backend/.env`.

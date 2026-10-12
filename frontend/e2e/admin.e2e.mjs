@@ -52,6 +52,19 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
   const state = {
     signedIn, user, rows: enquiries(), calls: [], pending: false, twoFactor, media, uploads: 0,
     pages: {},
+    mailSaves: [],
+    mail: {
+      configured: true,
+      problem: null,
+      can_store_password: true,
+      checked_at: "2026-10-12T09:00:00+00:00",
+      fields: {
+        transport: { value: "smtp", set: true, source: "server" }, host: { value: "mail.paxofi.com", set: true, source: "server" }, port: { value: "465", set: true, source: "server" },
+        encryption: { value: "ssl", set: true, source: "server" }, username: { value: "no-reply@paxofi.com", set: true, source: "server" }, password: { value: null, set: true, source: "server" },
+        from_address: { value: "no-reply@paxofi.com", set: true, source: "server" }, from_name: { value: "", set: false, source: "none" },
+      },
+      queue: { pending: 3, failed: 0, sent_last_day: 0, oldest_pending_at: "2026-10-09 06:39:30", last_error: null, last_error_kind: null, last_sent_at: null },
+    },
     catalog: { [PAY]: { kind: "products", item: { id: PAY, slug: "paxofi-pay", name: "Paxofi Pay", visible: true, has_draft: false, sort_order: 10, updated_at: "2026-10-03 09:00:00", content: payContent }, draft: null, revisions: [] } },
   };
   const detail = (id) => {
@@ -156,6 +169,17 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
       }
       return reply(route, 200, { changed: true });
     }
+    // Email page (D-031).
+    if (path === "/mail" && method === "GET") return reply(route, 200, state.mail);
+    if (path === "/mail" && method === "PATCH") {
+      state.mailSaves.push(body);
+      if (body.host && !/^[a-z0-9.-]+$/i.test(body.host)) return reply(route, 422, { code: "VALIDATION_ERROR", message: "Please correct the highlighted fields.", details: { fields: { host: "Enter the outgoing mail server, for example mail.paxofi.com." } } });
+      if (body.host) state.mail.fields.host = { value: body.host, set: true, source: "staff" };
+      if (body.password) state.mail.fields.password = { value: null, set: true, source: "staff" };
+      return reply(route, 200, state.mail);
+    }
+    if (path === "/mail/test") return reply(route, 200, { ok: false, error: "Mail server replied 535 to AUTH: Incorrect authentication data", seconds: 1.2, to: state.user.email, status: state.mail });
+    if (path === "/mail/send-queued") return reply(route, 200, { ok: true, error: null, seconds: 2.1, sent: 3, failed: 0, status: { ...state.mail, queue: { ...state.mail.queue, pending: 0, sent_last_day: 3 } } });
     if (path === "/enquiries" && method === "GET") {
       const status = url.searchParams.get("status");
       const items = state.rows.filter((row) => !status || row.status === status).map(({ message, ...row }) => ({ ...row, excerpt: message.slice(0, 160) }));
@@ -421,6 +445,35 @@ describe("staff area", () => {
     await page.goto(`${BASE}/admin/audit`);
     await page.getByRole("cell", { name: "enquiry.status.replied" }).waitFor();
     await assertAccessible(page, "on the audit log");
+    await page.context().close();
+  });
+
+  test("administrators check email, see the real error, and save SMTP settings without seeing the password", async () => {
+    const page = await newPage();
+    const state = await fakeAdminApi(page, { signedIn: true });
+    await page.goto(`${BASE}/admin/email`);
+    await page.getByRole("heading", { name: "Email", exact: true }).waitFor();
+    await page.getByText("Sending is on").waitFor();
+    assert.ok(await page.getByText(/3 \(oldest from/).isVisible(), "the waiting emails are counted");
+    await assertAccessible(page, "on the email page");
+
+    await page.getByRole("button", { name: "Send me a test email" }).click();
+    await page.getByText("Not sent: Mail server replied 535 to AUTH: Incorrect authentication data").waitFor();
+    await page.getByRole("button", { name: "Send queued emails now" }).click();
+    await page.getByText("Sent 3, failed 0.").waitFor();
+
+    assert.equal(await page.getByLabel("Mailbox password").inputValue(), "", "the password is never filled in");
+    await page.getByLabel("Outgoing mail server (host)").fill("bad host!");
+    await page.getByRole("button", { name: "Save settings" }).click();
+    await page.getByText("Enter the outgoing mail server, for example mail.paxofi.com.").waitFor();
+    await page.getByLabel("Outgoing mail server (host)").fill("mail.paxofi.com");
+    await page.getByLabel("Mailbox password").fill("New mailbox pass 1");
+    await page.getByRole("button", { name: "Save settings" }).click();
+    await page.getByText(/^Saved\./).waitFor();
+    const last = state.mailSaves.at(-1);
+    assert.equal(last.host, "mail.paxofi.com");
+    assert.equal(last.password, "New mailbox pass 1");
+    assert.equal(last.transport, "", "fields left on the .env setting are sent empty");
     await page.context().close();
   });
 
