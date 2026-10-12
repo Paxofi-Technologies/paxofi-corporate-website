@@ -40,7 +40,8 @@ final class CertificatesTest extends RecruitmentTestCase
         $public = $this->app()->handle(self::request('GET', '/api/v1/careers/certificates/' . strtolower($certificate['code'])));
         self::assertSame(200, $public->status(), $public->body());
         $shown = self::decode($public)['data'];
-        self::assertSame([true, 'Ada Lovelace', 'Software Engineer Fellow', 'fellow', 'Cohort 1', $payload['completed_on']], [$shown['valid'], $shown['holder_name'], $shown['role_title'], $shown['engagement']['type'], $shown['cohort'], $shown['completed_on']]);
+        $roleTitle = (string) self::scalar('SELECT o.title FROM job_applications a JOIN career_opportunities o ON o.id = a.opportunity_id WHERE a.id = ?', [$id]);
+        self::assertSame([true, 'Ada Lovelace', $roleTitle, 'fellow', 'Cohort 1', $payload['completed_on']], [$shown['valid'], $shown['holder_name'], $shown['role_title'], $shown['engagement']['type'], $shown['cohort'], $shown['completed_on']]);
         self::assertSame('no-store', $public->header('cache-control'));
         self::assertStringNotContainsString('ada@example.com', $public->body(), 'only what is printed on the certificate');
         self::assertStringNotContainsString($id, $public->body());
