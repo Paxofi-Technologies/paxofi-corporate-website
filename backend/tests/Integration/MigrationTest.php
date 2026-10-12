@@ -11,7 +11,7 @@ use RuntimeException;
 
 final class MigrationTest extends DatabaseTestCase
 {
-    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets', 'job_applications', 'application_notes', 'application_uploads', 'email_attachments', 'articles', 'industries', 'content_reviews', 'redirects'];
+    private const TABLES = ['users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'content_items', 'content_revisions', 'products', 'services', 'media_assets', 'enquiries', 'career_opportunities', 'career_applications', 'sessions', 'audit_events', 'login_attempts', 'recovery_codes', 'catalog_revisions', 'analytics_daily', 'analytics_sources', 'analytics_devices', 'analytics_salts', 'analytics_visitors', 'page_revisions', 'email_outbox', 'password_resets', 'job_applications', 'application_notes', 'application_uploads', 'email_attachments', 'articles', 'industries', 'content_reviews', 'redirects', 'careers_settings'];
 
     public function testProductionShapedDatabaseIsUpgradedToInnoDbUtf8mb4(): void
     {

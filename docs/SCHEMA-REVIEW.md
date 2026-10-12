@@ -63,6 +63,7 @@ Database `paxoalhu_corporate`, MariaDB 11.4, all tables InnoDB / utf8mb4_unicode
 |---|---|---|---|---|
 | content_reviews | item_type + item_key (PRIMARY KEY), review_by DATE NULL, last_reviewed_at, last_reviewed_by FK → users ON DELETE SET NULL, note VARCHAR(300), updated_at; index (review_by) | 020 | staff member who reviewed | OK; item_type checked by the API (page, product, service, industry, article, resource); rows for deleted items are ignored |
 | redirects | id, from_path VARCHAR(255) UNIQUE (lower-case, no trailing slash), to_path VARCHAR(500), note, created_by FK → users ON DELETE SET NULL, timestamps | 020 | staff member who added it | OK; paths validated by the API (no built-in, staff or live pages, no chains, https only for external links); public endpoint returns only from/to |
+| careers_settings | setting_key VARCHAR(40) PK, setting_value VARCHAR(255) NULL, updated_by FK → users ON DELETE SET NULL, updated_at | 022 | administrator who saved it | OK; opening day, Cohort 1 last day and the SHA-256 hash of the staff test code (never the code itself); a missing row means the server setting applies |
 
 ## Resources page (migration 019, D-023)
 
