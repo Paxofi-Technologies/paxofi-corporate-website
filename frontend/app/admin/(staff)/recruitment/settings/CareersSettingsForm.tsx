@@ -9,6 +9,13 @@ import { AdminApiError, type CareersSettings, formatDay } from "@/lib/admin-api"
 
 const SOURCES = { staff: "set here", server: "from the server setting", none: "not set" } as const;
 
+/** Yesterday as a Lagos calendar day (YYYY-MM-DD): making it the last day closes applications at once. */
+function lagosYesterday(now = new Date()): string {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const [y, m, d] = today.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
 type Raw = CareersSettings;
 
 /** Applications opening (D-028): administrators set the opening day, Cohort 1's last day and the staff test code. */
@@ -22,6 +29,7 @@ export default function CareersSettingsForm() {
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [newCode, setNewCode] = useState("");
+  const [formKey, setFormKey] = useState(0);
 
   const load = useCallback(() => {
     return request<Raw>("/careers-settings")
@@ -37,16 +45,22 @@ export default function CareersSettingsForm() {
   if (error) return <FormStatus state="error" message={error} />;
   if (settings === null) return <p role="status">Loading…</p>;
 
-  const save = async (form: HTMLFormElement) => {
-    const data = new FormData(form);
+  const save = async (form: HTMLFormElement | null, closesAfter?: string, success = "Saved. The careers website follows within a minute.") => {
+    const data = form ? new FormData(form) : null;
+    const body = {
+      opens_from: data ? String(data.get("opens_from") ?? "") : (settings.opens_from ?? ""),
+      cohort1_closes: data ? String(data.get("cohort1_closes") ?? "") : (settings.cohort1_closes ?? ""),
+      closes_after: closesAfter ?? (data ? String(data.get("closes_after") ?? "") : (settings.closes_after ?? "")),
+    };
     setBusy(true);
     setFields({});
     setFormError("");
     setStatus("");
     try {
-      const result = await request<Raw>("/careers-settings", { method: "PATCH", body: { opens_from: String(data.get("opens_from") ?? ""), cohort1_closes: String(data.get("cohort1_closes") ?? "") } });
+      const result = await request<Raw>("/careers-settings", { method: "PATCH", body });
       setSettings(result.data);
-      setStatus("Saved. The careers website follows within a minute.");
+      setFormKey((k) => k + 1);
+      setStatus(success);
     } catch (e) {
       if (e instanceof AdminApiError) {
         setFields(e.fields);
@@ -86,17 +100,39 @@ export default function CareersSettingsForm() {
   };
 
   const { effective } = settings;
-  const opensLine = effective.opens_from === null ? "Applications are open now (no opening day is set)." : effective.applications_open ? `Applications opened on ${formatDay(effective.opens_from)}.` : `Applications open on ${formatDay(effective.opens_from)}.`;
+  const lastDay = effective.closes_after ?? null;
+  const opensLine = effective.applications_closed
+    ? `Applications are closed (the last day was ${formatDay(lastDay)}).`
+    : effective.opens_from === null
+      ? `Applications are open now (no opening day is set)${lastDay ? `, until ${formatDay(lastDay)}` : ""}.`
+      : effective.applications_open
+        ? `Applications opened on ${formatDay(effective.opens_from)}${lastDay ? ` and close after ${formatDay(lastDay)}` : ""}.`
+        : `Applications open on ${formatDay(effective.opens_from)}${lastDay ? ` and close after ${formatDay(lastDay)}` : ""}.`;
+
+  const closeNow = () => {
+    if (!window.confirm("Close applications now? careers.paxofi.com stops accepting applications within a minute. You can reopen them here at any time.")) return;
+    save(null, lagosYesterday(), "Applications are closed. The careers website follows within a minute.");
+  };
+  const reopen = () => save(null, "", "The last day to apply was removed. Applications follow the opening day again.");
 
   return (
     <>
       <p className="admin-intro"><Link href="/admin/recruitment">Back to recruitment</Link></p>
       <p className="admin-intro">
-        Choose when careers.paxofi.com starts accepting applications. Until that day, people can read about the roles but not apply. Changes apply within a minute and no server setting needs to change.
+        Choose when careers.paxofi.com starts and stops accepting applications. Outside those days, people can read about the roles but not apply. Changes apply within a minute and no server setting needs to change.
       </p>
       <p role="status"><strong>{opensLine}</strong> Now counting as <strong>{effective.cohort}</strong>.</p>
 
+      <p>
+        {effective.applications_closed ? (
+          <button type="button" className="button button--outline" onClick={reopen} disabled={busy}>Reopen applications</button>
+        ) : (
+          <button type="button" className="button button--outline admin-danger" onClick={closeNow} disabled={busy}>Close applications now</button>
+        )}
+      </p>
+
       <form
+        key={formKey}
         className="contact-form"
         aria-labelledby="dates-title"
         onSubmit={(event) => {
@@ -107,6 +143,7 @@ export default function CareersSettingsForm() {
         <h2 id="dates-title" className="admin-card-title">Dates</h2>
         <Field name="opens_from" label="Applications open on" type="date" defaultValue={settings.opens_from ?? ""} error={fields.opens_from} hint={`Lagos time, from midnight. Now ${SOURCES[effective.opens_from_source]}. Leave empty to use the server setting${settings.server.opens_from ? ` (${formatDay(settings.server.opens_from)})` : ""}, or open immediately if there is none.`} />
         <Field name="cohort1_closes" label="Last day for Cohort 1" type="date" defaultValue={settings.cohort1_closes ?? ""} error={fields.cohort1_closes} hint={`Applications after this day count towards Cohort 2 and the talent pool. Now ${SOURCES[effective.cohort1_closes_source]}.`} />
+        <Field name="closes_after" label="Last day to apply (optional)" type="date" defaultValue={settings.closes_after ?? ""} error={fields.closes_after} hint="Lagos time: applications stop at midnight at the end of this day. Leave empty to keep applications open." />
         <FormStatus state="error" message={formError} />
         <FormStatus state="success" message={status} />
         <button type="submit" className="button button--primary" disabled={busy}>{busy ? "Saving…" : "Save dates"}</button>

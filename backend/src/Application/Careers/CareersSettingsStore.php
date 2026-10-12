@@ -10,6 +10,8 @@ interface CareersSettingsStore
     public const OPENS_FROM = 'opens_from';
     public const COHORT1_CLOSES = 'cohort1_closes';
     public const TEST_CODE_HASH = 'test_code_hash';
+    /** The last day applications are accepted (D-030). */
+    public const CLOSES_AFTER = 'closes_after';
 
     /** @return array<string, string> only the settings that have a value */
     public function all(): array;

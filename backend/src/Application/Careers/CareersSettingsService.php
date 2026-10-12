@@ -43,13 +43,16 @@ final class CareersSettingsService
         return [
             'opens_from' => $saved[CareersSettingsStore::OPENS_FROM] ?? null,
             'cohort1_closes' => $saved[CareersSettingsStore::COHORT1_CLOSES] ?? null,
+            'closes_after' => $saved[CareersSettingsStore::CLOSES_AFTER] ?? null,
             'server' => ['opens_from' => $server->opensOnDay(), 'cohort1_closes' => $server->cohort1LastDay()],
             'effective' => [
                 'opens_from' => $current->opensOnDay(),
                 'cohort1_closes' => $current->cohort1LastDay(),
                 'opens_from_source' => $source(CareersSettingsStore::OPENS_FROM, $server->opensOnDay()),
                 'cohort1_closes_source' => $source(CareersSettingsStore::COHORT1_CLOSES, $server->cohort1LastDay()),
+                'closes_after' => $current->lastDayToApply(),
                 'applications_open' => $current->open($now),
+                'applications_closed' => $current->closed($now),
                 'cohort' => $current->cohort($now),
             ],
             'test_code' => ['set' => isset($saved[CareersSettingsStore::TEST_CODE_HASH]) || $server->testCode !== '', 'by_staff' => isset($saved[CareersSettingsStore::TEST_CODE_HASH]), 'by_server' => $server->testCode !== ''],
@@ -67,7 +70,12 @@ final class CareersSettingsService
         $input = is_array($input) ? $input : [];
         $errors = [];
         $values = [];
-        foreach ([CareersSettingsStore::OPENS_FROM => 'opens_from', CareersSettingsStore::COHORT1_CLOSES => 'cohort1_closes'] as $key => $field) {
+        $fieldsToSave = [CareersSettingsStore::OPENS_FROM => 'opens_from', CareersSettingsStore::COHORT1_CLOSES => 'cohort1_closes'];
+        // The last day to apply (D-030) is only changed when it is sent, so older forms leave it as it is.
+        if (array_key_exists('closes_after', $input)) {
+            $fieldsToSave[CareersSettingsStore::CLOSES_AFTER] = 'closes_after';
+        }
+        foreach ($fieldsToSave as $key => $field) {
             $value = $input[$field] ?? null;
             $value = is_string($value) ? trim($value) : ($value === null ? '' : null);
             if ($value === null || ($value !== '' && RecruitmentSettings::lagosDay($value) === null)) {
@@ -81,6 +89,10 @@ final class CareersSettingsService
             $closes = $values[CareersSettingsStore::COHORT1_CLOSES] ?? $this->settings->server()->cohort1LastDay();
             if ($opens !== null && $closes !== null && $closes < $opens) {
                 $errors['cohort1_closes'] = 'The last day for Cohort 1 must be on or after the opening day.';
+            }
+            $lastDay = array_key_exists(CareersSettingsStore::CLOSES_AFTER, $values) ? $values[CareersSettingsStore::CLOSES_AFTER] : ($this->store->all()[CareersSettingsStore::CLOSES_AFTER] ?? null);
+            if ($opens !== null && $lastDay !== null && $lastDay < $opens) {
+                $errors['closes_after'] = 'The last day to apply must be on or after the opening day.';
             }
         }
         if ($errors !== []) {

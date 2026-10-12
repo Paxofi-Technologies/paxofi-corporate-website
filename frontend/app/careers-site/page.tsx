@@ -35,10 +35,18 @@ export default async function CareersHome() {
       <section className="section" id="roles" tabIndex={-1}>
         <div className="container">
           <SectionHead eyebrow={t.roles_eyebrow} title="Open roles" intro="Every position is remote and part of an unpaid learning programme. Fellows and Interns commit at least 15 hours a week, Volunteers at least 10. Choose how you want to join, then the role that matches your strongest skills." />
-          {status !== null && !status.open && (
+          {status !== null && status.closed && (
+            <p className="notice" role="status">
+              <strong>Applications are closed{status.closesOn ? ` (the last day was ${status.closesOn})` : ""}.</strong> You can still read about every role. New intakes are announced here.
+            </p>
+          )}
+          {status !== null && !status.open && !status.closed && (
             <p className="notice" role="status">
               <strong>Applications open{status.opensOn ? ` on ${status.opensOn}` : " soon"}.</strong> You can read about every role now and apply from that day.
             </p>
+          )}
+          {status !== null && status.open && status.closesOn && (
+            <p className="notice" role="status"><strong>The last day to apply is {status.closesOn}.</strong></p>
           )}
           {status !== null && status.open && status.cohort === "Cohort 1" && status.cohort1ClosesOn && (
             <p className="notice" role="status"><strong>Cohort 1 applications close on {status.cohort1ClosesOn}.</strong> Applications stay open afterwards for our talent pool and the next cohort.</p>
