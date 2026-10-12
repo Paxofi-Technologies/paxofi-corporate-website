@@ -525,5 +525,5 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Video.** A free video service is used for Paxofi-made videos for now.
 - **PCF code.** Participants never write to PCF directly. Their code reaches it only on a branch reviewed and merged by a supervisor.
 - **Project classes.** Every project is a practice replica, a Paxofi project, a participant's own idea or a client project, each with its own gates before anything goes live. A lawyer reviews participant-owned ideas and client work before any starts.
-- **Records.** Participant records are kept for the record. Wording for DP-025 is proposed to the owner for confirmation before any Notion or notice change.
+- **Records.** Participant records are kept for the record. DP-025 is amended to v1.2 ("kept as programme records after the engagement ends, reviewed at least every 6 years"), confirmed by the owner on 12 Oct 2026; the careers privacy notice follows. This resolves KI-002.
 - **Not chosen:** keeping dates only in `.env` (an owner edit and restart for each change).
