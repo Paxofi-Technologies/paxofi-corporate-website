@@ -35,7 +35,9 @@ use Paxofi\CorporateWebsite\Application\Articles\ArticleEditor;
 use Paxofi\CorporateWebsite\Application\Articles\ArticleService;
 use Paxofi\CorporateWebsite\Application\Careers\CareerRoleEditor;
 use Paxofi\CorporateWebsite\Application\Careers\CareersService;
+use Paxofi\CorporateWebsite\Application\Careers\CareersSettingsService;
 use Paxofi\CorporateWebsite\Application\Careers\RecruitmentService;
+use Paxofi\CorporateWebsite\Application\Careers\RecruitmentSettingsSource;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogService;
 use Paxofi\CorporateWebsite\Application\Catalog\CatalogType;
 use Paxofi\CorporateWebsite\Application\Contact\ContactService;
@@ -52,6 +54,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAnalyticsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminArticlesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminAuditController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareerRolesController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareersSettingsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
@@ -94,6 +97,7 @@ use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAdminEnquiryRepository
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditLog;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAuditRecorder;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCareerRoles;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCareersSettings;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogEditorRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoCatalogRepository;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoContentRepository;
@@ -210,6 +214,10 @@ final class ApiApplication implements HttpHandler
         ['DELETE', '/api/v1/admin/articles/{id}'],
         ['GET', '/api/v1/admin/reviews'],
         ['POST', '/api/v1/admin/reviews/{type}/{key}'],
+        ['GET', '/api/v1/admin/careers-settings'],
+        ['PATCH', '/api/v1/admin/careers-settings'],
+        ['POST', '/api/v1/admin/careers-settings/test-code'],
+        ['DELETE', '/api/v1/admin/careers-settings/test-code'],
         ['GET', '/api/v1/admin/redirects'],
         ['POST', '/api/v1/admin/redirects'],
         ['PATCH', '/api/v1/admin/redirects/{id}'],
@@ -438,6 +446,11 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/admin/reviews', static fn (HttpRequest $r): HttpResponse => $reviews()->list($r));
         $router->post('/api/v1/admin/reviews/{type}/{key}', static fn (HttpRequest $r): HttpResponse => $reviews()->update($r));
 
+        $careersSettings = fn (): AdminCareersSettingsController => new AdminCareersSettingsController($this->careersSettingsService(), $this->adminGuard());
+        $router->get('/api/v1/admin/careers-settings', static fn (HttpRequest $r): HttpResponse => $careersSettings()->show($r));
+        $router->add('PATCH', '/api/v1/admin/careers-settings', static fn (HttpRequest $r): HttpResponse => $careersSettings()->update($r));
+        $router->post('/api/v1/admin/careers-settings/test-code', static fn (HttpRequest $r): HttpResponse => $careersSettings()->newTestCode($r));
+        $router->add('DELETE', '/api/v1/admin/careers-settings/test-code', static fn (HttpRequest $r): HttpResponse => $careersSettings()->removeTestCode($r));
         $redirects = fn (): AdminRedirectsController => new AdminRedirectsController($this->redirects(), $this->adminGuard());
         $router->get('/api/v1/admin/redirects', static fn (HttpRequest $r): HttpResponse => $redirects()->list($r));
         $router->post('/api/v1/admin/redirects', static fn (HttpRequest $r): HttpResponse => $redirects()->create($r));
@@ -587,12 +600,29 @@ final class ApiApplication implements HttpHandler
             $this->cvStorage(),
             $this->outbox,
             $this->mail,
-            $this->settings->recruitment,
+            $this->recruitmentSettings(),
             new PdoAuditRecorder($this->database),
             new LazyTransactionManager($this->database),
             $this->logger,
             $this->clock,
             Uuid::v4(...),
+        );
+    }
+
+    /** The server's recruitment settings with what an administrator saved in the staff area on top (D-028). */
+    private function recruitmentSettings(): RecruitmentSettingsSource
+    {
+        return new RecruitmentSettingsSource($this->settings->recruitment, new PdoCareersSettings($this->database));
+    }
+
+    private function careersSettingsService(): CareersSettingsService
+    {
+        return new CareersSettingsService(
+            new PdoCareersSettings($this->database),
+            $this->recruitmentSettings(),
+            new PdoAuditRecorder($this->database),
+            new LazyTransactionManager($this->database),
+            $this->clock,
         );
     }
 

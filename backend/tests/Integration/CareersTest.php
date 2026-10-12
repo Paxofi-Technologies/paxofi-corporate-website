@@ -32,7 +32,7 @@ final class CareersTest extends DatabaseTestCase
 
     protected function setUp(): void
     {
-        foreach (['job_applications', 'application_uploads', 'email_attachments', 'email_outbox', 'sessions', 'login_attempts', 'audit_events', 'user_roles'] as $table) {
+        foreach (['careers_settings', 'job_applications', 'application_uploads', 'email_attachments', 'email_outbox', 'sessions', 'login_attempts', 'audit_events', 'user_roles'] as $table) {
             self::$pdo->exec("DELETE FROM {$table}");
         }
         self::$pdo->exec('DELETE FROM users');
@@ -339,6 +339,71 @@ final class CareersTest extends DatabaseTestCase
 
         $open = $this->app(extra: ['CAREERS_APPLICATIONS_OPEN_FROM' => '2020-01-01']);
         self::assertTrue(self::decode($open->handle(self::request('GET', '/api/v1/careers/status')))['data']['applications_open']);
+    }
+
+    public function testAnAdministratorControlsTheOpeningDateInTheStaffArea(): void
+    {
+        $admin = $this->setupAdmin();
+        $inFuture = (new DateTimeImmutable('now', new DateTimeZone('Africa/Lagos')))->modify('+5 days')->format('Y-m-d');
+        $app = $this->app();
+
+        $initial = self::decode($this->call('GET', '/api/v1/admin/careers-settings', cookie: $admin))['data'];
+        self::assertSame([null, null, 'none', false], [$initial['opens_from'], $initial['effective']['opens_from'], $initial['effective']['opens_from_source'], $initial['test_code']['set']]);
+        self::assertTrue($initial['effective']['applications_open'], 'open until a date is set');
+
+        $saved = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => $inFuture, 'cohort1_closes' => '2099-12-31'], $admin);
+        self::assertSame(200, $saved->status(), $saved->body());
+        $data = self::decode($saved)['data'];
+        self::assertSame([$inFuture, 'staff', false, 'Cohort 1'], [$data['effective']['opens_from'], $data['effective']['opens_from_source'], $data['effective']['applications_open'], $data['effective']['cohort']]);
+        self::assertFalse(self::decode($this->app()->handle(self::request('GET', '/api/v1/careers/status')))['data']['applications_open'], 'the public site follows at once');
+        self::assertSame(403, $this->app()->handle($this->apply('software-engineer-fellow', []))->status());
+
+        // The staff test code is shown once; only its hash is stored.
+        $created = $this->call('POST', '/api/v1/admin/careers-settings/test-code', null, $admin);
+        self::assertSame(201, $created->status(), $created->body());
+        $code = self::decode($created)['data']['test_code'];
+        self::assertMatchesRegularExpression('/^PIF-[A-HJ-KM-NP-Z2-9]{20}$/', $code);
+        self::assertSame('no-store', $created->header('cache-control'));
+        self::assertStringNotContainsString($code, (string) self::scalar("SELECT GROUP_CONCAT(setting_value) FROM careers_settings"), 'only the hash is kept');
+        self::assertTrue(self::decode($this->call('GET', '/api/v1/admin/careers-settings', cookie: $admin))['data']['test_code']['by_staff']);
+        self::assertStringNotContainsString($code, $this->call('GET', '/api/v1/admin/careers-settings', cookie: $admin)->body());
+        self::assertSame(201, $this->app()->handle($this->apply('software-engineer-fellow', ['test_code' => $code]))->status(), 'the code lets a flagged test through before opening');
+        self::assertSame('1', (string) self::scalar('SELECT is_test FROM job_applications'));
+        self::assertSame(200, $this->call('DELETE', '/api/v1/admin/careers-settings/test-code', cookie: $admin)->status());
+        self::assertSame(403, $this->app()->handle($this->apply('hr-officer-fellow', ['test_code' => $code], email: 'grace@example.com', ip: '198.51.100.51'))->status(), 'a removed code stops working');
+
+        // Clearing the date goes back to the server setting, here "always open".
+        $cleared = self::decode($this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '', 'cohort1_closes' => ''], $admin))['data'];
+        self::assertSame([null, 'none', true], [$cleared['effective']['opens_from'], $cleared['effective']['opens_from_source'], $cleared['effective']['applications_open']]);
+        self::assertSame(1, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'careers_settings.test_code_created'"));
+        self::assertSame(2, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'careers_settings.updated'"));
+    }
+
+    public function testTheServerSettingAppliesUntilAnAdministratorSavesADate(): void
+    {
+        $admin = $this->setupAdmin();
+        $app = $this->app(extra: ['CAREERS_APPLICATIONS_OPEN_FROM' => '2099-01-05', 'CAREERS_COHORT1_CLOSES' => '2099-01-20']);
+        $settings = self::decode($app->handle(self::request('GET', '/api/v1/admin/careers-settings', ['origin' => self::ORIGIN, 'cookie' => 'paxofi_admin=' . $admin])))['data'];
+        self::assertSame(['2099-01-05', 'server', '2099-01-20', false], [$settings['effective']['opens_from'], $settings['effective']['opens_from_source'], $settings['effective']['cohort1_closes'], $settings['effective']['applications_open']]);
+        self::assertSame(['2099-01-05', '2099-01-20'], [$settings['server']['opens_from'], $settings['server']['cohort1_closes']]);
+    }
+
+    public function testOpeningSettingsAreCheckedAndAdministratorsOnly(): void
+    {
+        $admin = $this->setupAdmin();
+        $this->call('POST', '/api/v1/admin/users', ['email' => 'hr@paxofi.com', 'display_name' => 'HR Officer', 'role' => 'human_resources', 'password' => self::PASSWORD], $admin);
+        $hr = $this->signIn('hr@paxofi.com');
+        foreach ([['GET', '/api/v1/admin/careers-settings', null], ['PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '2026-11-02']], ['POST', '/api/v1/admin/careers-settings/test-code', null]] as [$method, $uri, $payload]) {
+            self::assertSame(403, $this->call($method, $uri, $payload, $hr)->status(), "HR cannot {$method} {$uri}");
+        }
+        self::assertSame(401, $this->call('GET', '/api/v1/admin/careers-settings')->status());
+
+        $bad = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '2 November', 'cohort1_closes' => '2026-02-31'], $admin);
+        self::assertSame(422, $bad->status());
+        self::assertEqualsCanonicalizing(['opens_from', 'cohort1_closes'], array_keys(self::decode($bad)['error']['details']['fields']));
+        $order = $this->call('PATCH', '/api/v1/admin/careers-settings', ['opens_from' => '2026-11-10', 'cohort1_closes' => '2026-11-02'], $admin);
+        self::assertSame(422, $order->status());
+        self::assertSame(0, (int) self::scalar('SELECT COUNT(*) FROM careers_settings'));
     }
 
     public function testApplicationsAfterTheCohortOneWindowBelongToCohortTwo(): void

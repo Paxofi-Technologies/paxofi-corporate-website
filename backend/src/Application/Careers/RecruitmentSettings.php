@@ -13,6 +13,7 @@ use DateTimeZone;
  * - opensAt: applications are refused before this moment (CAREERS_APPLICATIONS_OPEN_FROM, a Lagos date such as 2026-11-02). Null: always open.
  * - cohort1ClosesAt: applications received before this moment are for Cohort 1, later ones for Cohort 2 (CAREERS_COHORT1_CLOSES, the last Lagos day, such as 2026-11-15). Null: no cohort label.
  * - testCode: a secret that lets staff submit controlled test applications before opening (CAREERS_TEST_CODE, 16 characters or more). Empty: tests are off.
+ * - testCodeHash: the SHA-256 of a test code an administrator generated in the staff area (D-028); works in addition to testCode.
  */
 final readonly class RecruitmentSettings
 {
@@ -24,6 +25,7 @@ final readonly class RecruitmentSettings
         public ?DateTimeImmutable $opensAt = null,
         public ?DateTimeImmutable $cohort1ClosesAt = null,
         public string $testCode = '',
+        public string $testCodeHash = '',
     ) {
     }
 
@@ -40,7 +42,43 @@ final readonly class RecruitmentSettings
 
     public function isTestCode(mixed $given): bool
     {
-        return $this->testCode !== '' && is_string($given) && hash_equals($this->testCode, $given);
+        if (!is_string($given) || $given === '') {
+            return false;
+        }
+
+        return ($this->testCode !== '' && hash_equals($this->testCode, $given))
+            || ($this->testCodeHash !== '' && hash_equals($this->testCodeHash, hash('sha256', $given)));
+    }
+
+    /**
+     * The same settings with what an administrator saved in the staff area
+     * (CareersSettingsStore) applied on top: a saved value wins over the server's.
+     *
+     * @param array<string, string> $saved
+     */
+    public function withSaved(array $saved): self
+    {
+        return new self(
+            $this->alertTo,
+            $this->replyTo,
+            $this->careersSiteUrl,
+            isset($saved[CareersSettingsStore::OPENS_FROM]) ? (self::lagosDay($saved[CareersSettingsStore::OPENS_FROM]) ?? $this->opensAt) : $this->opensAt,
+            isset($saved[CareersSettingsStore::COHORT1_CLOSES]) ? (self::lagosDay($saved[CareersSettingsStore::COHORT1_CLOSES], true) ?? $this->cohort1ClosesAt) : $this->cohort1ClosesAt,
+            $this->testCode,
+            $saved[CareersSettingsStore::TEST_CODE_HASH] ?? $this->testCodeHash,
+        );
+    }
+
+    /** The opening day as a Lagos calendar day (2026-11-02), or null. */
+    public function opensOnDay(): ?string
+    {
+        return $this->opensAt?->setTimezone(new DateTimeZone('Africa/Lagos'))->format('Y-m-d');
+    }
+
+    /** The last day for Cohort 1 as a Lagos calendar day (2026-11-15), or null. */
+    public function cohort1LastDay(): ?string
+    {
+        return $this->cohort1ClosesAt?->setTimezone(new DateTimeZone('Africa/Lagos'))->modify('-1 day')->format('Y-m-d');
     }
 
     /**
