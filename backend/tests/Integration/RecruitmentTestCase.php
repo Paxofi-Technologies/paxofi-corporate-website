@@ -24,7 +24,10 @@ use Paxofi\CorporateWebsite\Tests\Support\MemoryMailTransport;
  */
 abstract class RecruitmentTestCase extends DatabaseTestCase
 {
-    use HttpRequests;
+    use HttpRequests {
+        request as protected;
+        decode as protected;
+    }
 
     protected const ORIGIN = 'https://corporate.paxofi.com';
     protected const SETUP_TOKEN = 'setup-token-0123456789-abcdefghijklmnop';
