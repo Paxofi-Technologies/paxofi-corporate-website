@@ -98,7 +98,11 @@ export default async function RolePage({ params, searchParams }: Props) {
               </>
             ) : (
               <p className="notice" role="status">
-                <strong>Applications open{status?.opensOn ? ` on ${status.opensOn}` : " soon"}.</strong> Read the role now and come back then to apply. Questions? Email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.
+                {status?.closed ? (
+                  <><strong>Applications are closed{status.closesOn ? ` (the last day was ${status.closesOn})` : ""}.</strong> Thank you for your interest. New intakes are announced on this site. Questions? Email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.</>
+                ) : (
+                  <><strong>Applications open{status?.opensOn ? ` on ${status.opensOn}` : " soon"}.</strong> Read the role now and come back then to apply. Questions? Email <a href={`mailto:${RECRUITMENT_EMAIL}`}>{RECRUITMENT_EMAIL}</a>.</>
+                )}
               </p>
             )}
           </div>

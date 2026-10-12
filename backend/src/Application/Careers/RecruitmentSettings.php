@@ -14,6 +14,7 @@ use DateTimeZone;
  * - cohort1ClosesAt: applications received before this moment are for Cohort 1, later ones for Cohort 2 (CAREERS_COHORT1_CLOSES, the last Lagos day, such as 2026-11-15). Null: no cohort label.
  * - testCode: a secret that lets staff submit controlled test applications before opening (CAREERS_TEST_CODE, 16 characters or more). Empty: tests are off.
  * - testCodeHash: the SHA-256 of a test code an administrator generated in the staff area (D-028); works in addition to testCode.
+ * - closesAt: applications are refused from this moment, the start of the day after the last day to apply (set in the staff area, D-030). Null: no closing day.
  */
 final readonly class RecruitmentSettings
 {
@@ -26,12 +27,20 @@ final readonly class RecruitmentSettings
         public ?DateTimeImmutable $cohort1ClosesAt = null,
         public string $testCode = '',
         public string $testCodeHash = '',
+        public ?DateTimeImmutable $closesAt = null,
     ) {
     }
 
+    /** Accepting applications: on or after the opening day and not after the last day. */
     public function open(DateTimeImmutable $now): bool
     {
-        return $this->opensAt === null || $now >= $this->opensAt;
+        return ($this->opensAt === null || $now >= $this->opensAt) && !$this->closed($now);
+    }
+
+    /** Past the last day to apply (D-030). */
+    public function closed(DateTimeImmutable $now): bool
+    {
+        return $this->closesAt !== null && $now >= $this->closesAt;
     }
 
     /** "Cohort 1" until the review window closes, then "Cohort 2"; null when no closing date is set. */
@@ -66,6 +75,7 @@ final readonly class RecruitmentSettings
             isset($saved[CareersSettingsStore::COHORT1_CLOSES]) ? (self::lagosDay($saved[CareersSettingsStore::COHORT1_CLOSES], true) ?? $this->cohort1ClosesAt) : $this->cohort1ClosesAt,
             $this->testCode,
             $saved[CareersSettingsStore::TEST_CODE_HASH] ?? $this->testCodeHash,
+            isset($saved[CareersSettingsStore::CLOSES_AFTER]) ? (self::lagosDay($saved[CareersSettingsStore::CLOSES_AFTER], true) ?? $this->closesAt) : $this->closesAt,
         );
     }
 
@@ -79,6 +89,12 @@ final readonly class RecruitmentSettings
     public function cohort1LastDay(): ?string
     {
         return $this->cohort1ClosesAt?->setTimezone(new DateTimeZone('Africa/Lagos'))->modify('-1 day')->format('Y-m-d');
+    }
+
+    /** The last day to apply as a Lagos calendar day, or null. */
+    public function lastDayToApply(): ?string
+    {
+        return $this->closesAt?->setTimezone(new DateTimeZone('Africa/Lagos'))->modify('-1 day')->format('Y-m-d');
     }
 
     /**

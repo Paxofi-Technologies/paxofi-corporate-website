@@ -60,7 +60,10 @@ final class CareersService
      * Whether applications are open, and the cohort an application made now
      * belongs to (D-027). The careers site shows the opening date until then.
      *
-     * @return array{applications_open: bool, opens_at: ?string, opens_on: ?string, cohort: ?string, cohort1_closes_on: ?string}
+     * After the last day to apply (D-030) applications_closed is true and
+     * closes_on names that day.
+     *
+     * @return array{applications_open: bool, applications_closed: bool, opens_at: ?string, opens_on: ?string, cohort: ?string, cohort1_closes_on: ?string, closes_on: ?string}
      */
     public function status(): array
     {
@@ -68,13 +71,16 @@ final class CareersService
         $lagos = new \DateTimeZone('Africa/Lagos');
         $opensAt = $this->recruitment()->opensAt;
         $closes = $this->recruitment()->cohort1ClosesAt;
+        $lastDay = $this->recruitment()->closesAt;
 
         return [
             'applications_open' => $this->recruitment()->open($now),
+            'applications_closed' => $this->recruitment()->closed($now),
             'opens_at' => $opensAt?->setTimezone($lagos)->format(DATE_ATOM),
             'opens_on' => $opensAt?->setTimezone($lagos)->format('l j F Y'),
             'cohort' => $this->recruitment()->cohort($now),
             'cohort1_closes_on' => $closes?->setTimezone($lagos)->modify('-1 day')->format('l j F Y'),
+            'closes_on' => $lastDay?->setTimezone($lagos)->modify('-1 day')->format('l j F Y'),
         ];
     }
 
@@ -136,6 +142,9 @@ final class CareersService
         $now = ($this->clock)();
         // Staff with the test code can submit controlled test applications before opening (Gate 1); they are flagged and left out of reports.
         $testing = $this->recruitment()->isTestCode(is_array($input) ? ($input['test_code'] ?? null) : null);
+        if (!$testing && $this->recruitment()->closed($now)) {
+            throw new Forbidden('Applications are closed. Thank you for your interest; new intakes are announced on careers.paxofi.com.', 'APPLICATIONS_CLOSED');
+        }
         if (!$testing && !$this->recruitment()->open($now)) {
             $opens = $this->status()['opens_on'];
             throw new Forbidden('Applications are not open yet' . ($opens === null ? '.' : ". They open on {$opens}."), 'APPLICATIONS_NOT_OPEN');
