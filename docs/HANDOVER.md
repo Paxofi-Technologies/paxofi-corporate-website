@@ -1,6 +1,6 @@
 # Operations handover — Paxofi Corporate Website v1 (CW-DOC-006)
 
-Live since 2 Oct 2026 (v1 UAT signed off by the owner that day, `UAT-PLAN.md`). All planned work is live as of **release 25** (6 Oct 2026). The deployed version is always the one shown at `https://corporate.paxofi.com/release.txt`.
+Live since 2 Oct 2026 (v1 UAT signed off by the owner that day, `UAT-PLAN.md`). All planned work is live as of **release 25** (6 Oct 2026). Release 28 (prepared 12 Oct 2026, not yet deployed) adds reviewers with recusal, the talent pool, and certificates with the public check at careers.paxofi.com/verify (D-029). The deployed version is always the one shown at `https://corporate.paxofi.com/release.txt`.
 
 ## 1. What is running
 
@@ -42,7 +42,7 @@ Dependabot proposes dependency updates weekly; CI blocks known vulnerabilities (
 
 | Document | Content |
 |---|---|
-| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-027) | Every product and technical decision, newest last |
+| `DECISIONS.md` (PKDMS: Decision Register D-001 to D-029) | Every product and technical decision, newest last |
 | `PRODUCT-BASELINE.md` | Vision, sitemap, journeys, requirements, roles, workflow, change control |
 | `RUNBOOKS.md` | Operations, incidents, escalation, monitoring, secrets |
 | `ops/DEPLOYMENT-GUIDE.template.md` | Upload deployment (rendered per release, with PDF) |
