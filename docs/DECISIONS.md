@@ -577,3 +577,20 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 
 **Change:** the outbox sender now records any error on the email (attempt count, `last_error` with the error type) and carries on with the next one; an email that can never be built (no valid recipient) is given up at once with the reason. The queue can no longer stall silently, and `last_error` in phpMyAdmin shows the cause.
 
+## D-031 — Email settings and checks in the staff area; test applications from the staff area (12 Oct 2026)
+
+**Decision (CTO; the owner reported on 12 Oct 2026 that no email had gone out since 8 Oct, with every email `pending` and 0 attempts, and asked to enter the SMTP details in the staff area and to open a test application from it):**
+
+- **Email page** (staff area → **Email**, administrators: `users.manage`):
+  - Shows whether sending is on and, if not, why ("no transport", "send-from address missing", …).
+  - Shows the queue: waiting (and since when), given up, sent in the last 24 hours, last sent, and the latest error.
+  - **Send me a test email** sends one email straight to the signed-in administrator, not through the queue. **Send queued emails now** does what the 5-minute cron job does. Both show the real error on screen (for example "Mail server replied 535 to AUTH…" or "Could not connect to the mail server…"), so a problem can be found without server logs. Audited: `mail.test_sent`, `mail.queue_sent`.
+- **SMTP settings in the staff area, or in .env (both):**
+  - Transport, host, port, encryption, username, password, send-from address and sender name can be saved on the Email page (migration 024, `mail_settings`). A saved value wins; an empty field uses the `MAIL_*` setting in `backend/.env`. Audited: `mail.settings_updated`.
+  - The **password** is stored encrypted (AES-256-GCM, a key derived from `MFA_ENCRYPTION_KEY` for this purpose only), is never shown or sent back to the page, and can be removed to use the .env one. Without `MFA_ENCRYPTION_KEY` the page refuses to store a password and asks to keep `MAIL_PASSWORD` in .env.
+  - The website, the 5-minute cron job (`bin/send-mail.php`) and error alerts all use the same settings. Error alerts use .env first, so they still go out when the database is down.
+  - Settings are read only when email is actually sent, so pages that never send email never read them.
+- **Test applications:** Recruitment → *Set when applications open* → **Test application**: choose an open role and **Open a test application**. It opens the role on careers.paxofi.com with `?test`, where the staff test code is entered. Works before opening and after closing; flagged and left out of reports (D-027, D-028).
+- **GitGuardian alert of 11 Oct 2026 ("SMTP credentials"):** the only SMTP credential in the repository was a test fixture (a made-up password for a fake mail server on 127.0.0.1 in `SmtpTransportTest`). It is now generated at run time. No real mailbox password has been in the repository; real passwords live only in `backend/.env` on the server or, from this release, encrypted in the database.
+- **Not chosen:** storing the password in clear in the database (a database copy would reveal it); reading the settings on every request (health checks and pages that do not send email stay database-free).
+

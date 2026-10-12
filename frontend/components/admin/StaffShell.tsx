@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/media", label: "Media", permission: "content.edit" },
   { href: "/admin/analytics", label: "Analytics", permission: "analytics.read" },
   { href: "/admin/users", label: "Users", permission: "users.manage" },
+  { href: "/admin/email", label: "Email", permission: "users.manage" },
   { href: "/admin/audit", label: "Audit log", permission: "audit.read" },
   { href: "/admin/account", label: "My account", permission: null },
 ];

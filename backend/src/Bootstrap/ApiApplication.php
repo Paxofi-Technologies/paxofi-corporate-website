@@ -25,6 +25,8 @@ use Paxofi\CorporateWebsite\Application\Admin\PasswordHashing;
 use Paxofi\CorporateWebsite\Application\Admin\PasswordResetService;
 use Paxofi\CorporateWebsite\Application\Mail\AlertThrottle;
 use Paxofi\CorporateWebsite\Application\Mail\ErrorAlerts;
+use Paxofi\CorporateWebsite\Application\Mail\LazyMailTransport;
+use Paxofi\CorporateWebsite\Application\Mail\MailDiagnostics;
 use Paxofi\CorporateWebsite\Application\Mail\MailSettings;
 use Paxofi\CorporateWebsite\Application\Mail\MailTransport;
 use Paxofi\CorporateWebsite\Application\Mail\OutboxSender;
@@ -60,6 +62,7 @@ use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCareersSettingsControlle
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCatalogController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminCertificatesController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminEnquiryController;
+use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMailController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminMediaController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminRedirectsController;
 use Paxofi\CorporateWebsite\Http\Controllers\Admin\AdminReviewsController;
@@ -93,6 +96,8 @@ use Paxofi\CorporateWebsite\Infrastructure\Media\FilesystemMediaStorage;
 use Paxofi\CorporateWebsite\Infrastructure\Media\GdImageProcessor;
 use Paxofi\CorporateWebsite\Infrastructure\Mail\FileAlertThrottle;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoOutbox;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoOutboxStats;
+use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoMailSettings;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoPasswordResets;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\Database;
 use Paxofi\CorporateWebsite\Infrastructure\Persistence\PdoAnalyticsStore;
@@ -223,6 +228,10 @@ final class ApiApplication implements HttpHandler
         ['GET', '/api/v1/admin/certificates/{id}/pdf'],
         ['POST', '/api/v1/admin/certificates/{id}/revoke'],
         ['DELETE', '/api/v1/admin/certificates/{id}'],
+        ['GET', '/api/v1/admin/mail'],
+        ['PATCH', '/api/v1/admin/mail'],
+        ['POST', '/api/v1/admin/mail/test'],
+        ['POST', '/api/v1/admin/mail/send-queued'],
         ['GET', '/api/v1/admin/articles'],
         ['POST', '/api/v1/admin/articles'],
         ['GET', '/api/v1/admin/articles/{id}'],
@@ -253,8 +262,10 @@ final class ApiApplication implements HttpHandler
     /** @var Closure(): DateTimeImmutable */
     private readonly Closure $clock;
     private readonly PasswordHashing $hasher;
-    private readonly MailSettings $mail;
-    private readonly ?MailTransport $mailTransport;
+    /** A transport passed in by tests; otherwise email settings come from .env and the staff area (D-031). */
+    private readonly ?MailTransport $injectedTransport;
+    /** @var array{transport: ?MailTransport, values: array<string, string>, sources: array<string, string>, problem: ?string}|null */
+    private ?array $mailState = null;
     private readonly ErrorAlerts $alerts;
     private readonly PdoOutbox $outbox;
 
@@ -275,12 +286,19 @@ final class ApiApplication implements HttpHandler
         $this->database = new Database($connect ?? fn (): PDO => Connection::make($settings->environment));
         $this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $this->hasher = $hasher ?? new NativeStaffPasswordHasher();
-        $this->mailTransport = $mailTransport ?? $settings->mailTransport;
-        $mail = $settings->mail ?? MailSettings::disabled();
-        // A transport passed in (tests) turns sending on with the configured recipients.
-        $this->mail = $mailTransport !== null && !$mail->enabled ? new MailSettings(true, $mail->enquiryAlertTo, $mail->errorAlertTo, $mail->siteUrl) : $mail;
+        $this->injectedTransport = $mailTransport;
         $this->outbox = new PdoOutbox($this->database, $this->clock);
-        $this->alerts = new ErrorAlerts($this->mail, $this->mailTransport, $alertThrottle ?? new FileAlertThrottle(), $this->clock, $logger);
+        // Error alerts go straight to the mail server. With MAIL_* in .env they work even when the
+        // database is down; settings saved only in the staff area are read when an alert is sent.
+        $envTransport = $mailTransport ?? $settings->mailTransport;
+        $base = $settings->mail ?? MailSettings::disabled();
+        $this->alerts = new ErrorAlerts(
+            new MailSettings($envTransport !== null || $base->errorAlertTo !== [], $base->enquiryAlertTo, $base->errorAlertTo, $base->siteUrl, $base->siteName),
+            $envTransport ?? new LazyMailTransport(fn (): ?MailTransport => $this->mailTransport()),
+            $alertThrottle ?? new FileAlertThrottle(),
+            $this->clock,
+            $logger,
+        );
 
         $this->pipeline = new MiddlewarePipeline([
             new RequestIdMiddleware(),
@@ -303,7 +321,7 @@ final class ApiApplication implements HttpHandler
     public function afterResponse(float $budgetSeconds = 20.0): void
     {
         $this->alerts->flush();
-        if ($this->mailTransport === null || !$this->mail->enabled || $this->outbox->addedCount() === 0) {
+        if ($this->outbox->addedCount() === 0 || $this->mailTransport() === null) {
             return;
         }
         try {
@@ -316,11 +334,105 @@ final class ApiApplication implements HttpHandler
 
     public function outboxSender(): OutboxSender
     {
-        if ($this->mailTransport === null) {
+        $transport = $this->mailTransport();
+        if ($transport === null) {
             throw new \LogicException('Email sending is not configured (MAIL_TRANSPORT).');
         }
 
-        return new OutboxSender($this->outbox, $this->mailTransport, $this->clock, $this->logger, $this->alerts->report(...));
+        return new OutboxSender($this->outbox, $transport, $this->clock, $this->logger, $this->alerts->report(...));
+    }
+
+    /** Whether email can be sent, from .env or the settings saved in the staff area (D-031). */
+    public function mailConfigured(): bool
+    {
+        return $this->mailTransport() !== null;
+    }
+
+    /**
+     * The email settings in force: backend/.env with what an administrator
+     * saved in the staff area on top (D-031). Read once per request, and only
+     * when email is needed. If the saved settings cannot be read, .env applies.
+     *
+     * @return array{transport: ?MailTransport, values: array<string, string>, sources: array<string, string>, problem: ?string}
+     */
+    private function mailState(): array
+    {
+        if ($this->mailState !== null) {
+            return $this->mailState;
+        }
+        $values = Settings::mailValues($this->settings->environment);
+        $sources = array_map(static fn (string $value): string => $value === '' ? 'none' : 'server', $values);
+        $problem = null;
+        if ($this->injectedTransport === null) {
+            try {
+                $saved = (new PdoMailSettings($this->database))->all();
+            } catch (\Throwable) {
+                $saved = [];
+                $problem = 'The email settings saved in the staff area could not be read, so backend/.env is used.';
+            }
+            foreach ($saved as $key => $value) {
+                if (!array_key_exists($key, $values)) {
+                    continue;
+                }
+                if ($key === 'password') {
+                    $plain = $this->mailSecrets()?->decrypt($value);
+                    if ($plain === null) {
+                        $problem = 'The saved mailbox password cannot be read: MFA_ENCRYPTION_KEY is missing or was changed. Enter the password again.';
+                        continue;
+                    }
+                    $value = $plain;
+                }
+                $values[$key] = $value;
+                $sources[$key] = 'staff';
+            }
+        }
+
+        return $this->mailState = [
+            'transport' => $this->injectedTransport ?? Settings::buildMailTransport($values),
+            'values' => $values,
+            'sources' => $sources,
+            'problem' => $problem,
+        ];
+    }
+
+    private function mailTransport(): ?MailTransport
+    {
+        return $this->mailState()['transport'];
+    }
+
+    /**
+     * Recipients from .env; sending on when a transport is configured. Decided
+     * only when a service asks (on queueing an email), so routes that answer
+     * before using the database never read the saved settings.
+     */
+    private function mail(): MailSettings
+    {
+        $base = $this->settings->mail ?? MailSettings::disabled();
+
+        return new MailSettings(fn (): bool => $this->mailTransport() !== null, $base->enquiryAlertTo, $base->errorAlertTo, $base->siteUrl, $base->siteName);
+    }
+
+    /** Encrypts the mailbox password saved in the staff area; null without MFA_ENCRYPTION_KEY. */
+    private function mailSecrets(): ?OpenSslSecretEncryption
+    {
+        return $this->settings->mfaEncryptionKey === null ? null : new OpenSslSecretEncryption($this->settings->mfaEncryptionKey, 'mail-password/v1');
+    }
+
+    /** The staff Email page (D-031). */
+    private function mailDiagnostics(): MailDiagnostics
+    {
+        return new MailDiagnostics(
+            fn (): array => $this->mailState(),
+            function (): void {
+                $this->mailState = null;
+            },
+            new PdoMailSettings($this->database),
+            $this->mailSecrets(),
+            new PdoOutboxStats($this->database),
+            fn (): array => $this->outboxSender()->run(20, 25.0),
+            new PdoAuditRecorder($this->database),
+            $this->clock,
+        );
     }
 
     public function errorAlerts(): ErrorAlerts
@@ -460,6 +572,11 @@ final class ApiApplication implements HttpHandler
         $router->get('/api/v1/admin/certificates/{id}/pdf', static fn (HttpRequest $r): HttpResponse => $certificates()->pdf($r));
         $router->post('/api/v1/admin/certificates/{id}/revoke', static fn (HttpRequest $r): HttpResponse => $certificates()->revoke($r));
         $router->add('DELETE', '/api/v1/admin/certificates/{id}', static fn (HttpRequest $r): HttpResponse => $certificates()->delete($r));
+        $mailPage = fn (): AdminMailController => new AdminMailController($this->mailDiagnostics(), $this->adminGuard());
+        $router->get('/api/v1/admin/mail', static fn (HttpRequest $r): HttpResponse => $mailPage()->status($r));
+        $router->add('PATCH', '/api/v1/admin/mail', static fn (HttpRequest $r): HttpResponse => $mailPage()->save($r));
+        $router->post('/api/v1/admin/mail/test', static fn (HttpRequest $r): HttpResponse => $mailPage()->test($r));
+        $router->post('/api/v1/admin/mail/send-queued', static fn (HttpRequest $r): HttpResponse => $mailPage()->sendQueued($r));
 
         $articleEditor = fn (): AdminArticlesController => new AdminArticlesController(
             new ArticleEditor(new PdoArticles($this->database), new PdoMediaRepository($this->database), new PdoAuditRecorder($this->database), new LazyTransactionManager($this->database), $this->clock, Uuid::v4(...)),
@@ -540,7 +657,7 @@ final class ApiApplication implements HttpHandler
             new PdoAuditRecorder($this->database),
             new LazyTransactionManager($this->database),
             $this->outbox,
-            $this->mail,
+            $this->mail(),
             $this->clock,
         );
     }
@@ -603,7 +720,7 @@ final class ApiApplication implements HttpHandler
     /** The weekly "due for review" email, run by bin/send-mail.php (D-025). */
     public function contentReviewReminder(): ContentReviewReminder
     {
-        return new ContentReviewReminder($this->contentReviews(), new PdoContentReviews($this->database), $this->outbox, new PdoAuditRecorder($this->database), $this->mail, $this->clock);
+        return new ContentReviewReminder($this->contentReviews(), new PdoContentReviews($this->database), $this->outbox, new PdoAuditRecorder($this->database), $this->mail(), $this->clock);
     }
 
     private function redirects(): Redirects
@@ -631,7 +748,7 @@ final class ApiApplication implements HttpHandler
             new PdoJobApplications($this->database),
             $this->cvStorage(),
             $this->outbox,
-            $this->mail,
+            $this->mail(),
             $this->recruitmentSettings(),
             new PdoAuditRecorder($this->database),
             new LazyTransactionManager($this->database),
@@ -665,7 +782,7 @@ final class ApiApplication implements HttpHandler
             new PdoCareerRoles($this->database),
             $this->cvStorage(),
             $this->outbox,
-            $this->mail,
+            $this->mail(),
             $this->settings->recruitment,
             new PdoApplicationReviewers($this->database),
             $this->talentPoolService(),
@@ -730,7 +847,7 @@ final class ApiApplication implements HttpHandler
             $this->settings->contactRateLimitMax,
             $this->settings->contactRateLimitWindowMinutes,
             $this->outbox,
-            $this->mail,
+            $this->mail(),
         );
     }
 }

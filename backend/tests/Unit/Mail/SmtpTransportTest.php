@@ -40,7 +40,7 @@ final class SmtpTransportTest extends TestCase
             self::fail('Expected MailFailed');
         } catch (MailFailed $exception) {
             self::assertStringContainsString('550', $exception->getMessage());
-            self::assertStringNotContainsString('s3cret', $exception->getMessage());
+            self::assertStringNotContainsString($this->password(), $exception->getMessage());
         } finally {
             proc_terminate($process);
         }
@@ -53,10 +53,17 @@ final class SmtpTransportTest extends TestCase
     }
 
     private int $port = 0;
+    private string $password = '';
+
+    /** A throwaway password made at run time, for the local fake server only (never a real credential in the repository). */
+    private function password(): string
+    {
+        return $this->password !== '' ? $this->password : $this->password = 'fake-' . bin2hex(random_bytes(6));
+    }
 
     private function transport(): SmtpTransport
     {
-        return new SmtpTransport('127.0.0.1', $this->port, 'none', 'no-reply@paxofi.com', 's3cret', 'no-reply@paxofi.com', 'Paxofi Technologies', 5);
+        return new SmtpTransport('127.0.0.1', $this->port, 'none', 'no-reply@paxofi.com', $this->password(), 'no-reply@paxofi.com', 'Paxofi Technologies', 5);
     }
 
     /** @return array{string, resource} */

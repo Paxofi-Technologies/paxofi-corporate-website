@@ -51,7 +51,7 @@ final readonly class Settings
             mfaEncryptionKey: strlen($key = trim($environment->get('MFA_ENCRYPTION_KEY', '') ?? '')) >= 32 ? $key : null,
             // Folder for uploaded media (D-012), outside the release folders; uploads stay off while unset.
             mediaStoragePath: ($path = trim($environment->get('MEDIA_STORAGE_PATH', '') ?? '')) === '' ? null : $path,
-            mailTransport: $transport = self::mailTransport($environment),
+            mailTransport: $transport = self::buildMailTransport(self::mailValues($environment)),
             mail: new MailSettings(
                 enabled: $transport !== null,
                 enquiryAlertTo: Email::addressList($environment->get('ENQUIRY_ALERT_TO', '')),
@@ -71,24 +71,48 @@ final readonly class Settings
     }
 
     /**
-     * Email sending (D-016): MAIL_TRANSPORT=smtp (the company mailbox, preferred)
-     * or mail (the server's sendmail). Off when unset or incomplete.
+     * The MAIL_* settings from backend/.env, as plain values (D-016). The
+     * staff area can save values of its own on top (D-031).
+     *
+     * @return array{transport: string, host: string, port: string, encryption: string, username: string, password: string, from_address: string, from_name: string}
      */
-    private static function mailTransport(Environment $environment): ?MailTransport
+    public static function mailValues(Environment $environment): array
     {
-        $from = trim($environment->get('MAIL_FROM_ADDRESS', '') ?? '');
-        $fromName = Email::oneLine($environment->get('MAIL_FROM_NAME', 'Paxofi Technologies') ?? 'Paxofi Technologies');
+        return [
+            'transport' => strtolower(trim($environment->get('MAIL_TRANSPORT', '') ?? '')),
+            'host' => trim($environment->get('MAIL_HOST', '') ?? ''),
+            'port' => trim($environment->get('MAIL_PORT', '') ?? ''),
+            'encryption' => strtolower(trim($environment->get('MAIL_ENCRYPTION', '') ?? '')),
+            'username' => trim($environment->get('MAIL_USERNAME', '') ?? ''),
+            'password' => $environment->get('MAIL_PASSWORD', '') ?? '',
+            'from_address' => trim($environment->get('MAIL_FROM_ADDRESS', '') ?? ''),
+            'from_name' => $environment->get('MAIL_FROM_NAME', '') ?? '',
+        ];
+    }
+
+    /**
+     * Email sending (D-016): transport "smtp" (the company mailbox, preferred)
+     * or "mail" (the server's sendmail). Off (null) when unset or incomplete.
+     *
+     * @param array<string, string> $values as from mailValues()
+     */
+    public static function buildMailTransport(array $values): ?MailTransport
+    {
+        $from = trim($values['from_address'] ?? '');
+        $fromName = Email::oneLine(($values['from_name'] ?? '') !== '' ? $values['from_name'] : 'Paxofi Technologies');
         if (!Email::isAddress($from)) {
             return null;
         }
+        $port = (int) ($values['port'] ?? 0);
+        $encryption = strtolower(trim($values['encryption'] ?? ''));
 
-        return match (strtolower(trim($environment->get('MAIL_TRANSPORT', '') ?? ''))) {
-            'smtp' => ($host = trim($environment->get('MAIL_HOST', '') ?? '')) === '' ? null : new SmtpTransport(
+        return match (strtolower(trim($values['transport'] ?? ''))) {
+            'smtp' => ($host = trim($values['host'] ?? '')) === '' ? null : new SmtpTransport(
                 $host,
-                $environment->integer('MAIL_PORT', 465) ?? 465,
-                in_array($encryption = strtolower(trim($environment->get('MAIL_ENCRYPTION', 'ssl') ?? 'ssl')), ['ssl', 'tls', 'none'], true) ? $encryption : 'ssl',
-                trim($environment->get('MAIL_USERNAME', '') ?? '') ?: null,
-                $environment->get('MAIL_PASSWORD', '') ?: null,
+                $port > 0 && $port <= 65535 ? $port : 465,
+                in_array($encryption, ['ssl', 'tls', 'none'], true) ? $encryption : 'ssl',
+                trim($values['username'] ?? '') ?: null,
+                ($values['password'] ?? '') !== '' ? $values['password'] : null,
                 $from,
                 $fromName,
             ),

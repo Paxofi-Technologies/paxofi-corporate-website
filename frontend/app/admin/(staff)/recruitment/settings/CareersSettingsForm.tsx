@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { can, useAdmin } from "@/components/admin/AdminContext";
 import { Field, FormStatus } from "@/components/admin/AdminForm";
 import { NoAccess } from "@/components/admin/StaffShell";
-import { AdminApiError, type CareersSettings, formatDay } from "@/lib/admin-api";
+import { AdminApiError, type CareerRoleAdmin, type CareersSettings, formatDay } from "@/lib/admin-api";
 
 const SOURCES = { staff: "set here", server: "from the server setting", none: "not set" } as const;
 
@@ -30,6 +30,8 @@ export default function CareersSettingsForm() {
   const [busy, setBusy] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [formKey, setFormKey] = useState(0);
+  const [roles, setRoles] = useState<CareerRoleAdmin[]>([]);
+  const [testRole, setTestRole] = useState("");
 
   const load = useCallback(() => {
     return request<Raw>("/careers-settings")
@@ -40,6 +42,14 @@ export default function CareersSettingsForm() {
   useEffect(() => {
     if (allowed) load();
   }, [allowed, load]);
+
+  // Roles for the "Open a test application" button (D-031); only published roles can take applications.
+  useEffect(() => {
+    if (!allowed || !can(user, "careers.edit")) return;
+    request<CareerRoleAdmin[]>("/career-roles")
+      .then((r) => setRoles(r.data.filter((role) => role.state === "published")))
+      .catch(() => setRoles([]));
+  }, [allowed, user, request]);
 
   if (!allowed) return <NoAccess title="Applications opening" />;
   if (error) return <FormStatus state="error" message={error} />;
@@ -164,6 +174,32 @@ export default function CareersSettingsForm() {
           <button type="button" className="button button--outline" onClick={createCode}>{settings.test_code.by_staff ? "Replace the test code" : "Create a test code"}</button>{" "}
           {settings.test_code.by_staff && <button type="button" className="button button--outline" onClick={removeCode}>Remove the test code</button>}
         </p>
+      </section>
+
+      <section aria-labelledby="test-application-title">
+        <h2 id="test-application-title" className="admin-card-title">Test application</h2>
+        <p className="admin-sub">
+          Opens the role on {settings.careers_site_url ?? "careers.paxofi.com"} in test mode, where you enter the test code and apply with your own email. It works before opening and after closing. The application is flagged as a test and left out of reports.
+        </p>
+        {!settings.test_code.set && <p className="admin-sub"><strong>Create a test code first</strong> (above): the form asks for it.</p>}
+        {roles.length === 0 ? (
+          <p className="admin-sub">No open roles to test. Publish a role under Recruitment → Edit the roles.</p>
+        ) : (
+          <p className="admin-inline-label">
+            <label>
+              <span className="visually-hidden">Role to test</span>
+              <select value={testRole} onChange={(e) => setTestRole(e.target.value)}>
+                <option value="">Choose a role</option>
+                {roles.map((role) => <option key={role.id} value={role.slug}>{role.title}</option>)}
+              </select>
+            </label>{" "}
+            {testRole ? (
+              <a className="button button--primary" href={`${(settings.careers_site_url ?? "https://careers.paxofi.com").replace(/\/+$/, "")}/roles/${encodeURIComponent(testRole)}?test`} target="_blank" rel="noopener noreferrer">Open a test application</a>
+            ) : (
+              <button type="button" className="button button--primary" disabled>Open a test application</button>
+            )}
+          </p>
+        )}
       </section>
     </>
   );
