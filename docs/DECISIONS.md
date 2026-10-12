@@ -513,3 +513,17 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Corporate Careers page text** defaults now name the three types, the hours and terms, the nine role families and the unpaid status. A published override under Content → Page text → Careers replaces them and must be checked.
 - **Delivered:** migration 021, `GET /api/v1/careers/status`, release 27, guide Step 10j, RB-19.
 - **Not chosen:** one position per role family with a type chosen on the form (it would hide which Fellow, Intern or Volunteer positions exist and break the "one role, one page" addresses); deleting participant records at 6 years automatically (the owner asked to keep them).
+
+## D-028 — Admin-controlled opening dates, and the PIF platform decisions of 12 Oct 2026 (12 Oct 2026)
+
+**Decision (CTO; approved by the owner on 12 Oct 2026):**
+
+- **Opening dates are set in the staff area.** Administrators set the day applications open, the last day for Cohort 1 and the staff test code under Recruitment → *Set when applications open*. A saved value wins; clearing it returns to the `CAREERS_*` server settings, which remain as defaults. The test code is shown once and only its SHA-256 hash is stored. Every change is audited (`careers_settings.*`). Migration 022.
+- **PIF platform on PCF.** The PIF platform is built on PCF in this repository as a new `Pif` module with its own site `pif.paxofi.com`. Launch Decision Pack Revision 5 is approved (PCF certification does not block this use; updates go through staging first).
+- **Build order.** Certificates and public verification in release 28, the Academy by 4 Dec, tasks and reviews before sprints start on 4 Jan.
+- **Cookies.** The no-cookie rule is relaxed: cookies are used where necessary. Strictly necessary cookies need only a notice; anything else needs consent first, and the privacy notices must say what is set.
+- **Video.** A free video service is used for Paxofi-made videos for now.
+- **PCF code.** Participants never write to PCF directly. Their code reaches it only on a branch reviewed and merged by a supervisor.
+- **Project classes.** Every project is a practice replica, a Paxofi project, a participant's own idea or a client project, each with its own gates before anything goes live. A lawyer reviews participant-owned ideas and client work before any starts.
+- **Records.** Participant records are kept for the record. DP-025 is amended to v1.2 ("kept as programme records after the engagement ends, reviewed at least every 6 years"), confirmed by the owner on 12 Oct 2026; the careers privacy notice follows. This resolves KI-002.
+- **Not chosen:** keeping dates only in `.env` (an owner edit and restart for each change).

@@ -79,7 +79,7 @@ export default function ApplicantPrivacy() {
           <h2>How long we keep it</h2>
           <ul>
             <li>If you are not selected, withdraw or decline an offer: your application, CV, notes and scores are deleted automatically 12 months after the application closes, or 12 months after its last update if it stays open. We keep it longer only if you join the talent pool by consent.</li>
-            <li>If you join as a Fellow, Intern or Volunteer: your record is kept for 6 years after your engagement ends, and then reviewed for deletion or anonymisation. Certificate verification details (your name, certificate number, programme and dates) are kept for as long as we offer certificate verification.</li>
+            <li>If you join as a Fellow, Intern or Volunteer: your record is kept as a programme record after your engagement ends and reviewed at least every 6 years. It is not deleted automatically, and you can still ask us to correct or delete it. Certificate verification details (your name, certificate number, programme and dates) are kept for as long as we offer certificate verification.</li>
             <li>Your IP address and browser user-agent are removed after 90 days.</li>
             <li>A CV uploaded without completing the application is deleted after one day.</li>
             <li>Server backups are replaced within 14 days, so deleted information leaves them by then.</li>

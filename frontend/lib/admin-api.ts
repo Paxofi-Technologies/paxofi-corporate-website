@@ -245,6 +245,22 @@ export const REVIEW_STATUSES: Record<ReviewStatus, { label: string; pill: string
 /** Redirects for retired pages (D-025). */
 export type RedirectItem = { id: string; from: string; to: string; note: string | null; created_by: string | null; created_at: string; updated_at: string };
 
+/** Applications opening (D-028): the day applications open, Cohort 1's last day and the staff test code. */
+export type CareersSettings = {
+  opens_from: string | null;
+  cohort1_closes: string | null;
+  server: { opens_from: string | null; cohort1_closes: string | null };
+  effective: {
+    opens_from: string | null;
+    cohort1_closes: string | null;
+    opens_from_source: "staff" | "server" | "none";
+    cohort1_closes_source: "staff" | "server" | "none";
+    applications_open: boolean;
+    cohort: string;
+  };
+  test_code: { set: boolean; by_staff: boolean; by_server: boolean };
+};
+
 /** "2027-04-30" as "30 Apr 2027". */
 export function formatDay(value: string | null | undefined): string {
   if (!value) return "—";

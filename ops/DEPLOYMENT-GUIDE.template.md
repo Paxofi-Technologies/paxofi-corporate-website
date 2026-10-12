@@ -277,7 +277,7 @@ From this release, careers.paxofi.com offers the three PIF engagement types (Fel
         CAREERS_COHORT1_CLOSES=2026-11-15
         CAREERS_TEST_CODE=<your secret test code>
 
-    Until the opening date, careers.paxofi.com shows "Applications open on Monday 2 November 2026" and the API refuses applications. From 16 November the site says later applications go to the talent pool and Cohort 2. Without `CAREERS_APPLICATIONS_OPEN_FROM`, applications are open.
+    Until the opening date, careers.paxofi.com shows "Applications open on Monday 2 November 2026" and the API refuses applications. From 16 November the site says later applications go to the talent pool and Cohort 2. Without `CAREERS_APPLICATIONS_OPEN_FROM`, applications are open. These settings are only defaults: after release 28 an administrator sets or changes the opening day, the Cohort 1 last day and the test code in the staff area (Recruitment → Set when applications open), with no `.env` edit or restart.
 2. Deploy as usual (Steps 2 to 4, and the same website package for `paxofi-careers-website`, Step 10d). Restart both Node.js apps.
 3. Open `https://careers.paxofi.com`: the nine role families show, with Fellow, Intern and Volunteer links, and the opening notice.
 4. **Gate 1 test (one application per engagement type, then ideally all 15 positions):** open `https://careers.paxofi.com/roles/software-engineer-intern?test`, enter the test code, and apply with your own email (for example `you+intern@gmail.com`). You should receive the acknowledgement, and `RECRUITMENT_ALERT_TO` an alert starting `[TEST]`. In **Recruitment**, the application shows *Test application* and is left out of the report. Erase each test application afterwards.
