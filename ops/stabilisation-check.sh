@@ -5,15 +5,18 @@
 #
 #   bash ops/stabilisation-check.sh            # live
 #   CORPORATE_URL=https://staging.corporate.paxofi.com API_URL=https://api-staging.paxofi.com \
-#     CAREERS_URL= bash ops/stabilisation-check.sh   # staging (needs STAGING_AUTH=user:password)
+#     CAREERS_URL= REDIRECT_FROM= bash ops/stabilisation-check.sh   # staging (needs STAGING_AUTH=user:password)
 #
 # Checks: both sites report the same release; API health and readiness; the
-# main pages answer 200; security headers; TLS certificates valid for more than
+# main pages answer 200; www and the old corporate address redirect (301); security headers; TLS certificates valid for more than
 # 14 days; homepage response time. Prints one line per check and exits 1 if
 # any check fails. Needs bash, curl and openssl.
 set -uo pipefail
 
-CORPORATE="${CORPORATE_URL-https://corporate.paxofi.com}"
+CORPORATE="${CORPORATE_URL-https://paxofi.com}"
+# Other names of the corporate site that must redirect to it permanently (D-033).
+# Empty for staging: REDIRECT_FROM= bash ops/stabilisation-check.sh
+REDIRECT_FROM="${REDIRECT_FROM-https://www.paxofi.com https://corporate.paxofi.com}"
 CAREERS="${CAREERS_URL-https://careers.paxofi.com}"
 API="${API_URL-https://api.paxofi.com}"
 AUTH=(); [ -n "${STAGING_AUTH:-}" ] && AUTH=(-u "$STAGING_AUTH")
@@ -62,6 +65,17 @@ done
 if [ -n "$CAREERS" ]; then
   code="$(status "$CAREERS/")"
   [ "$code" = 200 ] && pass "careers /" || fail "careers / answered $code"
+fi
+
+if [ -n "$REDIRECT_FROM" ]; then
+  echo "Redirects to $CORPORATE (D-033)"
+  for from in $REDIRECT_FROM; do
+    result="$(get -o /dev/null -w '%{http_code} %{redirect_url}' "$from/about?x=1" 2>/dev/null)"
+    case "$result" in
+      "301 $CORPORATE/about?x=1"|"308 $CORPORATE/about?x=1") pass "$from → $CORPORATE (path kept)" ;;
+      *) fail "$from/about?x=1 answered ${result:-000}, expected 301 to $CORPORATE/about?x=1 (guide Step 10m)" ;;
+    esac
+  done
 fi
 
 echo "Security headers (corporate /)"

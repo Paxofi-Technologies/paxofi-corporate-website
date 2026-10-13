@@ -21,9 +21,12 @@ export const SHARE_IMAGE = {
   alt: "Paxofi Technologies — Technology for a Brighter Tomorrow.",
 };
 
-/** Canonical site origin without a trailing slash. Inlined at build time. */
+/**
+ * Canonical site origin without a trailing slash (D-033: https://paxofi.com).
+ * Read when the server runs, from the Node app's NEXT_PUBLIC_SITE_URL, not at build time.
+ */
 export function siteUrl(env: Record<string, string | undefined> = process.env): string {
-  return (env.NEXT_PUBLIC_SITE_URL?.trim() || "https://corporate.paxofi.com").replace(/\/+$/, "");
+  return (env.NEXT_PUBLIC_SITE_URL?.trim() || "https://paxofi.com").replace(/\/+$/, "");
 }
 
 /** Per-page metadata: title, description, canonical URL and Open Graph/Twitter cards. */

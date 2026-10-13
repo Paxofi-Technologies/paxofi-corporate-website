@@ -1,12 +1,12 @@
 # Operational runbooks — Paxofi Corporate Website
 
-For whoever operates `corporate.paxofi.com` and `api.paxofi.com` on the cPanel account `paxoalhu`. Everything here uses cPanel (File Manager, Setup Node.js App, phpMyAdmin, SSL/TLS Status); no terminal is needed.
+For whoever operates `paxofi.com` (the corporate website; `corporate.paxofi.com` until 13 Oct 2026, D-033), `careers.paxofi.com` and `api.paxofi.com` on the cPanel account `paxoalhu`. Everything here uses cPanel (File Manager, Setup Node.js App, phpMyAdmin, SSL/TLS Status); no terminal is needed.
 
 ## At a glance
 
 | Component | Where | Health check |
 |---|---|---|
-| Website (Next.js, Node 22) | `/home/paxoalhu/paxofi-corporate-website` (app root), document root `/home/paxoalhu/corporate.paxofi.com` | `https://corporate.paxofi.com/release.txt` shows the deployed release |
+| Website (Next.js, Node 22) | `/home/paxoalhu/paxofi-corporate-website` (app root), document root `/home/paxoalhu/public_html` (paxofi.com, D-033) | `https://paxofi.com/release.txt` shows the deployed release |
 | API (PHP 8.4, PCF) | `/home/paxoalhu/paxofi-api-runtime/backend` (document root `…/backend/public`) | `https://api.paxofi.com/api/v1/health` → `"status":"ok"`; `/readiness` → `"database":true` |
 | Database (MariaDB 11.4) | `paxoalhu_corporate` | `/readiness`; phpMyAdmin |
 | Secrets | `paxofi-api-runtime/backend/.env` (permissions 600) | never in Git, never in a public folder |
@@ -16,7 +16,7 @@ Every request to the API returns an `X-Request-Id` header and a `request_id` in 
 ## Daily / weekly checks (5 minutes, weekly)
 
 1. Open `/release.txt`, `/api/v1/health` and `/api/v1/readiness`.
-2. Staff area https://corporate.paxofi.com/admin → **Enquiries**: nothing left in *New* for more than 2 business days (owner: Business Development). Administrators: glance at **Audit log** → *Sign-ins* for repeated failures.
+2. Staff area https://paxofi.com/admin → **Enquiries**: nothing left in *New* for more than 2 business days (owner: Business Development). Administrators: glance at **Audit log** → *Sign-ins* for repeated failures.
 3. cPanel → **SSL/TLS Status**: both domains show a valid certificate (AutoSSL renews automatically; check it did).
 4. cPanel → **Disk Usage**: no sudden growth (logs, old release folders).
 5. Delete `…-old-<version>` folders and `release-<version>` folders older than one week.
@@ -37,14 +37,14 @@ Website or API code: rename the new folder to `…-failed`, rename `…-old-<ver
 |---|---|
 | *503* / *Incomplete response* | Setup Node.js App → **Restart**. Check `paxofi-corporate-website/stderr.log`. Startup file must be `app.js`, Node 22. |
 | Old content after a deployment | `/release.txt` shows the old version → the new folder is probably nested inside the old one (see guide troubleshooting). `/release.txt` is new but pages are old → server cache: guide section *One-time: stop the server cache*. |
-| File list, 403 or a downloaded file | Document root of `corporate.paxofi.com` must be `/corporate.paxofi.com`; then Setup Node.js App → **Edit → Save → Restart**. |
+| File list, 403 or a downloaded file | Document root of `paxofi.com` must be `/public_html` (never the app folder); then Setup Node.js App → **Edit → Save → Restart**. |
 | "Not secure" in the browser | RB-6. |
 
 ## RB-4 Contact form not working
 
 1. Try the form in a private window and press F12 → Console.
-2. Address bar shows **Not secure** / the console's CORS message names origin `http://corporate.paxofi.com` → the site is served without HTTPS: RB-6 (certificate) and cPanel → Domains → **Force HTTPS Redirect** on. Never add the `http://` origin to CORS (enquiries would travel unencrypted). (UAT defect DEF-001, 2 Oct 2026.)
-3. Other **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must be exactly `https://corporate.paxofi.com`.
+2. Address bar shows **Not secure** / the console's CORS message names origin `http://paxofi.com` → the site is served without HTTPS: RB-6 (certificate) and cPanel → Domains → **Force HTTPS Redirect** on. Never add the `http://` origin to CORS (enquiries would travel unencrypted). (UAT defect DEF-001, 2 Oct 2026.)
+3. Other **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must list exactly `https://paxofi.com,https://careers.paxofi.com` (plus `https://corporate.paxofi.com` during the move, D-033).
 4. Other network error → open `/api/v1/health` and `/readiness`. If the API is down, RB-5.
 5. *"You've sent several enquiries…"* → the rate limit (`CONTACT_RATE_LIMIT_MAX` per `CONTACT_RATE_LIMIT_WINDOW_MINUTES`, per email or IP) is working as designed; wait or raise the limit in `.env`.
 6. The form posts to `API_BASE_URL` (Setup Node.js App → environment variables); after changing it, **Restart**.
@@ -59,7 +59,7 @@ Website or API code: rename the new folder to `…-failed`, rename `…-old-<ver
 
 ## RB-6 TLS certificate problem
 
-cPanel → **SSL/TLS Status** → select `corporate.paxofi.com`, `www.corporate.paxofi.com`, `api.paxofi.com` → **Run AutoSSL**. If AutoSSL reports a DNS error, the domain's A record must point to this server's IP. The website sends HSTS, so browsers refuse plain HTTP once a valid certificate has been seen — fix certificates quickly.
+cPanel → **SSL/TLS Status** → select `paxofi.com`, `www.paxofi.com`, `careers.paxofi.com`, `api.paxofi.com` and `corporate.paxofi.com` (kept for its redirect) → **Run AutoSSL**. If AutoSSL reports a DNS error, the domain's A record must point to this server's IP. The website sends HSTS, so browsers refuse plain HTTP once a valid certificate has been seen — fix certificates quickly.
 
 ## RB-7 Backups and restore
 
@@ -98,7 +98,7 @@ Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit ev
 
 ## RB-11 Staff area access (/admin)
 
-Staff sign in at `https://corporate.paxofi.com/admin` (D-009). Roles: **Administrator** (enquiries, users, audit log) and **Business Development** (enquiries).
+Staff sign in at `https://paxofi.com/admin` (D-009). Roles: **Administrator** (enquiries, users, audit log) and **Business Development** (enquiries).
 
 - **First administrator:** guide Step 7 (one-time `ADMIN_SETUP_TOKEN`; it only works while no accounts exist). Keep **two** administrators so one can always reset the other.
 - **The only administrator has lost their password:** engineering generates a password hash for a temporary password and sends the operator one SQL statement (`UPDATE users SET password_hash = '…' WHERE email = '…';`) to run in phpMyAdmin → SQL; the administrator then signs in and changes it at *My account*. Never paste a plain password into the database.
@@ -164,16 +164,33 @@ Hosting-level problems (server down, MariaDB unavailable, LiteSpeed cache purge,
 
 ## Monitoring (UptimeRobot)
 
-Owner decision 2 Oct 2026: UptimeRobot (free plan, 5-minute checks, email alerts). Set up once at uptimerobot.com → **Add New Monitor**:
+Owner decision 2 Oct 2026: UptimeRobot (free plan, 5-minute checks, email alerts). From the move to paxofi.com (D-033, 13 Oct 2026) the monitors are:
 
 | # | Monitor type | Friendly name | URL | Setting |
 |---|---|---|---|---|
-| 1 | HTTP(s) | Paxofi website | `https://corporate.paxofi.com/` | Interval 5 min |
-| 2 | HTTP(s) | Paxofi website release | `https://corporate.paxofi.com/release.txt` | Interval 5 min (a 404 here means the Node.js app is not serving) |
-| 3 | Keyword | Paxofi API readiness | `https://api.paxofi.com/api/v1/readiness` | Keyword `"database":true` → alert when **not exists** |
-| 4 | HTTP(s) | Paxofi API health | `https://api.paxofi.com/api/v1/health` | Interval 5 min |
+| 1 | HTTP(s) | Paxofi website | `https://paxofi.com/` | Interval 5 min |
+| 2 | HTTP(s) | Paxofi website release | `https://paxofi.com/release.txt` | Interval 5 min (a 404 here means the Node.js app is not serving) |
+| 3 | HTTP(s) | Paxofi careers site | `https://careers.paxofi.com/` | Interval 5 min |
+| 4 | HTTP(s) | Paxofi careers release | `https://careers.paxofi.com/release.txt` | Interval 5 min (the careers Node.js app) |
+| 5 | Keyword | Paxofi API readiness | `https://api.paxofi.com/api/v1/readiness` | Keyword `"database":true` → alert when **not exists** |
+| 6 | HTTP(s) | Paxofi API health | `https://api.paxofi.com/api/v1/health` | Interval 5 min |
+| 7 | HTTP(s) | Paxofi old address | `https://corporate.paxofi.com/` | Interval 5 min. UptimeRobot follows the 301 to paxofi.com, so this alerts if the redirect or its certificate breaks. Optional. |
 
-Alert contact: the operations email (verify it in **My Settings → Alert Contacts**) on all four monitors. An alert starts the matching runbook: website monitors → RB-3, API monitors → RB-5, any certificate error → RB-6. Review the 30-day uptime report monthly (CW-OPS2-002/004). The readiness check touches the database once per 5 minutes, which is negligible.
+**Changing the existing monitors (13 Oct 2026):** edit *corporate.paxofi.com* → URL `https://paxofi.com/`, name *Paxofi website*; edit *Paxofi website release* → URL `https://paxofi.com/release.txt`; the old *paxofi.com* monitor (Coming soon) becomes *Paxofi careers site* with URL `https://careers.paxofi.com/`; add monitors 4 and 7. Keep the API monitors as they are.
+
+Alert contact: the operations email (verify it in **My Settings → Alert Contacts**) on every monitor. An alert starts the matching runbook: website and careers monitors → RB-3, API monitors → RB-5, any certificate error → RB-6. Review the 30-day uptime report monthly (CW-OPS2-002/004). The readiness check touches the database once per 5 minutes, which is negligible. `ops/stabilisation-check.sh` adds what UptimeRobot does not check: security headers, certificate expiry, both apps on the same release, and the redirects.
+
+## Cron jobs
+
+cPanel → **Cron Jobs**. Set **Cron Email** to the operations address. All three run the API (`paxofi-api-runtime`), so they do not change when the website moves. If `/usr/local/bin/php` is not PHP 8.4 on the server, use `/opt/cpanel/ea-php84/root/usr/bin/php`.
+
+| Job | Schedule (cron) | Command | Log to check | Runbook |
+|---|---|---|---|---|
+| Retention clean-up | `17 3 * * *` (daily 03:17) | `/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/purge-retention.php >> /home/paxoalhu/logs/purge-retention.log 2>&1` | one line per day | RB-10 |
+| Send queued email (and the weekly content-review reminder) | `*/5 * * * *` (every 5 minutes) | `/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/send-mail.php >> /home/paxoalhu/logs/send-mail.log 2>&1` | staff area → **Email** shows nothing waiting | RB-17 |
+| Nightly backup | `41 2 * * *` (daily 02:41) | `/usr/local/bin/php /home/paxoalhu/paxofi-api-runtime/backend/bin/backup.php >> /home/paxoalhu/logs/backup.log 2>&1` | a new database and media file in `paxofi-backups/` each night | RB-18 |
+
+The folder `/home/paxoalhu/logs` must exist. `bin/migrate.php` is run by hand during a release, never by cron. Staging has no cron jobs.
 
 ## GitHub repository secrets
 
@@ -248,7 +265,7 @@ Applications from careers.paxofi.com are handled in the staff area under **Recru
 - **New HR staff:** **Users** → add with the role **Human Resources**. When someone leaves, **disable** their account the same day.
 - **A candidate says they did not get the acknowledgement:** check the spam folder, then `email_outbox` in phpMyAdmin (RB-17). The reference is on the application in the staff area.
 - **Opening or closing a role:** **Recruitment** → *Edit the roles on careers.paxofi.com*. Closing hides the role; its applications stay.
-- **careers.paxofi.com shows "Page not found" for a new page, or applications fail with "We could not send your application":** open https://careers.paxofi.com/release.txt. If it is older than https://corporate.paxofi.com/release.txt, the careers app was not updated: deploy the same website ZIP to `paxofi-careers-website` (guide Step 4, item 6) and restart it.
+- **careers.paxofi.com shows "Page not found" for a new page, or applications fail with "We could not send your application":** open https://careers.paxofi.com/release.txt. If it is older than https://paxofi.com/release.txt, the careers app was not updated: deploy the same website ZIP to `paxofi-careers-website` (guide Step 4, item 6) and restart it.
 - **Careers site down:** `https://careers.paxofi.com` is its own Node.js app (`paxofi-careers-website`). Restart it in **Setup Node.js App**; check its `API_BASE_URL` and that `SITE_SECTION=careers`.
 - **Campaign links (D-020):** give every post its own link, so the report shows what works. Use lower-case words and dashes:
   - LinkedIn post: `https://careers.paxofi.com/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026`
