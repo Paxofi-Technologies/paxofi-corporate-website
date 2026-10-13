@@ -594,3 +594,13 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **GitGuardian alert of 11 Oct 2026 ("SMTP credentials"):** the only SMTP credential in the repository was a test fixture (a made-up password for a fake mail server on 127.0.0.1 in `SmtpTransportTest`). It is now generated at run time. No real mailbox password has been in the repository; real passwords live only in `backend/.env` on the server or, from this release, encrypted in the database.
 - **Not chosen:** storing the password in clear in the database (a database copy would reveal it); reading the settings on every request (health checks and pages that do not send email stay database-free).
 - **Follow-up (12 Oct 2026):** a failed SSL handshake (for example the server's certificate is for another name) used to show "Could not connect … ()" with nothing in the brackets. The Email page now shows OpenSSL's reason, and a "Send queued emails now" run in which emails fail is shown in red.
+
+## D-032 — PIF 2026 campaign dates and reviewers (13 Oct 2026)
+
+**Decision (owner, 13 Oct 2026, on the proposals in `PIF-CAMPAIGN-PLAN.md` §6):**
+
+- **Dates (Lagos):** Gate 1 Fri 30 Oct; applications open Mon 2 Nov (fallback Mon 9 Nov if Gate 1 checks 1–10 fail); last day for Cohort 1 Sun 15 Nov; applications stay open as Cohort 2 until **Sun 29 Nov** and then close (*Last day to apply*, D-030); evidence review by Fri 20 Nov; interviews 23–27 Nov; decisions sent by Tue 1 Dec; agreements signed by Fri 4 Dec; Cohort 1 starts Mon 7 Dec.
+- **Reviewers:** Samuel Adeniji, Opeyemi, Michael and Awwal for now, with the Human Resources role and two-factor sign-in. Two reviewers per Fellow and Intern application, one per Volunteer application (D-029 allows up to 5).
+- **Channels:** LinkedIn, X, Instagram and WhatsApp groups, each post with its own tracked link (D-020); every partner school gets its own `utm_source`.
+- **Tracked in Asana** as subtasks of *[LAUNCH] Careers site launch and recruitment campaign go-ahead*.
+

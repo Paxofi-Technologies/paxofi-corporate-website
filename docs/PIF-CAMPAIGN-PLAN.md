@@ -14,6 +14,11 @@ Everything the campaign needs is built and live, and the owner tested the full f
 | **Fri 30 Oct** | **Gate 1:** go or wait, using the checklist in §3. A test application on the day is part of it | Owner, HR, Engineering |
 | **Mon 2 Nov** | **Applications open** (fallback Mon 9 Nov if Gate 1 says wait). Campaign posts go out | Business Development |
 | Sun 15 Nov | Last day for Cohort 1. Later applications are labelled *Cohort 2* (talent pool, with consent) | — |
+| Fri 20 Nov | Evidence review complete (Cohort 1) | Reviewers |
+| Mon 23 – Fri 27 Nov | Interviews | Reviewers |
+| **Sun 29 Nov** | **Applications close** (set in advance as *Last day to apply*) | — |
+| Tue 1 Dec | Decisions sent | HR |
+| Fri 4 Dec | Agreements signed | HR |
 | Mon 7 Dec | Cohort 1 starts | — |
 
 Review targets during the campaign: every new application moves out of *Applied* within 2 working days; the evidence review within 2 weeks (RB-19).
@@ -29,7 +34,9 @@ Staff area → Recruitment → *Set when applications open* (administrators):
 3. **Reopen applications.** This clears the "last day to apply". The careers site now says applications open on Monday 2 November.
 4. Check https://careers.paxofi.com: every role says it opens on 2 November and the form is not shown.
 5. **Staff test code:** create a new one for Gate 1 if the old one was shared widely. It is shown once; give it only to the people testing.
-6. Leave **Last day to apply** empty unless you decide on a final close date (decision D1 in §6). If Gate 1 says wait, change the opening day to Mon 9 Nov; nothing else changes.
+6. **Last day to apply:** Sun 29 Nov 2026 (decision D1). Set it now; applications close by themselves after that day. If Gate 1 says wait, change the opening day to Mon 9 Nov; nothing else changes.
+
+**Check on 13 Oct:** opening day Mon 2 Nov is set, but *Last day to apply* was Thu 15 Oct 2026 (applications would close before they open) and *Last day for Cohort 1* was empty. Correct both as in steps 2 and 6. The API then reports `opens_on` Monday 2 November, `cohort1_closes_on` Sunday 15 November and `closes_on` Sunday 29 November (`https://api.paxofi.com/api/v1/careers/status`).
 
 Evidence query 13 in `ops/stabilisation-evidence.sql` shows the saved values.
 
@@ -71,19 +78,21 @@ Every post gets its own link, so the recruitment report shows which channels bri
 
 ## 5. Reviewing during the campaign
 
-- **Reviewers:** administrators and Human Resources staff. Name them before Gate 1; each needs an account with the Human Resources role and two-factor on (RB-11).
+- **Reviewers:** Samuel Adeniji, Opeyemi, Michael and Awwal (decision D3). Two per Fellow and Intern application, one per Volunteer application; each needs an account with the Human Resources role and two-factor on (RB-11).
 - **Assign** up to 5 reviewers per application; once assigned, only they score. Anyone who knows a candidate uses **I have a conflict of interest** (D-029).
 - **Daily** (10 minutes): Recruitment → filter *Applied* → move each to *Screening*. Staff area → **Email**: nothing waiting.
 - **Weekly:** Recruitment → report: overdue applications first; which channels and links work. Share the counts (no names) with the owner.
 - **Scorecards:** Fellows progress at 21/35 and are selected at 24/35; Interns 18/35 and 21/35; Volunteers have a short conversation, selected at 15/25 (RB-19).
 - **After 15 Nov:** candidates not selected may be offered the talent pool, only with their consent (RB-19).
 
-## 6. Decisions needed from the owner
+## 6. Owner decisions (13 Oct 2026)
 
-| # | Decision | Suggested |
+| # | Decision | Decided |
 |---|---|---|
-| D1 | Do applications close completely at some point, or stay open after 15 Nov for Cohort 2? | Stay open to Sun 29 Nov, labelled Cohort 2, then **Close applications now** |
-| D2 | Review deadlines between 15 Nov and the 7 Dec start | Evidence review by Fri 20 Nov; interviews 23–27 Nov; decisions sent by Tue 1 Dec; agreements signed by Fri 4 Dec |
-| D3 | Reviewers (names) and the number per application | Two per application for Fellows and Interns, one for Volunteers |
-| D4 | Channels and partner schools | LinkedIn, X, Instagram, WhatsApp groups; partner schools listed in PKDMS with their own `utm_source` |
-| D5 | Fallback trigger for Mon 9 Nov | Any Gate 1 check 1–10 failing on 30 Oct |
+| D1 | After 15 Nov | Applications stay open to **Sun 29 Nov**, labelled Cohort 2, then close (set in advance as *Last day to apply*) |
+| D2 | Review deadlines | Evidence review by **Fri 20 Nov**; interviews **23–27 Nov**; decisions sent by **Tue 1 Dec**; agreements signed by **Fri 4 Dec** |
+| D3 | Reviewers | **Samuel Adeniji, Opeyemi, Michael and Awwal**; two per Fellow and Intern application, one per Volunteer application |
+| D4 | Channels | LinkedIn, X, Instagram, WhatsApp groups; each partner school gets its own `utm_source` link |
+| D5 | Fallback | Mon 9 Nov if any Gate 1 check 1–10 fails on 30 Oct |
+
+Tasks: Asana → [LAUNCH] Careers site launch and recruitment campaign go-ahead → 11 subtasks with these dates.
