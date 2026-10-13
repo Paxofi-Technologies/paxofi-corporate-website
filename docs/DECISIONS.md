@@ -604,3 +604,15 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Channels:** LinkedIn, X, Instagram and WhatsApp groups, each post with its own tracked link (D-020); every partner school gets its own `utm_source`.
 - **Tracked in Asana** as subtasks of *[LAUNCH] Careers site launch and recruitment campaign go-ahead*.
 
+## D-033 — The corporate website moves to paxofi.com (13 Oct 2026)
+
+**Decision (owner, 13 Oct 2026: "move the corporate website now to go live on the main domain paxofi.com … remove the coming soon site"):**
+
+- **One address:** the corporate website and its staff area are served at **https://paxofi.com** (`/admin`). The Coming soon page is retired (a copy is kept in `coming-soon-backup`).
+- **Redirects (301, path and query kept):** `www.paxofi.com` and the old `corporate.paxofi.com`. The app does this for the host names in `REDIRECT_HOSTS` (by default only `www.<site>`, so deploying a release never redirects a host by surprise); cPanel's redirect covers `corporate.paxofi.com` once the app has moved. Staging, careers and the API keep their addresses.
+- **The site address is read when the app starts** (`NEXT_PUBLIC_SITE_URL` on each Node.js app), not at build time as `ops/cpanel-deployment.md` used to say. Its default is now `https://paxofi.com`, as are the API's fallback for email links and `security.txt`.
+- **API:** `CORS_ALLOWED_ORIGINS` lists `https://paxofi.com` and `https://careers.paxofi.com`, and keeps `https://corporate.paxofi.com` during the transition; `STAFF_AREA_URL=https://paxofi.com`. The staff session cookie is on api.paxofi.com, which is the same site as paxofi.com, so sign-in keeps working.
+- **Monitoring and checks:** UptimeRobot monitors are repointed and careers is added (RUNBOOKS → Monitoring); `ops/stabilisation-check.sh` checks paxofi.com and both redirects. Cron jobs are unchanged and are listed in RUNBOOKS → Cron jobs.
+- **Delivered:** guide Step 10m (with undo), D-033.
+- **Not chosen:** a Cloudflare redirect rule for `corporate.paxofi.com` (its DNS record is DNS-only by design, D-024, and the cPanel redirect keeps its certificate valid); serving the site on both addresses (duplicate content for search engines).
+

@@ -55,7 +55,7 @@ final class MailSettings
 
     public static function disabled(): self
     {
-        return new self(false, [], [], 'https://corporate.paxofi.com');
+        return new self(false, [], [], 'https://paxofi.com');
     }
 
     public function staffLink(string $path): string

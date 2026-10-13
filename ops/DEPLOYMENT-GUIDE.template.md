@@ -266,6 +266,48 @@ BACKUP_KEEP_DAYS=14
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
+## Step 10m — One time: move the corporate website to paxofi.com (about 45 minutes)
+
+From this release the corporate website's address is **https://paxofi.com** (decision D-033). The "Coming soon" page is removed, `www.paxofi.com` and the old `corporate.paxofi.com` redirect permanently to the same page on paxofi.com, and the staff area becomes **https://paxofi.com/admin**. careers.paxofi.com, api.paxofi.com and staging do not move. Do it in a quiet hour, after deploying this release (Steps 1–5) to the API and **both** Node.js apps.
+
+**A. Keep a copy of the Coming soon page.** cPanel → **File Manager** → `public_html` (the document root of paxofi.com; check it under **Domains**). Select everything except `.well-known` and `cgi-bin` → **Compress** → download the zip, then **Move** the same files to a new folder `/home/paxoalhu/coming-soon-backup`. `public_html` is now empty apart from `.well-known` and `cgi-bin`. It must stay a separate folder from the app folder `paxofi-corporate-website` (Step 0 rule).
+
+**B. Certificates.** cPanel → **SSL/TLS Status**: `paxofi.com` and `www.paxofi.com` must show a valid certificate (select them → **Run AutoSSL** if not). Today `www.paxofi.com` answers Cloudflare error 525, which means its certificate on the server is missing. Keep `corporate.paxofi.com` valid too: its redirect needs it. **Domains** → **Force HTTPS Redirect** on for `paxofi.com`. **Cloudflare** → SSL/TLS → **Full (strict)** (never *Flexible*, RB-23); `paxofi.com` and `www` stay proxied (orange cloud); `mail` stays DNS only.
+
+**C. API settings.** File Manager → `paxofi-api-runtime/backend/.env` → edit two lines, then save:
+
+```
+CORS_ALLOWED_ORIGINS=https://paxofi.com,https://careers.paxofi.com,https://corporate.paxofi.com
+STAFF_AREA_URL=https://paxofi.com
+```
+
+Keep `https://corporate.paxofi.com` in the list for the first weeks, so pages still open under the old address keep working and its visits are not counted as outside referrals. No restart is needed.
+
+**D. Move the website app.** cPanel → **Setup Node.js App** → the corporate app (`paxofi-corporate-website`) → **Edit**:
+1. **Application URL:** choose `paxofi.com` and leave the path empty.
+2. **Environment variables**, add:
+   - `NEXT_PUBLIC_SITE_URL` = `https://paxofi.com` (canonical addresses, sitemap, robots, share links: read when the app starts)
+   - `REDIRECT_HOSTS` = `www.paxofi.com,corporate.paxofi.com`
+3. **Save**, then **Restart**. cPanel writes the app's routing into `public_html/.htaccess`. If `/home/paxoalhu/corporate.paxofi.com/.htaccess` still has `Passenger` lines, delete those lines.
+
+**E. Careers app.** **Setup Node.js App** → `paxofi-careers-website` → **Edit** → add `NEXT_PUBLIC_SITE_URL` = `https://paxofi.com` (its "paxofi.com" links point there) → **Save** → **Restart**.
+
+**F. Redirect the old address.** cPanel → **Domains** → **Redirects** → **Add Redirect**: type **Permanent (301)**; `corporate.paxofi.com`, path `/` (empty); redirects to `https://paxofi.com/`; choose **Redirect with or without www**; tick **Wild Card Redirect** (keeps the page path) → **Add**.
+
+**G. Check.**
+1. `bash ops/stabilisation-check.sh` from any computer: "all checks passed" or warnings only. It now checks that `https://www.paxofi.com/about` and `https://corporate.paxofi.com/about` both answer 301 to `https://paxofi.com/about`.
+2. Open https://paxofi.com in a private window: the website, not Coming soon. `https://paxofi.com/release.txt` shows this release. View the page source: `<link rel="canonical" href="https://paxofi.com/`.
+3. Sign in at **https://paxofi.com/admin** (bookmark it). Save any small change (for example a draft) to prove staff writes work. If you see "This request must come from the Paxofi website", step C is missing.
+4. Send a test enquiry from https://paxofi.com/contact; the alert email's link opens https://paxofi.com/admin/enquiries/….
+5. Staff area → **Email** → **Send me a test email**.
+6. https://careers.paxofi.com: the "paxofi.com" link in the header and footer goes to https://paxofi.com.
+
+**H. Search engines (10 minutes).** Google Search Console → add the property `https://paxofi.com` (verify by DNS TXT in Cloudflare) → **Sitemaps** → submit `https://paxofi.com/sitemap.xml`. In the old `corporate.paxofi.com` property: **Settings → Change of address** → `paxofi.com`. Do the same in Bing Webmaster Tools if used.
+
+**I. Monitoring.** Update UptimeRobot as in RUNBOOKS → *Monitoring (UptimeRobot)*. Cron jobs do not change (they run the API, not the website): RUNBOOKS → *Cron jobs*.
+
+**Undo (if something is wrong and cannot be fixed quickly):** delete the redirect (F); **Setup Node.js App** → corporate app → **Application URL** back to `corporate.paxofi.com`, remove `REDIRECT_HOSTS`, set `NEXT_PUBLIC_SITE_URL` = `https://corporate.paxofi.com` → **Save** → **Restart**; move the Coming soon files back into `public_html`; set `STAFF_AREA_URL=https://corporate.paxofi.com` in the API `.env`.
+
 ## Step 10l — Email page and test applications (no settings to add, about 5 minutes)
 
 From this release the staff area has an **Email** page (administrators) and a **Test application** button under Recruitment → *Set when applications open* (decision D-031, RB-17). The database upgrade (migration 024) adds the table for SMTP settings saved in the staff area.

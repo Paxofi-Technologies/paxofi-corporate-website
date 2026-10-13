@@ -31,11 +31,11 @@ Release source:
 2. **API environment.** Create `paxofi-api-runtime/backend/.env` from the repo's `.env.example`, `chmod 600`:
    - `APP_ENV=production`
    - `DB_HOST`, `DB_PORT`, `DB_DATABASE=paxoalhu_corporate`, `DB_USERNAME`, `DB_PASSWORD`
-   - `CORS_ALLOWED_ORIGINS=https://corporate.paxofi.com` (every live frontend origin, comma-separated; without it browsers block the contact form)
+   - `CORS_ALLOWED_ORIGINS=https://paxofi.com` (every live frontend origin, comma-separated; without it browsers block the contact form)
 3. **Frontend environment.** Create `paxofi-corporate-website/.env.production`, `chmod 600`:
-   - `NEXT_PUBLIC_SITE_URL=https://corporate.paxofi.com`
-   - `NEXT_PUBLIC_API_URL=https://<api-domain>/api/v1` (the API **base**; the form posts to `{base}/forms/contact/submit`). Next.js inlines these at **build** time, so the deploy script rebuilds after any change.
-4. **Application Manager.** Application root `paxofi-corporate-website`, Node.js 22, startup file `app.js`, domain `corporate.paxofi.com`.
+   - `NEXT_PUBLIC_SITE_URL=https://paxofi.com`
+   - `NEXT_PUBLIC_API_URL=https://<api-domain>/api/v1` (the API **base**; the form posts to `{base}/forms/contact/submit`). Next.js inlines `NEXT_PUBLIC_API_URL` at **build** time, so the deploy script rebuilds after any change; `NEXT_PUBLIC_SITE_URL` is read when the app starts (D-033).
+4. **Application Manager.** Application root `paxofi-corporate-website`, Node.js 22, startup file `app.js`, domain `paxofi.com` (D-033; before 13 Oct 2026 `corporate.paxofi.com`).
 5. **API domain.** Document root `paxofi-api-runtime/backend/public`, PHP 8.4 (MultiPHP Manager), TLS enabled.
 
 ## Deploying

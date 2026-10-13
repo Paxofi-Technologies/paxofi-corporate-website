@@ -70,7 +70,7 @@ describe("industries", () => {
     await page.goto(`${BASE}/industries/education`);
     assert.equal(await page.locator("h1").textContent(), "Education");
     assert.equal(await page.title(), "Education | Paxofi Technologies");
-    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://corporate.paxofi.com/industries/education");
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://paxofi.com/industries/education");
     assert.equal(await page.locator(".industry-detail .prose p").count(), 2, "two paragraphs");
     assert.ok(await page.getByText("<script>window.hacked = true</script>", { exact: false }).isVisible(), "text stays text");
     assert.equal(await page.evaluate(() => window.hacked), undefined);

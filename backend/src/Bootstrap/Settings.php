@@ -56,7 +56,7 @@ final readonly class Settings
                 enabled: $transport !== null,
                 enquiryAlertTo: Email::addressList($environment->get('ENQUIRY_ALERT_TO', '')),
                 errorAlertTo: Email::addressList($environment->get('ERROR_ALERT_TO', '')),
-                siteUrl: rtrim(trim($environment->get('STAFF_AREA_URL', '') ?? '') ?: ($origins[0] ?? 'https://corporate.paxofi.com'), '/'),
+                siteUrl: rtrim(trim($environment->get('STAFF_AREA_URL', '') ?? '') ?: ($origins[0] ?? 'https://paxofi.com'), '/'),
             ),
             // careers.paxofi.com (D-018, D-019): who hears about new applications, and where candidates reply.
             recruitment: new RecruitmentSettings(
