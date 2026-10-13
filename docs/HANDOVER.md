@@ -6,7 +6,7 @@ Live since 2 Oct 2026 (v1 UAT signed off by the owner that day, `UAT-PLAN.md`). 
 
 | Component | Address | Hosting (cPanel account `paxoalhu`) | Health |
 |---|---|---|---|
-| Website (Next.js 16, Node 22) | https://paxofi.com (until 13 Oct 2026 corporate.paxofi.com, which now redirects; D-033) | Setup Node.js App, app root `paxofi-corporate-website`, startup `app.js`, env `API_BASE_URL` | `/release.txt`; UptimeRobot |
+| Website (Next.js 16, Node 22) | https://paxofi.com (until 13 Oct 2026 corporate.paxofi.com, now retired; D-033) | Setup Node.js App, app root `paxofi-corporate-website`, startup `app.js`, env `API_BASE_URL` | `/release.txt`; UptimeRobot |
 | API (PHP 8.4, Paxofi Core Framework 1.1) | https://api.paxofi.com/api/v1 | `paxofi-api-runtime/backend/public` (document root), secrets in `backend/.env` (600) | `/health`, `/readiness`; UptimeRobot |
 | Database (MariaDB 11.4) | `paxoalhu_corporate` | phpMyAdmin | `/readiness` → `"database":true` |
 | Careers site (same release, `SITE_SECTION=careers`) | https://careers.paxofi.com | Setup Node.js App, app root `paxofi-careers-website`, env `API_BASE_URL`, `SITE_SECTION`, `CAREERS_SITE_URL` (guide Step 10d, D-018) | `/release.txt`; add an UptimeRobot monitor |
@@ -15,7 +15,7 @@ Live since 2 Oct 2026 (v1 UAT signed off by the owner that day, `UAT-PLAN.md`). 
 
 - **Enquiries:** staff area https://paxofi.com/admin → **Enquiries** (from the Phase 2.1 release; before it, phpMyAdmin → `enquiries`). Business Development replies within 2 business days (D-007). Staff accounts: RUNBOOKS RB-11.
 - **Applications:** staff area → **Recruitment** (administrators and Human Resources staff, D-019). Acknowledge within 2 working days, screen within 2 weeks; data requests and erasure: RB-19. Applications and CVs are deleted automatically 12 months after they close.
-- **Monitoring:** UptimeRobot (7 monitors, RUNBOOKS → Monitoring) emails the operations address. Alerts lead to `RUNBOOKS.md` RB-3/RB-5/RB-6.
+- **Monitoring:** UptimeRobot (6 monitors, RUNBOOKS → Monitoring) emails the operations address. Alerts lead to `RUNBOOKS.md` RB-3/RB-5/RB-6.
 - **Weekly check (5 minutes):** `RUNBOOKS.md` → Daily/weekly checks.
 - **Retention:** the daily cron job `bin/purge-retention.php` (RB-10, guide Step 6). Confirm `logs/purge-retention.log` gains a line each day.
 - **Backups:** phpMyAdmin export before every release; cPanel full backup monthly, stored off the server (RB-7).

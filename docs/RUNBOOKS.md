@@ -1,6 +1,6 @@
 # Operational runbooks — Paxofi Corporate Website
 
-For whoever operates `paxofi.com` (the corporate website; `corporate.paxofi.com` until 13 Oct 2026, D-033), `careers.paxofi.com` and `api.paxofi.com` on the cPanel account `paxoalhu`. Everything here uses cPanel (File Manager, Setup Node.js App, phpMyAdmin, SSL/TLS Status); no terminal is needed.
+For whoever operates `paxofi.com` (the corporate website; `corporate.paxofi.com` until 13 Oct 2026, now retired, D-033), `careers.paxofi.com` and `api.paxofi.com` on the cPanel account `paxoalhu`. Everything here uses cPanel (File Manager, Setup Node.js App, phpMyAdmin, SSL/TLS Status); no terminal is needed.
 
 ## At a glance
 
@@ -44,7 +44,7 @@ Website or API code: rename the new folder to `…-failed`, rename `…-old-<ver
 
 1. Try the form in a private window and press F12 → Console.
 2. Address bar shows **Not secure** / the console's CORS message names origin `http://paxofi.com` → the site is served without HTTPS: RB-6 (certificate) and cPanel → Domains → **Force HTTPS Redirect** on. Never add the `http://` origin to CORS (enquiries would travel unencrypted). (UAT defect DEF-001, 2 Oct 2026.)
-3. Other **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must list exactly `https://paxofi.com,https://careers.paxofi.com` (plus `https://corporate.paxofi.com` during the move, D-033).
+3. Other **CORS** message → `CORS_ALLOWED_ORIGINS` in the API `.env` must list exactly `https://paxofi.com,https://careers.paxofi.com` .
 4. Other network error → open `/api/v1/health` and `/readiness`. If the API is down, RB-5.
 5. *"You've sent several enquiries…"* → the rate limit (`CONTACT_RATE_LIMIT_MAX` per `CONTACT_RATE_LIMIT_WINDOW_MINUTES`, per email or IP) is working as designed; wait or raise the limit in `.env`.
 6. The form posts to `API_BASE_URL` (Setup Node.js App → environment variables); after changing it, **Restart**.
@@ -59,7 +59,7 @@ Website or API code: rename the new folder to `…-failed`, rename `…-old-<ver
 
 ## RB-6 TLS certificate problem
 
-cPanel → **SSL/TLS Status** → select `paxofi.com`, `www.paxofi.com`, `careers.paxofi.com`, `api.paxofi.com` and `corporate.paxofi.com` (kept for its redirect) → **Run AutoSSL**. If AutoSSL reports a DNS error, the domain's A record must point to this server's IP. The website sends HSTS, so browsers refuse plain HTTP once a valid certificate has been seen — fix certificates quickly.
+cPanel → **SSL/TLS Status** → select `paxofi.com`, `www.paxofi.com`, `careers.paxofi.com`, `api.paxofi.com`  → **Run AutoSSL**. If AutoSSL reports a DNS error, the domain's A record must point to this server's IP. The website sends HSTS, so browsers refuse plain HTTP once a valid certificate has been seen — fix certificates quickly.
 
 ## RB-7 Backups and restore
 
@@ -144,7 +144,7 @@ Cookieless counts of page views (D-014), shown in the staff area under **Analyti
 
 ## RB-14 Staging copy
 
-`staging.corporate.paxofi.com` + `api-staging.paxofi.com`, folders in `/home/paxoalhu/staging/`, database `paxoalhu_corporate_staging` (D-013). Same release files as live; the Node app's `SITE_ENVIRONMENT=staging` and `STAGING_PASSWORD` make it private and unindexed.
+`staging.paxofi.com` + `api-staging.paxofi.com`, folders in `/home/paxoalhu/staging/`, database `paxoalhu_corporate_staging` (D-013). Same release files as live; the Node app's `SITE_ENVIRONMENT=staging` and `STAGING_PASSWORD` make it private and unindexed.
 
 - **Use:** install each release there first (guide *Release routine*), run the release's UAT scenarios, then deploy the same files to live.
 - **Password:** kept in the owner's password manager; change it in the staging Node app's environment variables → **Save** → **Restart**. Share it only with staff who test.
@@ -174,9 +174,8 @@ Owner decision 2 Oct 2026: UptimeRobot (free plan, 5-minute checks, email alerts
 | 4 | HTTP(s) | Paxofi careers release | `https://careers.paxofi.com/release.txt` | Interval 5 min (the careers Node.js app) |
 | 5 | Keyword | Paxofi API readiness | `https://api.paxofi.com/api/v1/readiness` | Keyword `"database":true` → alert when **not exists** |
 | 6 | HTTP(s) | Paxofi API health | `https://api.paxofi.com/api/v1/health` | Interval 5 min |
-| 7 | HTTP(s) | Paxofi old address | `https://corporate.paxofi.com/` | Interval 5 min. UptimeRobot follows the 301 to paxofi.com, so this alerts if the redirect or its certificate breaks. Optional. |
 
-**Changing the existing monitors (13 Oct 2026):** edit *corporate.paxofi.com* → URL `https://paxofi.com/`, name *Paxofi website*; edit *Paxofi website release* → URL `https://paxofi.com/release.txt`; the old *paxofi.com* monitor (Coming soon) becomes *Paxofi careers site* with URL `https://careers.paxofi.com/`; add monitors 4 and 7. Keep the API monitors as they are.
+**Changing the existing monitors (13 Oct 2026):** edit *corporate.paxofi.com* → URL `https://paxofi.com/`, name *Paxofi website*; edit *Paxofi website release* → URL `https://paxofi.com/release.txt`; the old *paxofi.com* monitor (Coming soon) becomes *Paxofi careers site* with URL `https://careers.paxofi.com/`; add monitor 4. Keep the API monitors as they are. corporate.paxofi.com was retired with its DNS record (D-033), so nothing monitors it.
 
 Alert contact: the operations email (verify it in **My Settings → Alert Contacts**) on every monitor. An alert starts the matching runbook: website and careers monitors → RB-3, API monitors → RB-5, any certificate error → RB-6. Review the 30-day uptime report monthly (CW-OPS2-002/004). The readiness check touches the database once per 5 minutes, which is negligible. `ops/stabilisation-check.sh` adds what UptimeRobot does not check: security headers, certificate expiry, both apps on the same release, and the redirects.
 
@@ -327,7 +326,7 @@ Documents on the public Resources page (/resources) come from the media library 
 
 paxofi.com's DNS is managed in Cloudflare (D-024). The cPanel server's address is the one on the existing records (cPanel home → *Shared IP Address*).
 
-- **New subdomain:** create it in cPanel (Domains), then add an **A record** in Cloudflare → DNS → Records pointing to the server's address. Use **DNS only** (grey cloud) unless there is a reason to proxy. Names two levels deep (`x.corporate.paxofi.com`) must stay DNS only. Then run AutoSSL in cPanel.
+- **New subdomain:** create it in cPanel (Domains), then add an **A record** in Cloudflare → DNS → Records pointing to the server's address. Use **DNS only** (grey cloud) unless there is a reason to proxy. Names two levels deep (for example `x.careers.paxofi.com`) must stay DNS only. Then run AutoSSL in cPanel.
 - **Proxied names** (orange cloud): set Cloudflare → SSL/TLS → **Full (strict)**. *Flexible* causes redirect loops with cPanel's Force HTTPS.
 - **Visitor addresses:** the API reads the visitor's address from Cloudflare only for connections from Cloudflare's ranges. Once a year, compare https://www.cloudflare.com/ips/ with `RANGES` in `backend/src/Http/CloudflareClientIp.php` and update it in a release if they differ.
 - **Check:** send a test enquiry from the contact form, then open it under **Enquiries**: *IP address* should be your own (search “what is my IP”), not a Cloudflare one (Cloudflare addresses start with 104., 172.64–172.71., 162.158–162.159., 141.101., 108.162., 173.245., 188.114., 190.93., 197.234., 198.41., 103.21/22/31., 131.0.72. or 2400:cb00, 2606:4700, …).
