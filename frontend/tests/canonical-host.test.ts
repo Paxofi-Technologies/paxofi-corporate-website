@@ -12,7 +12,7 @@ test("www and the old corporate address redirect to paxofi.com, keeping path and
 });
 
 test("the canonical host, careers, staging and unknown hosts are served as they are", () => {
-  for (const host of ["paxofi.com", "careers.paxofi.com", "staging.corporate.paxofi.com", "localhost:3000", "", null]) {
+  for (const host of ["paxofi.com", "careers.paxofi.com", "staging.paxofi.com", "localhost:3000", "", null]) {
     assert.equal(canonicalRedirect(host, "/", "", live), null, String(host));
   }
 });

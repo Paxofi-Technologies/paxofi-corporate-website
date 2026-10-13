@@ -262,7 +262,7 @@ BACKUP_KEEP_DAYS=14
    - Send a message through the website's contact form: the alert should arrive within a minute.
    - On the staff sign-in page, use **Forgot your password?** with your own address and follow the link.
    - The next morning, `paxofi-backups` should hold a `paxofi-database-….sql.gz` file.
-6. On **staging**, use the same mailbox but `STAFF_AREA_URL=https://staging.corporate.paxofi.com` and its own backup folder (`/home/paxoalhu/paxofi-backups-staging`). Point `ENQUIRY_ALERT_TO` at yourself, so test enquiries don't reach the team.
+6. On **staging**, use the same mailbox but `STAFF_AREA_URL=https://staging.paxofi.com` and its own backup folder (`/home/paxoalhu/paxofi-backups-staging`). Point `ENQUIRY_ALERT_TO` at yourself, so test enquiries don't reach the team.
 
 If an email does not arrive, `email_outbox` in phpMyAdmin shows the reason (RB-17).
 
@@ -277,17 +277,19 @@ From this release the corporate website's address is **https://paxofi.com** (dec
 **C. API settings.** File Manager → `paxofi-api-runtime/backend/.env` → edit two lines, then save:
 
 ```
-CORS_ALLOWED_ORIGINS=https://paxofi.com,https://careers.paxofi.com,https://corporate.paxofi.com
+CORS_ALLOWED_ORIGINS=https://paxofi.com,https://careers.paxofi.com
 STAFF_AREA_URL=https://paxofi.com
 ```
 
-Keep `https://corporate.paxofi.com` in the list for the first weeks, so pages still open under the old address keep working and its visits are not counted as outside referrals. No restart is needed.
+No restart is needed. (corporate.paxofi.com was retired completely on 13 Oct 2026, so it is not in the list.)
+
+**Every line in `.env` must be `NAME=value`, empty, or start with `#`.** A comment line that loses its `#` stops the whole API with "The service is misconfigured." (13 Oct 2026: line 55). After any edit open https://api.paxofi.com/api/v1/health: it must show `"status":"ok"`. The exact reason is in `paxofi-api-runtime/backend/public/error_log` ("Invalid .env syntax on line N").
 
 **D. Move the website app.** cPanel → **Setup Node.js App** → the corporate app (`paxofi-corporate-website`) → **Edit**:
 1. **Application URL:** choose `paxofi.com` and leave the path empty.
-2. **Environment variables**, add:
+2. **Environment variables**: keep `API_BASE_URL` = `https://api.paxofi.com/api/v1` (without it the pages cannot load products or articles and the staff area says "Staff area unavailable"), and add:
    - `NEXT_PUBLIC_SITE_URL` = `https://paxofi.com` (canonical addresses, sitemap, robots, share links: read when the app starts)
-   - `REDIRECT_HOSTS` = `www.paxofi.com,corporate.paxofi.com`
+   - `REDIRECT_HOSTS` = `www.paxofi.com` (optional: www is redirected by default)
 3. **Save**, then **Restart**. cPanel writes the app's routing into `public_html/.htaccess`. If `/home/paxoalhu/corporate.paxofi.com/.htaccess` still has `Passenger` lines, delete those lines.
 
 **E. Careers app.** **Setup Node.js App** → `paxofi-careers-website` → **Edit** → add `NEXT_PUBLIC_SITE_URL` = `https://paxofi.com` (its "paxofi.com" links point there) → **Save** → **Restart**.
@@ -405,7 +407,7 @@ The staging copy is a private second website where each new release is installed
 
 | | Live | Staging |
 |---|---|---|
-| Website | `corporate.paxofi.com` | `staging.corporate.paxofi.com` |
+| Website | `corporate.paxofi.com` | `staging.paxofi.com` |
 | API | `api.paxofi.com` | `api-staging.paxofi.com` |
 | Folders in `/home/paxoalhu/` | `paxofi-api-runtime`, `paxofi-corporate-website`, `paxofi-media` | the same three names inside `staging/` |
 | Database | `paxoalhu_corporate` | `paxoalhu_corporate_staging` |
@@ -413,7 +415,7 @@ The staging copy is a private second website where each new release is installed
 1. **Folders:** File Manager → `/home/paxoalhu/` → **+ Folder** `staging`. Inside `staging`, create `paxofi-media`.
 2. **Domains:** cPanel → **Domains** → **Create A New Domain**:
     - `api-staging.paxofi.com`, document root `/staging/paxofi-api-runtime/backend/public` (untick *Share document root*);
-    - `staging.corporate.paxofi.com`, document root `/staging.corporate.paxofi.com` (its own folder, like the live site).
+    - `staging.paxofi.com`, document root `/staging.paxofi.com` (its own folder, like the live site).
     - Then **SSL/TLS Status** → select both → **Run AutoSSL**, and turn on **Force HTTPS Redirect** for both under **Domains**. If a new address does not open after 30 minutes, the domain's DNS is managed elsewhere: add the two names there (same IP address as `corporate.paxofi.com`).
 
 3. **Database:** cPanel → **MySQL Databases** → create database `corporate_staging` (shown as `paxoalhu_corporate_staging`), create a new user with a new password, and **Add User To Database** with **ALL PRIVILEGES**. Then phpMyAdmin → click the new database → **Import** → `database-install-{{VERSION}}.sql` → **Import**. Use the *install* file only here, and only once.
@@ -423,7 +425,7 @@ The staging copy is a private second website where each new release is installed
         DB_DATABASE=paxoalhu_corporate_staging
         DB_USERNAME=the staging database user
         DB_PASSWORD="the staging database password"
-        CORS_ALLOWED_ORIGINS=https://staging.corporate.paxofi.com
+        CORS_ALLOWED_ORIGINS=https://staging.paxofi.com
         ADMIN_SETUP_TOKEN=a new 32+ character code (delete after step 7)
         MFA_ENCRYPTION_KEY=a NEW 40+ character key (not the live one)
         MEDIA_STORAGE_PATH=/home/paxoalhu/staging/paxofi-media
@@ -432,12 +434,12 @@ The staging copy is a private second website where each new release is installed
 
 5. **Website:** upload and extract `paxofi-corporate-website-{{VERSION}}.zip` into `/home/paxoalhu/staging/`. cPanel → **Setup Node.js App** → **Create Application**:
     - Node.js version **22**, Application mode **Production**;
-    - Application root `staging/paxofi-corporate-website`, Application URL `staging.corporate.paxofi.com`, startup file `app.js`;
+    - Application root `staging/paxofi-corporate-website`, Application URL `staging.paxofi.com`, startup file `app.js`;
     - **Environment variables:** `API_BASE_URL` = `https://api-staging.paxofi.com/api/v1`, `SITE_ENVIRONMENT` = `staging`, `STAGING_PASSWORD` = a password of 12 or more characters (keep it in your password manager; share it only with staff who test);
     - **Create**, then **Start App**. Do not click *Run NPM Install*.
 
-6. **Check it is private:** open `https://staging.corporate.paxofi.com` in a private window. The browser asks for a user name and password: enter any user name (for example `paxofi`) and the staging password. A yellow line at the top says *Staging site for testing*. Without the password nothing is shown.
-7. **Staff account on staging:** open `https://staging.corporate.paxofi.com/admin/setup` and create an administrator with the staging `ADMIN_SETUP_TOKEN`, as in Step 7. Then delete the `ADMIN_SETUP_TOKEN` line from the staging `.env`. Staging accounts are separate from live accounts.
+6. **Check it is private:** open `https://staging.paxofi.com` in a private window. The browser asks for a user name and password: enter any user name (for example `paxofi`) and the staging password. A yellow line at the top says *Staging site for testing*. Without the password nothing is shown.
+7. **Staff account on staging:** open `https://staging.paxofi.com/admin/setup` and create an administrator with the staging `ADMIN_SETUP_TOKEN`, as in Step 7. Then delete the `ADMIN_SETUP_TOKEN` line from the staging `.env`. Staging accounts are separate from live accounts.
 
 Staging holds no real enquiries or staff accounts. Do not copy the live database into it: it contains personal data (D-008).
 
