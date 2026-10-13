@@ -154,9 +154,9 @@ Run after guide Step 11. About 15 minutes.
 
 | # | Scenario | Steps | Expected | Result |
 |---|---|---|---|---|
-| S1 | Private | Open `https://staging.corporate.paxofi.com` in a private window → **Cancel** at the password prompt | Nothing of the site is shown | |
+| S1 | Private | Open `https://staging.paxofi.com` in a private window → **Cancel** at the password prompt | Nothing of the site is shown | |
 | S2 | Password works | Open it again, enter any user name and the staging password | The site opens with the yellow *Staging site for testing* line | |
-| S3 | Not indexed | Open `https://staging.corporate.paxofi.com/robots.txt` | `Disallow: /` | |
+| S3 | Not indexed | Open `https://staging.paxofi.com/robots.txt` | `Disallow: /` | |
 | S4 | Its own data | Send the contact form on staging; check phpMyAdmin | The enquiry is in `paxoalhu_corporate_staging`, **not** in the live database | |
 | S5 | Its own staff area | Sign in at staging `/admin` with the staging administrator; edit and publish a product summary | The change shows on staging only; the live site is unchanged | |
 | S6 | Live unchanged | Open `https://corporate.paxofi.com` and its `robots.txt` | No password, no yellow line, `robots.txt` allows the site | |
@@ -165,7 +165,7 @@ Record sign-off ("Phase 2.5 UAT passed") in Asana.
 
 ### Results — release 20261003-f48adc7 (3 Oct 2026)
 
-**Phase 2.5 accepted**, signed off by Samuel Kehinde Adeniji (owner and founder): "Everything has been setup properly and all running fine", then "ssl now working". Release deployed to live (Steps 1–5) and the staging copy created (Step 11). Screenshots confirm: the staging banner on every page, the staging staff area with its own administrator and two-factor requirement, and HTTPS on `staging.corporate.paxofi.com`. The first check found staging on `http://` without staging mode; both were fixed before sign-off (SITE_ENVIRONMENT set, certificate installed).
+**Phase 2.5 accepted**, signed off by Samuel Kehinde Adeniji (owner and founder): "Everything has been setup properly and all running fine", then "ssl now working". Release deployed to live (Steps 1–5) and the staging copy created (Step 11). Screenshots confirm: the staging banner on every page, the staging staff area with its own administrator and two-factor requirement, and HTTPS on `staging.paxofi.com`. The first check found staging on `http://` without staging mode; both were fixed before sign-off (SITE_ENVIRONMENT set, certificate installed).
 
 ## Phase 2.6 — visitor analytics (D-014)
 
@@ -306,7 +306,7 @@ Run as an Administrator after deploying, with `api.paxofi.com` proxied (orange c
 
 | # | Scenario | Steps | Expected | Result |
 |---|---|---|---|---|
-| CF1 | Sites reachable | Open corporate.paxofi.com, careers.paxofi.com and staging.corporate.paxofi.com | Each opens over https with a valid padlock | |
+| CF1 | Sites reachable | Open corporate.paxofi.com, careers.paxofi.com and staging.paxofi.com | Each opens over https with a valid padlock | |
 | CF2 | Own address | Search “what is my IP”, then send a test enquiry from the contact form | It arrives in **Enquiries**; its *IP address* is the same as yours, not a Cloudflare one | |
 | CF3 | Sign-in | Sign in to the staff area with two-factor | Works as before | |
 

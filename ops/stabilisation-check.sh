@@ -4,19 +4,20 @@
 # sends GET requests and opens TLS connections, like a visitor would.
 #
 #   bash ops/stabilisation-check.sh            # live
-#   CORPORATE_URL=https://staging.corporate.paxofi.com API_URL=https://api-staging.paxofi.com \
+#   CORPORATE_URL=https://staging.paxofi.com API_URL=https://api-staging.paxofi.com \
 #     CAREERS_URL= REDIRECT_FROM= bash ops/stabilisation-check.sh   # staging (needs STAGING_AUTH=user:password)
 #
 # Checks: both sites report the same release; API health and readiness; the
-# main pages answer 200; www and the old corporate address redirect (301); security headers; TLS certificates valid for more than
+# main pages answer 200; www.paxofi.com redirects (301); security headers; TLS certificates valid for more than
 # 14 days; homepage response time. Prints one line per check and exits 1 if
 # any check fails. Needs bash, curl and openssl.
 set -uo pipefail
 
 CORPORATE="${CORPORATE_URL-https://paxofi.com}"
-# Other names of the corporate site that must redirect to it permanently (D-033).
+# Other names of the corporate site that must redirect to it permanently (D-033;
+# corporate.paxofi.com was retired with its DNS record on 13 Oct 2026).
 # Empty for staging: REDIRECT_FROM= bash ops/stabilisation-check.sh
-REDIRECT_FROM="${REDIRECT_FROM-https://www.paxofi.com https://corporate.paxofi.com}"
+REDIRECT_FROM="${REDIRECT_FROM-https://www.paxofi.com}"
 CAREERS="${CAREERS_URL-https://careers.paxofi.com}"
 API="${API_URL-https://api.paxofi.com}"
 AUTH=(); [ -n "${STAGING_AUTH:-}" ] && AUTH=(-u "$STAGING_AUTH")
