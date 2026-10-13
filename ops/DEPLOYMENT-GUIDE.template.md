@@ -287,7 +287,7 @@ No restart is needed. (corporate.paxofi.com was retired completely on 13 Oct 202
 
 **D. Move the website app.** cPanel → **Setup Node.js App** → the corporate app (`paxofi-corporate-website`) → **Edit**:
 1. **Application URL:** choose `paxofi.com` and leave the path empty.
-2. **Environment variables**, add:
+2. **Environment variables**: keep `API_BASE_URL` = `https://api.paxofi.com/api/v1` (without it the pages cannot load products or articles and the staff area says "Staff area unavailable"), and add:
    - `NEXT_PUBLIC_SITE_URL` = `https://paxofi.com` (canonical addresses, sitemap, robots, share links: read when the app starts)
    - `REDIRECT_HOSTS` = `www.paxofi.com` (optional: www is redirected by default)
 3. **Save**, then **Restart**. cPanel writes the app's routing into `public_html/.htaccess`. If `/home/paxoalhu/corporate.paxofi.com/.htaccess` still has `Passenger` lines, delete those lines.
