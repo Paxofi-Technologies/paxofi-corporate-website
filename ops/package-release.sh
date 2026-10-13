@@ -11,11 +11,11 @@
 #
 # Usage (from the repository root, on a machine with PHP 8.4+, Composer with
 # read access to the private PCF repository, Node.js 22, zip):
-#   SITE_URL=https://corporate.paxofi.com API_URL=https://api.paxofi.com/api/v1 ops/package-release.sh
+#   SITE_URL=https://paxofi.com API_URL=https://api.paxofi.com/api/v1 ops/package-release.sh
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SITE_URL="${SITE_URL:-https://corporate.paxofi.com}"
+SITE_URL="${SITE_URL:-https://paxofi.com}"
 API_URL="${API_URL:-https://api.paxofi.com/api/v1}"
 VERSION="${VERSION:-$(date -u +%Y%m%d)-$(git -C "$ROOT" rev-parse --short HEAD)}"
 OUT_DIR="${OUT_DIR:-$ROOT/dist/$VERSION}"

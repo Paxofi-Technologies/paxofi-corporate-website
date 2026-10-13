@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { canonicalRedirect } from "@/lib/canonical-host";
 import { isCareersSite, sectionPath } from "@/lib/careers";
 import { resolveApiBase } from "@/lib/contact";
 import { contentSecurityPolicy, createNonce } from "@/lib/csp";
@@ -15,6 +16,13 @@ export async function proxy(request: NextRequest) {
   // Staging copy (D-013): password first, for every path, before anything else.
   const gate = stagingGate(request.headers.get("authorization"));
   if (gate) return new NextResponse(gate.body, { status: gate.status, headers: gate.headers });
+  // One address for the corporate site (D-033): www and the old corporate name redirect.
+  const moved = isCareersSite() ? null : canonicalRedirect(request.headers.get("host"), request.nextUrl.pathname, request.nextUrl.search);
+  if (moved) {
+    const response = NextResponse.redirect(moved, request.method === "GET" || request.method === "HEAD" ? 301 : 308);
+    response.headers.set("Content-Type", "text/plain; charset=utf-8");
+    return response;
+  }
   const response = (await retired(request)) ?? route(request);
   // Staging is never indexed, whatever the page says.
   if (isStaging()) response.headers.set("X-Robots-Tag", "noindex, nofollow");
