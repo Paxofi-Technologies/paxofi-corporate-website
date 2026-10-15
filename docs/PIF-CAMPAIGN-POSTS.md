@@ -11,7 +11,7 @@ Where this pack and the Notion copy differ, the difference is deliberate and lis
 
 ### 1.1 Voice and tone
 
-- **Professional and human.** Write as Paxofi Technologies LTD speaking to capable people at the start of their careers: warm, direct, respectful. The approved brand values are *People First, Innovation Always, Real Solutions, A Brighter Tomorrow*; the approved sign-off is *"A brighter tomorrow, together."* (Brand Guidelines v1.0).
+- **Professional and human.** Write as Paxofi Technologies LTD speaking to capable people at the start of their careers: warm, direct, respectful. The approved brand values are *People First, Innovation Always, Real Solutions, Transforming Tomorrow*; the approved sign-off is *"Transforming tomorrow, together."* (Brand Guidelines v1.0, updated 15 Oct 2026). Corporate tagline: *Innovating Today. Transforming Tomorrow.* PIF headline: *Build. Learn. Contribute.*
 - **Clear before clever.** Say what PIF is (a remote, structured, unpaid learning programme), who each engagement type is for, the hours and the dates. One idea per sentence.
 - **Development-oriented, no hype.** Talk about real project experience, structured learning in the Paxofi Academy, a supervisor and mentor, feedback and a certificate on meeting the requirements. Do not use "life-changing", "dream job", "guaranteed", "career launchpad", "hiring", "vacancy", "salary" or "stipend".
 - **Inclusive.** Welcome students, recent graduates, SIWES/industrial-training students, career changers and self-taught people from anywhere in Nigeria. Do not imply a university degree is required. Never ask for or mention age beyond "18 or older", or anything about religion, ethnicity, finances or politics.
@@ -310,7 +310,7 @@ Please share only with people who may genuinely be interested.
 >
 > Apply: https://careers.paxofi.com/?utm_source=linkedin&utm_medium=social&utm_campaign=pif-2026
 >
-> A brighter tomorrow, together.
+> Transforming tomorrow, together.
 >
 > #PIF2026 #PaxofiInnovationFellowship #NigeriaTech
 
