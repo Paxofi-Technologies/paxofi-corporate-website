@@ -1,7 +1,7 @@
 import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
+import { SHARE_IMAGE, SITE, TAGLINE, siteUrl } from "@/lib/site";
 import { isStaging } from "@/lib/staging";
 
 // Render every page per request. Prerendered pages are sent with
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: `${SITE.name} — Technology for a Brighter Tomorrow`, template: `%s | ${SITE.name}` },
+  title: { default: `${SITE.name} — ${TAGLINE}`, template: `%s | ${SITE.name}` },
   description: SITE.description,
   openGraph: { siteName: SITE.name, type: "website", url: "/", title: SITE.name, description: SITE.description, images: [SHARE_IMAGE] },
   twitter: { card: "summary_large_image", title: SITE.name, description: SITE.description, images: [SHARE_IMAGE.url] },

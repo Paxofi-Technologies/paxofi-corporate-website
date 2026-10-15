@@ -46,7 +46,7 @@ final class PageCopyTest extends DatabaseTestCase
         self::assertSame('Home', $page['label']);
         self::assertNull($page['live']);
         $fields = array_column($page['fields'], 'default', 'key');
-        self::assertSame('Technology for a', $fields['hero_title_start']);
+        self::assertSame('Innovating', $fields['hero_title_start']);
 
         $edited = ['hero_title_start' => 'Technology for an even', 'cta_title' => "Got a hard\nproblem?"] + $fields;
         $draft = self::decode($this->call('POST', '/api/v1/admin/pages/home/draft', ['fields' => $edited], cookie: $admin))['data'];

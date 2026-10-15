@@ -18,7 +18,7 @@ Automated tests already cover these flows in Chromium, Firefox and WebKit on eve
 
 | # | Scenario | Steps | Expected | Desktop | iPhone | Android |
 |---|---|---|---|---|---|---|
-| U1 | First impression | Open https://corporate.paxofi.com | Home page loads within about 3 seconds, Paxofi branding (blue/navy), headline "Technology for a Brighter Tomorrow.", no errors, padlock shown | | | |
+| U1 | First impression | Open https://corporate.paxofi.com | Home page loads within about 3 seconds, Paxofi branding (blue/navy), headline "Innovating Today. Transforming Tomorrow." (D-034), no errors, padlock shown | | | |
 | U2 | Navigation | Use the menu to open About, Services, Products, Careers, then **Talk to us** | Each page opens; the current page is highlighted in the menu. On phones, the menu button opens and closes the menu | | | |
 | U3 | Content accuracy | Read every page, including the footer | Company name, products, services, values, email address and wording are correct and approved; no spelling mistakes; no placeholder text | | | |
 | U4 | Careers hand-off | Careers → **View opportunities** | careers.paxofi.com opens. No application form on the corporate site | | | |

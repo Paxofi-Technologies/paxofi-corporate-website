@@ -510,6 +510,7 @@ final class ApiApplication implements HttpHandler
                 $this->hasher,
                 new PdoAuditRecorder($this->database),
                 new LazyTransactionManager($this->database),
+                $this->passwordResetService(),
             ),
             $this->adminGuard(),
         );

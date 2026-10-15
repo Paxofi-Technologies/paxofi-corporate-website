@@ -4,7 +4,7 @@ Baseline of what version 1 of the Paxofi corporate website is, how it is governe
 
 ## 1. Vision, objectives and audiences (CW-PD-001)
 
-**Vision:** the public home of Paxofi Technologies, presenting the company as a credible builder of digital products and infrastructure: *Technology for a Brighter Tomorrow.*
+**Vision:** the public home of Paxofi Technologies, presenting the company as a credible builder of digital products and infrastructure: *Innovating Today. Transforming Tomorrow.* (tagline from 15 Oct 2026, D-034)
 
 | Objective | Measure |
 |---|---|

@@ -18,8 +18,19 @@ export const SHARE_IMAGE = {
   url: "/og-image.png",
   width: 1200,
   height: 630,
-  alt: "Paxofi Technologies — Technology for a Brighter Tomorrow.",
+  alt: "Paxofi Technologies — Innovating Today. Transforming Tomorrow.",
 };
+
+/** careers.paxofi.com share image: the PIF campaign headline (D-034). */
+export const CAREERS_SHARE_IMAGE = {
+  url: "/og-careers.png",
+  width: 1200,
+  height: 630,
+  alt: "Paxofi Innovation Fellowship — Build. Learn. Contribute.",
+};
+
+/** Corporate tagline (D-034). */
+export const TAGLINE = "Innovating Today. Transforming Tomorrow.";
 
 /**
  * Canonical site origin without a trailing slash (D-033: https://paxofi.com).

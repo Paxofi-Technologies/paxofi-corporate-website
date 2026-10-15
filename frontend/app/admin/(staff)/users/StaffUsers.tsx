@@ -39,7 +39,7 @@ export default function StaffUsers() {
     <>
       <h1 className="admin-title">Users</h1>
       <p className="admin-intro">
-        Staff who can sign in. Give each person a temporary password through a secure channel and ask them to change it on their account page.
+        Staff who can sign in. A new person gets a welcome email with a link to choose their own password (valid for 72 hours). Without email, set a temporary password and pass it on through a secure channel.
       </p>
       <FormStatus state="success" message={notice} />
       <FormStatus state="error" message={error} />
@@ -92,9 +92,11 @@ function CreateUser({ roles, onCreated }: { roles: RoleOption[]; onCreated: (mes
     setFields({});
     setError("");
     try {
-      const result = await request<StaffUser>("/users", { method: "POST", body: formValues(form) });
+      const result = await request<StaffUser & { welcome_email_sent?: boolean }>("/users", { method: "POST", body: formValues(form) });
       form.reset();
-      onCreated(`${result.data.display_name} can now sign in with the temporary password you set.`);
+      onCreated(result.data.welcome_email_sent
+        ? `${result.data.display_name} was added. A welcome email with a link to choose their password is on its way to ${result.data.email} (valid for 72 hours).`
+        : `${result.data.display_name} can now sign in with the temporary password you set.`);
     } catch (e) {
       if (e instanceof AdminApiError) {
         setFields(e.fields);
@@ -114,13 +116,12 @@ function CreateUser({ roles, onCreated }: { roles: RoleOption[]; onCreated: (mes
       <RoleSelect roles={roles} error={fields.role} />
       <Field
         name="password"
-        label="Temporary password"
+        label="Temporary password (optional)"
         type="password"
         autoComplete="new-password"
-        required
         minLength={12}
         maxLength={256}
-        hint={PASSWORD_HINT}
+        hint={`Leave empty to send a welcome email with a link to choose their own password. ${PASSWORD_HINT}`}
         error={fields.password}
       />
       <FormStatus state="error" message={error} />
