@@ -21,6 +21,7 @@ final class StaffAdminService
         private readonly PasswordHashing $hasher,
         private readonly AuditRecorder $audit,
         private readonly TransactionManager $transactions,
+        private readonly ?PasswordResetService $welcome = null,
     ) {
     }
 
@@ -30,14 +31,25 @@ final class StaffAdminService
         return array_map(static fn (StaffUser $user): array => $user->toArray(), $this->staff->all());
     }
 
-    /** Creates an account with a temporary password the administrator passes on securely. */
+    /**
+     * Creates an account. Without a password, and with email set up, the person
+     * gets a welcome email with a one-time link to choose their own (D-034);
+     * with a password, the administrator passes that temporary password on.
+     */
     public function create(array $input, AuthenticatedStaff $actor, RequestContext $context): array
     {
         $errors = [];
         $email = StaffInput::email($input, $errors);
         $name = (string) StaffInput::displayName($input, $errors);
         $role = StaffInput::role($input, $errors);
-        $password = StaffInput::password($input, $email, $errors);
+        $invite = trim(is_string($input['password'] ?? null) ? $input['password'] : '') === '';
+        if ($invite && ($this->welcome === null || !$this->welcome->available())) {
+            $errors['password'] = 'Email is not set up, so enter a temporary password and pass it on yourself.';
+            $password = '';
+        } else {
+            // An invited account gets a random password nobody knows until the link is used.
+            $password = $invite ? bin2hex(random_bytes(32)) : StaffInput::password($input, $email, $errors);
+        }
         if ($errors !== []) {
             throw new ValidationFailed($errors, 'Please correct the highlighted fields.');
         }
@@ -45,14 +57,17 @@ final class StaffAdminService
             throw new Conflict('An account with this email already exists.');
         }
 
-        $id = $this->transactions->transaction(function () use ($email, $name, $role, $password, $actor, $context): string {
+        $id = $this->transactions->transaction(function () use ($email, $name, $role, $password, $invite, $actor, $context): string {
             $id = $this->staff->create($email, $name, $this->hasher->hash($password), $role);
             $this->audit->record(new AuditEvent('staff.created', AuditEvent::OUTCOME_SUCCESS, 'user', $id, $actor->user->id, $context->requestId));
+            if ($invite && $this->welcome !== null) {
+                $this->welcome->invite($this->staff->findById($id) ?? throw new ResourceNotFound(), $role, $actor->user->displayName, $context);
+            }
 
             return $id;
         });
 
-        return ($this->staff->findById((string) $id) ?? throw new ResourceNotFound())->toArray();
+        return ($this->staff->findById((string) $id) ?? throw new ResourceNotFound())->toArray() + ['welcome_email_sent' => $invite];
     }
 
     /** Changes name, role or status, or sets a new temporary password. */

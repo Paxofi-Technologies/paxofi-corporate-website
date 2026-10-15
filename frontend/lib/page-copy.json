@@ -7,14 +7,14 @@
       "fields": [
         { "key": "meta_description", "group": "Search engines", "label": "Description in search results", "kind": "text", "max": 200, "default": "Paxofi Technologies builds dependable digital products, software platforms and technology infrastructure for businesses and communities." },
         { "key": "hero_eyebrow", "group": "Top of the page", "label": "Small line above the headline", "kind": "line", "max": 50, "default": "People | Products | Possibilities" },
-        { "key": "hero_title_start", "group": "Top of the page", "label": "Headline: start", "kind": "line", "max": 40, "default": "Technology for a" },
-        { "key": "hero_title_highlight", "group": "Top of the page", "label": "Headline: highlighted word (sky blue)", "kind": "line", "max": 20, "default": "Brighter" },
-        { "key": "hero_title_end", "group": "Top of the page", "label": "Headline: end", "kind": "line", "max": 40, "default": "Tomorrow." },
+        { "key": "hero_title_start", "group": "Top of the page", "label": "Headline: start", "kind": "line", "max": 40, "default": "Innovating" },
+        { "key": "hero_title_highlight", "group": "Top of the page", "label": "Headline: highlighted word (sky blue)", "kind": "line", "max": 20, "default": "Today." },
+        { "key": "hero_title_end", "group": "Top of the page", "label": "Headline: end", "kind": "line", "max": 40, "default": "Transforming Tomorrow." },
         { "key": "hero_lead", "group": "Top of the page", "label": "Introduction", "kind": "text", "max": 200, "default": "We build people, products and solutions that create real impact across Africa and beyond." },
         { "key": "hero_primary_button", "group": "Top of the page", "label": "Main button (to Contact)", "kind": "line", "max": 28, "default": "Build with Paxofi" },
         { "key": "hero_secondary_button", "group": "Top of the page", "label": "Second button (to Services)", "kind": "line", "max": 28, "default": "Explore our services" },
         { "key": "hero_card_line", "group": "Top of the page", "label": "Card beside the headline: main line", "kind": "line", "max": 30, "default": "Build · Operate · Scale" },
-        { "key": "hero_card_sub", "group": "Top of the page", "label": "Card beside the headline: second line", "kind": "line", "max": 40, "default": "A brighter tomorrow, together." },
+        { "key": "hero_card_sub", "group": "Top of the page", "label": "Card beside the headline: second line", "kind": "line", "max": 40, "default": "Transforming tomorrow, together." },
         { "key": "values_eyebrow", "group": "Values", "label": "Small heading", "kind": "line", "max": 40, "default": "What we stand for" },
         { "key": "values_title", "group": "Values", "label": "Heading", "kind": "line", "max": 70, "default": "Consistent. Credible. Impactful." },
         { "key": "values_intro", "group": "Values", "label": "Introduction", "kind": "text", "max": 200, "default": "Our values guide how we build, who we build with and the impact we aim for." },
@@ -24,7 +24,7 @@
         { "key": "value_2_text", "group": "Values", "label": "Card 2 text", "kind": "text", "max": 90, "default": "We turn ideas into impact." },
         { "key": "value_3_title", "group": "Values", "label": "Card 3 title", "kind": "line", "max": 30, "default": "Real Solutions" },
         { "key": "value_3_text", "group": "Values", "label": "Card 3 text", "kind": "text", "max": 90, "default": "We solve real problems." },
-        { "key": "value_4_title", "group": "Values", "label": "Card 4 title", "kind": "line", "max": 30, "default": "A Brighter Tomorrow" },
+        { "key": "value_4_title", "group": "Values", "label": "Card 4 title", "kind": "line", "max": 30, "default": "Transforming Tomorrow" },
         { "key": "value_4_text", "group": "Values", "label": "Card 4 text", "kind": "text", "max": 90, "default": "We create lasting possibilities." },
         { "key": "services_eyebrow", "group": "What we do", "label": "Small heading", "kind": "line", "max": 40, "default": "What we do" },
         { "key": "services_title", "group": "What we do", "label": "Heading", "kind": "line", "max": 70, "default": "Technology built around real outcomes." },
@@ -238,8 +238,8 @@
         { "key": "join_4_text", "group": "Who can join", "label": "Card 4: text", "kind": "text", "max": 160, "default": "Share what you know, contribute to meaningful products and help others grow." },
         { "key": "join_note", "group": "Who can join", "label": "Note below the cards", "kind": "text", "max": 260, "default": "You can join the Paxofi Innovation Fellowship as a Fellow, Intern or Volunteer. All three are unpaid learning programmes with real projects and mentorship; none is employment." },
         { "key": "pif_eyebrow", "group": "Fellowship", "label": "Small heading", "kind": "line", "max": 50, "default": "Paxofi Innovation Fellowship" },
-        { "key": "pif_title", "group": "Fellowship", "label": "Heading", "kind": "line", "max": 80, "default": "One fellowship. Real projects. Real mentorship." },
-        { "key": "pif_text", "group": "Fellowship", "label": "Paragraph", "kind": "text", "max": 300, "default": "The Paxofi Innovation Fellowship (PIF) is a structured, remote programme for people who want practical experience, mentorship and the chance to contribute to real products in a technology company." },
+        { "key": "pif_title", "group": "Fellowship", "label": "Heading", "kind": "line", "max": 80, "default": "Build. Learn. Contribute." },
+        { "key": "pif_text", "group": "Fellowship", "label": "Paragraph", "kind": "text", "max": 300, "default": "Real projects. Real mentors. Real growth. The Paxofi Innovation Fellowship (PIF) is a structured, remote programme for people who want practical experience, mentorship and the chance to contribute to real products in a technology company." },
         { "key": "pif_point_1", "group": "Fellowship", "label": "Point 1", "kind": "line", "max": 90, "default": "Remote and open to applicants anywhere" },
         { "key": "pif_point_2", "group": "Fellowship", "label": "Point 2", "kind": "line", "max": 90, "default": "Fellows and Interns: at least 15 hours a week. Volunteers: at least 10" },
         { "key": "pif_point_3", "group": "Fellowship", "label": "Point 3", "kind": "line", "max": 90, "default": "Fellows 24 weeks · Interns 12 or 24 · Volunteers 8 to 24" },
@@ -324,7 +324,7 @@
         { "key": "aside_title", "group": "Form and contact details", "label": "Side panel heading", "kind": "line", "max": 40, "default": "Other ways to reach us" },
         { "key": "response_text", "group": "Form and contact details", "label": "Response (under the email address)", "kind": "line", "max": 80, "default": "We reply to enquiries by email." },
         { "key": "where_text", "group": "Form and contact details", "label": "Where we work", "kind": "line", "max": 80, "default": "Across Africa and beyond." },
-        { "key": "signoff", "group": "Form and contact details", "label": "Closing line", "kind": "line", "max": 60, "default": "A brighter tomorrow, together." }
+        { "key": "signoff", "group": "Form and contact details", "label": "Closing line", "kind": "line", "max": 60, "default": "Transforming tomorrow, together." }
       ]
     },
     "site": {
@@ -356,7 +356,7 @@
         { "key": "footer_extra_label", "group": "Footer", "label": "Link 3: name", "kind": "line", "max": 40, "default": "", "optional": true, "pair": "footer_extra_link" },
         { "key": "footer_extra_link", "group": "Footer", "label": "Link 3: link", "kind": "link", "max": 200, "default": "", "optional": true, "pair": "footer_extra_label" },
         { "key": "footer_company_heading", "group": "Footer", "label": "Third column heading (Privacy and Terms)", "kind": "line", "max": 30, "default": "Company" },
-        { "key": "footer_signoff", "group": "Footer", "label": "Line at the bottom right", "kind": "line", "max": 60, "default": "A brighter tomorrow, together." }
+        { "key": "footer_signoff", "group": "Footer", "label": "Line at the bottom right", "kind": "line", "max": 60, "default": "Transforming tomorrow, together." }
       ]
     }
   }

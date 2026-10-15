@@ -304,6 +304,9 @@ async function fakeAdminApi(page, { user = ADMIN, signedIn = false, setupAvailab
     if (!state.user.permissions.includes("users.manage") && path.startsWith("/users")) {
       return reply(route, 403, { code: "FORBIDDEN", message: "You do not have permission." });
     }
+    if (path === "/users" && method === "POST") {
+      return reply(route, 201, { ...BD, id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", email: body.email, display_name: body.display_name, welcome_email_sent: !body.password });
+    }
     if (path === "/users" && method === "GET") {
       return reply(route, 200, [ADMIN, { ...BD, two_factor_enabled: true }], { roles: [{ value: "administrator", label: "Administrator" }, { value: "business_development", label: "Business Development" }] });
     }
@@ -441,6 +444,12 @@ describe("staff area", () => {
     await page.getByText("Edit Ben Business").click();
     await page.getByText("Add a user").click();
     await assertAccessible(page, "on users");
+    const add = page.locator("form").filter({ has: page.getByRole("button", { name: "Add user" }) });
+    await add.getByLabel("Name").fill("Opeyemi Ogunshina");
+    await add.getByLabel("Email").fill("opeyemi@paxofi.com");
+    await add.getByLabel("Role").selectOption("business_development");
+    await add.getByRole("button", { name: "Add user" }).click();
+    await page.getByText("A welcome email with a link to choose their password is on its way to opeyemi@paxofi.com").waitFor();
 
     await page.goto(`${BASE}/admin/audit`);
     await page.getByRole("cell", { name: "enquiry.status.replied" }).waitFor();

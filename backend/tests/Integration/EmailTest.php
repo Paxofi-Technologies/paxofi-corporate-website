@@ -129,6 +129,49 @@ final class EmailTest extends DatabaseTestCase
         );
     }
 
+    public function testANewStaffAccountGetsAWelcomeEmailToChooseItsOwnPassword(): void
+    {
+        $this->setupAdmin();
+        $admin = $this->signIn();
+        $app = $this->app();
+        $created = $this->call($app, 'POST', '/api/v1/admin/users', ['email' => 'Opeyemi@Paxofi.com', 'display_name' => 'Opeyemi Ogunshina', 'role' => 'human_resources'], $admin);
+        self::assertSame(201, $created->status(), $created->body());
+        self::assertTrue(self::decode($created)['data']['welcome_email_sent']);
+        $app->afterResponse();
+
+        $welcome = $this->mail->sent[count($this->mail->sent) - 1];
+        self::assertSame(['opeyemi@paxofi.com'], $welcome->to);
+        self::assertSame('Your Paxofi staff account', $welcome->subject);
+        self::assertStringContainsString('Samuel Adeniji has created a Paxofi staff account for you (Human Resources)', $welcome->text);
+        self::assertStringContainsString('within 72 hours', $welcome->text);
+        self::assertSame(1, preg_match('~https://corporate\.paxofi\.com/admin/reset-password#([A-Za-z0-9_-]{43})~', $welcome->text, $m));
+        self::assertSame('2026-10-07 10:00:00', self::scalar("SELECT expires_at FROM password_resets"), '72 hours');
+        self::assertSame(401, $this->call($this->app(), 'POST', '/api/v1/admin/session', ['email' => 'opeyemi@paxofi.com', 'password' => 'Guessing a pass phrase 1'])->status(), 'no usable password before the link');
+
+        self::assertSame(200, $this->call($this->app(), 'POST', '/api/v1/admin/password-reset/complete', ['token' => $m[1], 'password' => 'Her own pass phrase 2026'])->status());
+        self::assertSame(200, $this->call($this->app(), 'POST', '/api/v1/admin/session', ['email' => 'opeyemi@paxofi.com', 'password' => 'Her own pass phrase 2026'])->status());
+        self::assertSame(1, (int) self::scalar("SELECT COUNT(*) FROM audit_events WHERE action = 'staff.welcome_sent' AND outcome = 'success'"));
+
+        // A temporary password still works the old way, without an email.
+        $before = count($this->mail->sent);
+        $withPassword = $this->app();
+        $other = $this->call($withPassword, 'POST', '/api/v1/admin/users', ['email' => 'bd@paxofi.com', 'display_name' => 'Business Dev', 'role' => 'business_development', 'password' => 'Temporary pass phrase 7'], $admin);
+        self::assertSame(201, $other->status());
+        self::assertFalse(self::decode($other)['data']['welcome_email_sent']);
+        $withPassword->afterResponse();
+        self::assertCount($before, $this->mail->sent);
+    }
+
+    public function testWithoutEmailANewAccountNeedsATemporaryPassword(): void
+    {
+        $this->setupAdmin();
+        $admin = $this->signIn();
+        $response = $this->call($this->app(withMail: false), 'POST', '/api/v1/admin/users', ['email' => 'hr@paxofi.com', 'display_name' => 'HR', 'role' => 'human_resources'], $admin);
+        self::assertSame(422, $response->status());
+        self::assertStringContainsString('Email is not set up', self::decode($response)['error']['details']['fields']['password']);
+        self::assertSame(0, (int) self::scalar("SELECT COUNT(*) FROM users WHERE email = 'hr@paxofi.com'"));
+    }
+
     public function testResetLinksExpireAndRequestsAreLimited(): void
     {
         $this->setupAdmin();
@@ -204,10 +247,24 @@ final class EmailTest extends DatabaseTestCase
         self::assertSame(201, $response->status(), $response->body());
     }
 
-    /** @param array<string, mixed> $payload */
-    private function call(ApiApplication $app, string $method, string $uri, array $payload): HttpResponse
+    /** Signs the founder in; returns the session cookie value. */
+    private function signIn(): string
     {
-        return $app->handle(self::request($method, $uri, ['origin' => self::ORIGIN, 'content-type' => 'application/json'], json_encode($payload, JSON_THROW_ON_ERROR)));
+        $response = $this->call($this->app(), 'POST', '/api/v1/admin/session', ['email' => 'founder@paxofi.com', 'password' => self::PASSWORD]);
+        self::assertSame(1, preg_match('/^(?:__Host-)?paxofi_admin=([^;]+);/', (string) $response->header('set-cookie'), $match), $response->body());
+
+        return $match[1];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function call(ApiApplication $app, string $method, string $uri, array $payload, ?string $cookie = null): HttpResponse
+    {
+        $headers = ['origin' => self::ORIGIN, 'content-type' => 'application/json'];
+        if ($cookie !== null) {
+            $headers['cookie'] = 'paxofi_admin=' . $cookie;
+        }
+
+        return $app->handle(self::request($method, $uri, $headers, json_encode($payload, JSON_THROW_ON_ERROR)));
     }
 
     private function app(bool $withMail = true): ApiApplication
