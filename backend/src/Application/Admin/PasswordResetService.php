@@ -26,10 +26,13 @@ use Paxofi\CorporateWebsite\Application\RequestContext;
  * - Setting a new password signs the person out everywhere. Two-factor
  *   sign-in (D-010) still applies the next time they sign in.
  * - At most 3 requests per account and 10 per IP address an hour.
+ * - New staff accounts get the same kind of link in a welcome email (D-034),
+ *   valid for 72 hours, so nobody has to pass on a temporary password.
  */
 final class PasswordResetService
 {
     public const LINK_MINUTES = 30;
+    public const WELCOME_LINK_HOURS = 72;
     private const WINDOW_MINUTES = 60;
     private const MAX_PER_USER = 3;
     private const MAX_PER_IP = 10;
@@ -89,6 +92,35 @@ final class PasswordResetService
             ]) . "\n", kind: 'password_reset'));
             $this->audit->record(new AuditEvent('staff.password_reset.requested', AuditEvent::OUTCOME_SUCCESS, 'user', $user->id, requestId: $context->requestId));
         });
+    }
+
+    /**
+     * Queues the welcome email for a new account with a one-time link to set
+     * its own password (D-034). Call it inside the transaction that creates the
+     * account, so either both happen or neither does.
+     */
+    public function invite(StaffUser $user, Role $role, string $invitedBy, RequestContext $context): void
+    {
+        $now = ($this->clock)();
+        $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $this->resets->create(hash('sha256', $token), $user->id, $context->clientIp, $now, $now->modify('+' . self::WELCOME_LINK_HOURS . ' hours'));
+        $this->outbox->add(new Email([$user->email], 'Your Paxofi staff account', implode("\n", [
+            'Hello ' . Email::oneLine($user->displayName) . ',',
+            '',
+            Email::oneLine($invitedBy) . ' has created a Paxofi staff account for you (' . $role->label() . ').',
+            '',
+            'Open this link within ' . self::WELCOME_LINK_HOURS . ' hours to choose your password. It works once:',
+            '',
+            $this->mail->staffLink('/admin/reset-password#' . $token),
+            '',
+            'Then sign in at ' . $this->mail->staffLink('/admin') . ' with ' . $user->email . '.',
+            $role === Role::Administrator
+                ? 'Administrators set up two-factor sign-in with an authenticator app at the first sign-in.'
+                : 'You can turn on two-factor sign-in under My account; we recommend it.',
+            '',
+            'If the link has expired, use "Forgot password?" on the sign-in page. If you did not expect this email, tell us at the address it came from.',
+        ]) . "\n", kind: 'staff_welcome'));
+        $this->audit->record(new AuditEvent('staff.welcome_sent', AuditEvent::OUTCOME_SUCCESS, 'user', $user->id, requestId: $context->requestId));
     }
 
     public function complete(array $input, RequestContext $context): void

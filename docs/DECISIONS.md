@@ -618,3 +618,14 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Follow-up (owner, 13 Oct 2026):** `corporate.paxofi.com` is retired completely: its folders and DNS record are deleted, so old links to it no longer open (no redirect). Only `www.paxofi.com` redirects. UptimeRobot has six monitors (no old-address monitor), the check script checks only the www redirect, and `CORS_ALLOWED_ORIGINS` lists only `https://paxofi.com` and `https://careers.paxofi.com`. The staging copy will be `staging.paxofi.com` (with `api-staging.paxofi.com`), replacing `staging.corporate.paxofi.com`.
 - **Found during the move (13 Oct 2026):** a comment line in the API `.env` that lost its `#` stopped the API ("The service is misconfigured."; the careers roles and the staff area failed with it). Guide Step 10m now says to open `/api/v1/health` after every `.env` edit.
 - **Also found (13 Oct 2026):** after the move the corporate app had lost its `API_BASE_URL` variable. Step 10m now says to keep it; RB-3 lists it.
+
+## D-034 — Taglines, share images and a welcome email for new staff (15 Oct 2026)
+
+**Decision (owner, 15 Oct 2026):**
+
+- **Corporate tagline: "Innovating Today. Transforming Tomorrow."** It replaces "Technology for a Brighter Tomorrow" (D-002) as the home-page headline (page-text defaults), the browser title and the share image of paxofi.com. **Note:** PKDMS V1 Chapter 15 §15.3/§15.13 and Brand Guidelines v1.0 §1 still record "Technology for a Brighter Tomorrow" as the tagline adopted on 2 Oct 2026; Brand Guidelines §11 (added 15 Oct) records this decision, and the owner decides whether to revise Chapter 15 and §1.
+- **PIF headline: "Build. Learn. Contribute."** (Final Launch Production Pack), with **"Real projects. Real mentors. Real growth."** as the supporting line. careers.paxofi.com uses them in its heading, introduction, share description and its own share image (`/og-careers.png`).
+- **Share images** are drawn by `frontend/scripts/share-images.mjs` (both now show the current addresses; the old one still said corporate.paxofi.com).
+- **Kept for now:** the sign-off "A brighter tomorrow, together." and the value "A Brighter Tomorrow" (Brand Guidelines §1). A published override under Content → Page text wins over the new defaults: check Home and Careers there after deploying.
+- **Welcome email for new staff:** Users → *Add user* without a password emails the person a one-time link to choose their own password, valid 72 hours (`staff.welcome_sent`); the account has a random unusable password until then. If the link expires, "Forgot password?" sends a new one. A temporary password can still be set (needed when email is not set up; the form says so).
+

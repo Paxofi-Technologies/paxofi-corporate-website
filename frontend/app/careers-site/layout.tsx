@@ -5,11 +5,11 @@ import { ArrowUpRight, Mail } from "lucide-react";
 import Logo from "@/components/Logo";
 import CampaignCapture from "./CampaignCapture";
 import { RECRUITMENT_EMAIL, careersSiteUrl } from "@/lib/careers";
-import { SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
+import { CAREERS_SHARE_IMAGE, SITE, siteUrl } from "@/lib/site";
 import { isStaging } from "@/lib/staging";
 
 const DESCRIPTION =
-  "Join the Paxofi Innovation Fellowship (PIF 2026) as a Fellow, Intern or Volunteer: remote, mentored, with real projects. An unpaid learning programme.";
+  "Build. Learn. Contribute. Join the Paxofi Innovation Fellowship (PIF 2026) as a Fellow, Intern or Volunteer: remote, mentored, with real projects. An unpaid learning programme.";
 
 /** careers.paxofi.com (D-018): its own address, title and search settings, read at run time. */
 export function generateMetadata(): Metadata {
@@ -18,8 +18,8 @@ export function generateMetadata(): Metadata {
     title: { default: "Careers at Paxofi — Paxofi Innovation Fellowship", template: "%s | Paxofi Careers" },
     description: DESCRIPTION,
     alternates: { canonical: "/" },
-    openGraph: { siteName: "Paxofi Careers", type: "website", url: "/", title: "Careers at Paxofi", description: DESCRIPTION, images: [SHARE_IMAGE] },
-    twitter: { card: "summary_large_image", title: "Careers at Paxofi", description: DESCRIPTION, images: [SHARE_IMAGE.url] },
+    openGraph: { siteName: "Paxofi Careers", type: "website", url: "/", title: "Careers at Paxofi", description: DESCRIPTION, images: [CAREERS_SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title: "Careers at Paxofi", description: DESCRIPTION, images: [CAREERS_SHARE_IMAGE.url] },
     robots: isStaging() ? { index: false, follow: false } : { index: true, follow: true },
   };
 }

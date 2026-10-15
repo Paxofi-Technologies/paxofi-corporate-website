@@ -100,6 +100,7 @@ Periods are decision D-008 (enquiries 24 months, IP/user-agent 90 days, audit ev
 
 Staff sign in at `https://paxofi.com/admin` (D-009). Roles: **Administrator** (enquiries, users, audit log) and **Business Development** (enquiries).
 
+- **Adding someone (D-034):** *Users* → *Add a user* → name, email, role, and leave the password empty. They get a welcome email with a link to choose their password, valid 72 hours; if it expires they use **Forgot password?** on the sign-in page. Check the email address carefully: it cannot be changed later (disable the account and add a new one instead).
 - **First administrator:** guide Step 7 (one-time `ADMIN_SETUP_TOKEN`; it only works while no accounts exist). Keep **two** administrators so one can always reset the other.
 - **The only administrator has lost their password:** engineering generates a password hash for a temporary password and sends the operator one SQL statement (`UPDATE users SET password_hash = '…' WHERE email = '…';`) to run in phpMyAdmin → SQL; the administrator then signs in and changes it at *My account*. Never paste a plain password into the database.
 - **Forgotten password:** an administrator → *Users* → **Edit** → new temporary password (signs that person out everywhere).
