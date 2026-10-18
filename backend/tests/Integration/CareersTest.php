@@ -184,6 +184,7 @@ final class CareersTest extends DatabaseTestCase
         self::assertSame('screening', $detail['stage']);
         self::assertSame(['stage', 'score', 'note'], array_reverse(array_column($detail['notes'], 'kind')));
         $template = array_values(array_filter($detail['email_templates'], static fn (array $t): bool => $t['key'] === 'assessment_invitation'))[0];
+        self::assertStringContainsString('You may use AI tools for this task if you tell us which ones you used and what for.', $template['body']);
         self::assertSame(422, $this->call('POST', "/api/v1/admin/applications/{$id}/emails", ['template' => 'assessment_invitation', 'subject' => $template['subject'], 'body' => $template['body']], $hr)->status(), 'placeholders must be filled in first');
         $body = (string) preg_replace('/\[[^\]]+\]/', '10 October', $template['body']);
         self::assertSame(200, $this->call('POST', "/api/v1/admin/applications/{$id}/emails", ['template' => 'assessment_invitation', 'subject' => $template['subject'], 'body' => $body], $hr)->status());

@@ -629,3 +629,13 @@ Reviewed in the 30-day operational review (CW-OPS2-004) against actual UptimeRob
 - **Brand lines (owner, 15 Oct 2026):** sign-off **"Transforming tomorrow, together."** (home card, contact page, footer), value **"Transforming Tomorrow"** (home values card 4) and operating line **BUILD · OPERATE · SCALE · TRANSFORMING TOMORROW** replace the "brighter tomorrow" versions, in PKDMS and on the website. A published override under Content → Page text wins over the new defaults: check Home and Careers there after deploying.
 - **Welcome email for new staff:** Users → *Add user* without a password emails the person a one-time link to choose their own password, valid 72 hours (`staff.welcome_sent`); the account has a random unusable password until then. If the link expires, "Forgot password?" sends a new one. A temporary password can still be set (needed when email is not set up; the form says so).
 
+## D-035 — Dates reconciled with Notion; AI tools allowed in recruitment tasks (18 Oct 2026)
+
+**Decision (owner, 18 Oct 2026; the interim Programme Director confirmed his approval of the PIF drafts the same day):**
+
+- **Offers and agreements.** PKDMS said offers go out Mon 30 Nov; D-032 said decisions are sent Tue 1 Dec. **Offers (with the offer letter and agreement) are sent Tue 1 Dec; signed documents are due Fri 4 Dec (Gate 2).** PKDMS (Launch Decision Pack Revision 6, Programme Charter, Final Campaign Configuration, Onboarding Guide) now says the same. The 5-working-day signing window applies from Cohort 2.
+- **Capstone brief** (PKDMS) moved from Fri 26 Mar 2027 (Good Friday) to Thu 25 Mar 2027.
+- **AI tools in recruitment role tasks.** Candidates may use AI tools **if they say which and what for**; the interview tests their understanding of their own work. The *Assessment invitation* email template (`CandidateEmails`) now carries this sentence, so staff no longer paste it: "You may use AI tools for this task if you tell us which ones you used and what for. We will ask you to explain your work in the interview."
+- **Pod C** charter: the certificate verification page prototype became a usability and accessibility test of the live page (the page shipped in release 28). PKDMS only; no code.
+- **Delivered:** the template sentence and a test that checks it; the PIF-CAMPAIGN-POSTS discrepancy list marks the date item done.
+
