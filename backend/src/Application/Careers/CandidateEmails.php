@@ -44,7 +44,7 @@ final class CandidateEmails
         'assessment_invitation' => [
             'label' => 'Assessment invitation (Fellows and Interns)',
             'subject' => 'Your role assessment: {role} ({reference})',
-            'body' => "Hello {first_name},\n\nWe would like to invite you to the role assessment for {role}.\n\nWhat to do: [describe the task]\nDeadline: [date and time, with time zone]\nHow to submit: reply to this email with your work attached or linked.\n\nThe assessment tests capability and should take no more than 3 hours. It is never work that Paxofi intends to use.\n\nPaxofi Technologies — Recruitment",
+            'body' => "Hello {first_name},\n\nWe would like to invite you to the role assessment for {role}.\n\nWhat to do: [describe the task]\nDeadline: [date and time, with time zone]\nHow to submit: reply to this email with your work attached or linked.\n\nThe assessment tests capability and should take no more than 3 hours. It is never work that Paxofi intends to use.\n\nYou may use AI tools for this task if you tell us which ones you used and what for. We will ask you to explain your work in the interview.\n\nPaxofi Technologies — Recruitment",
             'stage' => 'assessment',
             'types' => ['fellow', 'intern'],
         ],
